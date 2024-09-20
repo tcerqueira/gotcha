@@ -1,9 +1,11 @@
 use axum::Router;
-use tower_http::services::ServeDir;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub fn app() -> Router {
-    Router::new().fallback_service(ServeDir::new("assets"))
+    Router::new()
+        .fallback_service(ServeDir::new("assets"))
+        .layer(TraceLayer::new_for_http())
 }
 
 pub fn init_tracing() {
