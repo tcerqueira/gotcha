@@ -1,0 +1,22 @@
+{
+  "name": "widget",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "vite build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "solid-js": "^1.9.1"
+  },
+  "devDependencies": {
+    "terser": "^5.34.0",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vite-plugin-solid": "^2.10.2"
+  }
+}
