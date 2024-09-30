@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Gotcha demo - JS params</title>
+        <script type="text/javascript">
+            console.debug("user script loaded");
+            var onloadCallback = function () {
+                alert("grecaptcha is ready!");
+            };
+        </script>
+        <script
+            src="http://localhost:8080/api.js?onload=onloadCallback&render=explicit"
+            async
+            defer
+        ></script>
+    </head>
+    <body>
+        <form action="?" method="POST">
+            <div class="g-recaptcha" data-sitekey="your_site_key"></div>
+            <br />
+            <input type="submit" value="Submit" />
+        </form>
+    </body>
+</html>

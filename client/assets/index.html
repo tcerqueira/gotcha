@@ -1,19 +1,16 @@
 <!doctype html>
 <html>
     <head>
-        <title>reCAPTCHA demo: Simple page</title>
-        <script
-            src="http://localhost:8080/api.js?onload=onLoadCallback&render=explicit&garbage=aaa"
-            src="https://www.google.com/recaptcha/api.js"
-            async
-            defer
-        ></script>
+        <title>Gotcha demo</title>
     </head>
     <body>
-        <form action="?" method="POST">
-            <div class="g-recaptcha" data-sitekey="your_site_key"></div>
-            <br />
-            <input type="submit" value="Submit" />
-        </form>
+        <h1>Demos</h1>
+        <nav>
+            <ul>
+                <li><a href="/auto-render.html">Auto render widget</a></li>
+                <li><a href="/js-params.html">Javascript parameters</a></li>
+                <li><a href="/invisible-render.html">Invisible button</a></li>
+            </ul>
+        </nav>
     </body>
 </html>
