@@ -1,0 +1,15 @@
+[alias]
+watch-server = [
+    "watch",
+    "-x",
+    "run -q -p gotcha-server",
+    "-i",
+    "package-lock.json",
+]
+watch-client = [
+    "watch",
+    "-x",
+    "run -q -p gotcha-client",
+    "-i",
+    "package-lock.json",
+]

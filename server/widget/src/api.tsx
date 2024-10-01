@@ -28,7 +28,7 @@ function init() {
   console.debug(`Found ${elements.length} elements with class 'g-recaptcha'`);
   for (const element of elements) {
     console.debug("Rendering widget in element:", element);
-    grecaptcha.render(element);
+    (window as any).grecaptcha.render(element);
   }
 }
 
