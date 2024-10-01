@@ -1,6 +1,6 @@
 export type JsParams = {
   onload?: () => void;
-  render?: "explicit";
+  render: "explicit" | "onload";
   hl?: string;
 };
 
@@ -17,14 +17,14 @@ export function getJsParams(): JsParams {
     }
   }
 
-  const params: JsParams = {};
+  const params: JsParams = { render: "onload" };
   url?.searchParams.forEach((value, key) => {
     switch (key) {
       case "onload":
         params.onload = (window as any)[value];
         break;
       case "render":
-        params.render = value === "explicit" ? "explicit" : undefined;
+        params.render = value === "explicit" ? "explicit" : "onload";
         break;
       case "hl":
         params.hl = value;
