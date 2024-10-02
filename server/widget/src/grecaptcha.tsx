@@ -15,6 +15,9 @@ export type RenderParams = {
 
 type Widget = {
   element: JSX.Element;
+  container: Element;
+  renderParams: RenderParams;
+  response: string | null;
 };
 
 export class GreCaptcha {
@@ -33,30 +36,7 @@ export class GreCaptcha {
       return;
     }
 
-    let params: RenderParams = {
-      sitekey: captchaElem.getAttribute("data-sitekey") ?? "",
-      theme:
-        (captchaElem.getAttribute("data-theme") as
-          | "dark"
-          | "light"
-          | undefined) ?? "light",
-      size:
-        (captchaElem.getAttribute("data-size") as
-          | "compact"
-          | "normal"
-          | undefined) ?? "normal",
-      tabindex: parseInt(captchaElem.getAttribute("data-tabindex") || "0") || 0,
-      callback: (window as any)[
-        captchaElem.getAttribute("data-callback") || ""
-      ],
-      "expired-callback": (window as any)[
-        captchaElem.getAttribute("data-expired-callback") || ""
-      ],
-      "error-callback": (window as any)[
-        captchaElem.getAttribute("data-error-callback") || ""
-      ],
-    };
-
+    const params = this.getParamsFromContainer(captchaElem);
     this.render(captchaElem, params);
   }
 
@@ -69,16 +49,69 @@ export class GreCaptcha {
     if (element === null) {
       return null;
     }
+
+    let response: string | null = null;
     const widget = {
-      element: <GotchaWidget />,
+      element: (
+        <GotchaWidget
+          onSuccess={(res: string) => {
+            response = res;
+            alert(response);
+          }}
+          onFailure={() => {
+            response = null;
+            alert("beep boop");
+          }}
+        />
+      ),
+      renderParams: parameters,
+      container: element,
+      get response() {
+        return response;
+      },
     };
     render(() => widget.element, element);
     return this.widgets.push(widget) - 1;
   }
 
-  reset(widgetId?: number) {}
+  reset(widgetId?: number) {
+    const widget = this.getWidget(widgetId);
+    if (!widget) return;
+    while (widget.container.firstChild) {
+      widget.container.removeChild(widget.container.lastChild!);
+    }
+    this.render(widget.container, widget?.renderParams);
+  }
 
-  getResponse(widgetId?: number): string {
-    return "not yet implemented";
+  getResponse(widgetId?: number): string | null {
+    return this.getWidget(widgetId)?.response ?? null;
+  }
+
+  private getWidget(widgetId?: number): Widget | undefined {
+    return this.widgets[widgetId ?? 0];
+  }
+
+  private getParamsFromContainer(container: Element): RenderParams {
+    return {
+      sitekey: container.getAttribute("data-sitekey") ?? "",
+      theme:
+        (container.getAttribute("data-theme") as
+          | "dark"
+          | "light"
+          | undefined) ?? "light",
+      size:
+        (container.getAttribute("data-size") as
+          | "compact"
+          | "normal"
+          | undefined) ?? "normal",
+      tabindex: parseInt(container.getAttribute("data-tabindex") || "0") || 0,
+      callback: (window as any)[container.getAttribute("data-callback") ?? ""],
+      "expired-callback": (window as any)[
+        container.getAttribute("data-expired-callback") ?? ""
+      ],
+      "error-callback": (window as any)[
+        container.getAttribute("data-error-callback") ?? ""
+      ],
+    };
   }
 }

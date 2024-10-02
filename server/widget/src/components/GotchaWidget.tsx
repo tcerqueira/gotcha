@@ -1,5 +1,28 @@
-import { Component } from "solid-js";
+import { Component, createSignal, Show } from "solid-js";
 
-export const GotchaWidget: Component = () => {
-  return <div>I'm not a robot</div>;
+export type GotchaWidgetProps = {
+  onSuccess?: (response: string) => void;
+  onFailure?: () => void;
 };
+
+export function GotchaWidget(props: GotchaWidgetProps) {
+  const [isLoading, setLoading] = createSignal(true);
+
+  return (
+    <div>
+      <Show when={isLoading} fallback={<></>}>
+        <p>Loading...</p>
+      </Show>
+      <span>Are you a robot?</span>
+      <button type="button" onClick={props.onFailure}>
+        YES
+      </button>
+      <button
+        type="button"
+        onClick={() => props.onSuccess && props.onSuccess("congratz")}
+      >
+        NO
+      </button>
+    </div>
+  );
+}
