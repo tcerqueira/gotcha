@@ -1,27 +1,14 @@
-import { render } from "solid-js/web";
 import { getJsParams } from "./js-params";
-import { GotchaWidget } from "./components/GotchaWidget";
-import { JSX } from "solid-js/jsx-runtime";
+import { defaultRenderParams, RenderParams, Widget } from "./lib";
+import { Factory } from "./components/yes-no-widget";
 
-export type RenderParams = {
-  sitekey: string;
-  theme?: "dark" | "light";
-  size?: "compact" | "normal";
-  tabindex?: number;
-  callback?: (responseToken: string) => void;
-  "expired-callback"?: () => void;
-  "error-callback"?: () => void;
-};
-
-type Widget = {
-  element: JSX.Element;
-  container: Element;
-  renderParams: RenderParams;
+type Gotcha = {
+  widget: Widget;
   response: string | null;
 };
 
 export class GreCaptcha {
-  widgets: Widget[] = [];
+  widgets: Gotcha[] = [];
 
   constructor() {
     const { onload, render, hl } = getJsParams();
@@ -50,44 +37,42 @@ export class GreCaptcha {
       return null;
     }
 
+    const widget = Factory.create();
     let response: string | null = null;
-    const widget = {
-      element: (
-        <GotchaWidget
-          onSuccess={(res: string) => {
-            response = res;
-            alert(response);
-          }}
-          onFailure={() => {
-            response = null;
-            alert("beep boop");
-          }}
-        />
-      ),
-      renderParams: parameters,
-      container: element,
+    const params = {
+      ...defaultRenderParams,
+      ...parameters,
+      callback: (token: string) => {
+        response = token;
+        parameters.callback && parameters.callback(token);
+      },
+    };
+    let gotcha = {
+      widget,
       get response() {
         return response;
       },
+      set response(res: string | null) {
+        response = res;
+      },
     };
-    render(() => widget.element, element);
-    return this.widgets.push(widget) - 1;
+
+    widget.render(element, params);
+    return this.widgets.push(gotcha) - 1;
   }
 
   reset(widgetId?: number) {
-    const widget = this.getWidget(widgetId);
-    if (!widget) return;
-    while (widget.container.firstChild) {
-      widget.container.removeChild(widget.container.lastChild!);
-    }
-    this.render(widget.container, widget?.renderParams);
+    const gotcha = this.getWidget(widgetId);
+    if (!gotcha) return;
+    gotcha.widget.reset();
+    gotcha.response = null;
   }
 
   getResponse(widgetId?: number): string | null {
     return this.getWidget(widgetId)?.response ?? null;
   }
 
-  private getWidget(widgetId?: number): Widget | undefined {
+  private getWidget(widgetId?: number): Gotcha | undefined {
     return this.widgets[widgetId ?? 0];
   }
 
