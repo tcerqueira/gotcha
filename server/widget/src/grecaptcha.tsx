@@ -4,7 +4,6 @@ import { Factory } from "./components/yes-no-widget";
 
 type Gotcha = {
   widget: Widget;
-  response: string | null;
 };
 
 export class GreCaptcha {
@@ -36,28 +35,40 @@ export class GreCaptcha {
     if (element === null) {
       return null;
     }
+    const widgetId = this.widgets.length;
+
+    // create wrapper in case the target container already has elements
+    // <div style="width: 304px; height: 78px"></div>
+    const innerContainer = document.createElement("div");
+    innerContainer.style.width = "304px";
+    innerContainer.style.height = "78px";
+    // this automatically gets sent when inside a form
+    // <textarea id="g-response-id" name="g-response-area" style="display: none;">response</textarea>
+    const formResponse = document.createElement("textarea");
+    formResponse.id =
+      widgetId === 0
+        ? "g-recaptcha-response"
+        : `g-recaptcha-response-${widgetId}`;
+    formResponse.name = "g-recaptcha-response";
+    formResponse.style.display = "none";
+    // add to the DOM
+    innerContainer.appendChild(formResponse);
+    element.appendChild(innerContainer);
 
     const widget = Factory.create();
-    let response: string | null = null;
     const params = {
       ...defaultRenderParams,
       ...parameters,
       callback: (token: string) => {
-        response = token;
+        this.setResponseTextarea(token, widgetId);
         parameters.callback && parameters.callback(token);
       },
     };
     let gotcha = {
       widget,
-      get response() {
-        return response;
-      },
-      set response(res: string | null) {
-        response = res;
-      },
     };
 
-    widget.render(element, params);
+    widget.render(innerContainer, params);
     return this.widgets.push(gotcha) - 1;
   }
 
@@ -65,11 +76,24 @@ export class GreCaptcha {
     const gotcha = this.getWidget(widgetId);
     if (!gotcha) return;
     gotcha.widget.reset();
-    gotcha.response = null;
+    this.setResponseTextarea(null, widgetId);
   }
 
   getResponse(widgetId?: number): string | null {
-    return this.getWidget(widgetId)?.response ?? null;
+    return this.getResponseTextarea(widgetId)?.textContent ?? null;
+  }
+
+  private getResponseTextarea(widgetId?: number): Element | null {
+    const id = widgetId ?? 0;
+    return document.getElementById(
+      id === 0 ? "g-recaptcha-response" : `g-recaptcha-response-${id}`,
+    );
+  }
+
+  private setResponseTextarea(response: string | null, widgetId?: number) {
+    let textarea = this.getResponseTextarea(widgetId);
+    if (!textarea) return;
+    textarea.textContent = response ?? "";
   }
 
   private getWidget(widgetId?: number): Gotcha | undefined {
@@ -79,16 +103,14 @@ export class GreCaptcha {
   private getParamsFromContainer(container: Element): RenderParams {
     return {
       sitekey: container.getAttribute("data-sitekey") ?? "",
-      theme:
-        (container.getAttribute("data-theme") as
-          | "dark"
-          | "light"
-          | undefined) ?? "light",
-      size:
-        (container.getAttribute("data-size") as
-          | "compact"
-          | "normal"
-          | undefined) ?? "normal",
+      theme: container.getAttribute("data-theme") as
+        | "dark"
+        | "light"
+        | undefined,
+      size: container.getAttribute("data-size") as
+        | "compact"
+        | "normal"
+        | undefined,
       tabindex: parseInt(container.getAttribute("data-tabindex") || "0") || 0,
       callback: (window as any)[container.getAttribute("data-callback") ?? ""],
       "expired-callback": (window as any)[

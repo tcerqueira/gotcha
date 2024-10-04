@@ -1,4 +1,3 @@
-import { createSignal, Show } from "solid-js";
 import { render } from "solid-js/web";
 import { RenderParams, Widget, WidgetFactory } from "../lib";
 
@@ -11,6 +10,7 @@ export const Factory: WidgetFactory = {
     const renderWidget = (container: Element, parameters: RenderParams) => {
       containerElem = container;
       params = parameters;
+
       render(
         () => (
           <GotchaWidget
@@ -18,7 +18,7 @@ export const Factory: WidgetFactory = {
             onFailure={parameters["error-callback"]}
           />
         ),
-        container,
+        containerElem,
       );
     };
 
@@ -27,9 +27,7 @@ export const Factory: WidgetFactory = {
       reset: () => {
         // TODO: control state instead of clearing and rerendering
         if (!containerElem) return;
-        while (containerElem.firstChild) {
-          containerElem.removeChild(containerElem.lastChild!);
-        }
+        containerElem.getElementsByClassName("yes-no-widget")[0]?.remove();
         renderWidget(containerElem, params!);
       },
     };
@@ -43,7 +41,7 @@ export type GotchaWidgetProps = {
 
 export function GotchaWidget(props: GotchaWidgetProps) {
   return (
-    <>
+    <div class="yes-no-widget">
       <span>Are you a robot?</span>
       <button type="button" onClick={props.onFailure}>
         YES
@@ -54,6 +52,6 @@ export function GotchaWidget(props: GotchaWidgetProps) {
       >
         NO
       </button>
-    </>
+    </div>
   );
 }

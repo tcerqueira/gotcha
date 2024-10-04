@@ -3,6 +3,7 @@ use secrecy::Secret;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+#[expect(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct VerificationRequest {
     secret: Secret<String>,
@@ -20,6 +21,7 @@ pub struct VerificationResponse {
     error_codes: Option<Vec<ErrorCodes>>,
 }
 
+#[expect(dead_code)]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ErrorCodes {
@@ -32,7 +34,7 @@ pub enum ErrorCodes {
 }
 
 pub async fn site_verify(
-    Form(verification): Form<VerificationRequest>,
+    Form(_verification): Form<VerificationRequest>,
 ) -> Json<VerificationResponse> {
     todo!()
 }
