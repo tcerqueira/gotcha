@@ -10,3 +10,6 @@ tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+time = { version = "0.3", features = ["serde", "formatting"] }
+serde = { version = "1", features = ["derive"] }
+secrecy = { version = "0.8", features = ["serde"] }

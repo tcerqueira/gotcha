@@ -1,4 +1,7 @@
-use axum::Router;
+mod routes;
+
+use axum::{routing::post, Router};
+use routes::site_verify;
 use std::net::SocketAddr;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -13,7 +16,7 @@ async fn main() {
     axum::serve(listener, app()).await.unwrap();
 }
 
-pub fn app() -> Router {
+fn app() -> Router {
     let serve_dir = std::env::current_dir()
         .expect("Failed to get current directory")
         .join("server")
@@ -22,11 +25,16 @@ pub fn app() -> Router {
     tracing::debug!("Serving files from: {:?}", serve_dir);
 
     Router::new()
+        .nest("/api", api())
         .fallback_service(ServeDir::new(serve_dir))
         .layer(TraceLayer::new_for_http())
 }
 
-pub fn init_tracing() {
+fn api() -> Router {
+    Router::new().route("/siteverify", post(site_verify))
+}
+
+fn init_tracing() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
