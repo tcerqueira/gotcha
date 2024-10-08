@@ -1,9 +1,8 @@
 import { render } from "solid-js/web";
-import { RenderParams, Widget, WidgetFactory } from "../lib";
+import { generateResponseToken, RenderParams, WidgetFactory } from "../lib";
 
 export const Factory: WidgetFactory = {
-  create: function (): Widget {
-    // TODO: remove this hack, control state directly
+  create: () => {
     let containerElem: Element | undefined;
     let params: RenderParams | undefined;
 
@@ -12,12 +11,7 @@ export const Factory: WidgetFactory = {
       params = parameters;
 
       render(
-        () => (
-          <GotchaWidget
-            onSuccess={parameters.callback}
-            onFailure={parameters["error-callback"]}
-          />
-        ),
+        () => <GotchaWidget {...(params as RenderParams)} />,
         containerElem,
       );
     };
@@ -25,7 +19,7 @@ export const Factory: WidgetFactory = {
     return {
       render: renderWidget,
       reset: () => {
-        // TODO: control state instead of clearing and rerendering
+        // TODO: remove this hack, control state directly
         if (!containerElem) return;
         containerElem.getElementsByClassName("yes-no-widget")[0]?.remove();
         renderWidget(containerElem, params!);
@@ -34,23 +28,29 @@ export const Factory: WidgetFactory = {
   },
 };
 
-export type GotchaWidgetProps = {
-  onSuccess?: (response: string) => void;
-  onFailure?: () => void;
-};
+export type GotchaWidgetProps = RenderParams;
 
 export function GotchaWidget(props: GotchaWidgetProps) {
   return (
     <div class="yes-no-widget">
-      <span>Are you a robot?</span>
-      <button type="button" onClick={props.onFailure}>
-        YES
+      <span>I'm not a robot</span>
+      <button
+        type="button"
+        onClick={() =>
+          props.callback &&
+          props.callback(generateResponseToken(true, props.sitekey))
+        }
+      >
+        PASS
       </button>
       <button
         type="button"
-        onClick={() => props.onSuccess && props.onSuccess("congratz")}
+        onClick={() => {
+          props.callback &&
+            props.callback(generateResponseToken(false, props.sitekey));
+        }}
       >
-        NO
+        FAIL
       </button>
     </div>
   );

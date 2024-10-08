@@ -23,3 +23,11 @@ export const defaultRenderParams: RenderParams = {
   size: "normal",
   tabindex: 0,
 };
+
+// TODO: define a secure response token that can be verified server side
+export function generateResponseToken(
+  success: boolean,
+  secret: string,
+): string {
+  return success ? `${secret}__no-shit-sherlock` : `${secret}__L-bozo`;
+}
