@@ -20,7 +20,6 @@ fn app() -> Router {
     let serve_dir = std::env::current_dir()
         .expect("Failed to get current directory")
         .join("server")
-        .join("widget")
         .join("dist");
     tracing::debug!("Serving files from: {:?}", serve_dir);
 

@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import solidPlugin from "vite-plugin-solid";
 import checker from "vite-plugin-checker";
+import path from "path";
 
 export default defineConfig({
   plugins: [
@@ -10,6 +11,7 @@ export default defineConfig({
     }),
   ],
   build: {
+    outDir: path.resolve(__dirname, "../dist"),
     lib: {
       entry: "src/api.tsx",
       name: "Gotcha",
