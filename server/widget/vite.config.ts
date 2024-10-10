@@ -25,6 +25,6 @@ export default defineConfig({
         drop_debugger: false, // TODO: prod true
       },
     },
-    target: "es2015",
+    target: "esnext",
   },
 });

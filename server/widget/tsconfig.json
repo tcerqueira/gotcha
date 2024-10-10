@@ -2,8 +2,8 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "target": "ES2022",
-    // "allowJs": true,
+    "target": "ESNext",
+    "allowJs": true,
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true,
@@ -13,8 +13,8 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
 
-    "module": "ES2022",
-    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "sourceMap": true,
     "declaration": true,
 
