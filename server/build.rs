@@ -3,7 +3,7 @@ use std::process::Command;
 
 fn main() {
     let current_dir = env::current_dir().unwrap();
-    let widget_dir = current_dir.join("widget");
+    let widget_dir = current_dir.join("widget-api");
     // Change dir to /widget/
     env::set_current_dir(&widget_dir).unwrap();
 
