@@ -33,25 +33,13 @@ export type GotchaWidgetProps = RenderParams;
 export function GotchaWidget(props: GotchaWidgetProps) {
   return (
     <div class="yes-no-widget">
-      <span>I'm not a robot</span>
-      <button
-        type="button"
-        onClick={() =>
-          props.callback &&
-          props.callback(generateResponseToken(true, props.sitekey))
-        }
-      >
-        PASS
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          props.callback &&
-            props.callback(generateResponseToken(false, props.sitekey));
-        }}
-      >
-        FAIL
-      </button>
+      <iframe
+        src="http://localhost:8080/im-not-a-robot/index.html"
+        width={304}
+        height={78}
+        role="presentation"
+        sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
+      ></iframe>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { getJsParams } from "./js-params";
 import { defaultRenderParams, RenderParams, Widget } from "./lib";
-import { Factory } from "./components/yes-no-widget";
+import { Factory } from "./components/gotcha-widget";
 
 type Gotcha = {
   widget: Widget;

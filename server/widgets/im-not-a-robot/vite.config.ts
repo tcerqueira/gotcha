@@ -4,6 +4,7 @@ import solidPlugin from "vite-plugin-solid";
 import path from "path";
 
 export default defineConfig({
+  base: "/im-not-a-robot/",
   plugins: [
     /*
     Uncomment the following line to enable solid-devtools.
