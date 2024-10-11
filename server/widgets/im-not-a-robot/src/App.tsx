@@ -9,6 +9,7 @@ const App: Component = () => {
     // Simulate verification process
     setTimeout(() => {
       setVerified(true);
+      window.parent.postMessage("verified", "*");
     }, 1000);
   };
 

@@ -1,5 +1,6 @@
 import { render } from "solid-js/web";
 import { generateResponseToken, RenderParams, WidgetFactory } from "../lib";
+import { onMount } from "solid-js";
 
 export const Factory: WidgetFactory = {
   create: () => {
@@ -31,6 +32,14 @@ export const Factory: WidgetFactory = {
 export type GotchaWidgetProps = RenderParams;
 
 export function GotchaWidget(props: GotchaWidgetProps) {
+  onMount(() => {
+    window.addEventListener("message", (event) => {
+      // Always check the origin of the message
+      if (event.origin !== "http://localhost:8080") return;
+      props.callback?.(event.data);
+    });
+  });
+
   return (
     <div class="yes-no-widget">
       <iframe
