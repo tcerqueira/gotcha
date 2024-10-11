@@ -1,6 +1,6 @@
 import { render } from "solid-js/web";
 import { generateResponseToken, RenderParams, WidgetFactory } from "../lib";
-import { onMount } from "solid-js";
+import { onCleanup, onMount } from "solid-js";
 
 export const Factory: WidgetFactory = {
   create: () => {
@@ -22,7 +22,7 @@ export const Factory: WidgetFactory = {
       reset: () => {
         // TODO: remove this hack, control state directly
         if (!containerElem) return;
-        containerElem.getElementsByClassName("yes-no-widget")[0]?.remove();
+        containerElem.getElementsByClassName("gotcha-widget")[0]?.remove();
         renderWidget(containerElem, params!);
       },
     };
@@ -32,16 +32,20 @@ export const Factory: WidgetFactory = {
 export type GotchaWidgetProps = RenderParams;
 
 export function GotchaWidget(props: GotchaWidgetProps) {
+  const handleMessage = (event: MessageEvent<any>) => {
+    // Always check the origin of the message
+    if (event.origin !== "http://localhost:8080") return;
+    props.callback?.(event.data);
+  };
   onMount(() => {
-    window.addEventListener("message", (event) => {
-      // Always check the origin of the message
-      if (event.origin !== "http://localhost:8080") return;
-      props.callback?.(event.data);
-    });
+    window.addEventListener("message", handleMessage);
+  });
+  onCleanup(() => {
+    window.removeEventListener("message", handleMessage);
   });
 
   return (
-    <div class="yes-no-widget">
+    <div class="gotcha-widget">
       <iframe
         src="http://localhost:8080/im-not-a-robot/index.html"
         width={304}
