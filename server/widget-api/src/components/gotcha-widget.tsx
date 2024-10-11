@@ -1,6 +1,6 @@
 import { render } from "solid-js/web";
-import { generateResponseToken, RenderParams, WidgetFactory } from "../lib";
-import { onMount } from "solid-js";
+import { RenderParams, WidgetFactory } from "../lib";
+import { onCleanup, onMount } from "solid-js";
 
 export const Factory: WidgetFactory = {
   create: () => {
@@ -22,7 +22,7 @@ export const Factory: WidgetFactory = {
       reset: () => {
         // TODO: remove this hack, control state directly
         if (!containerElem) return;
-        containerElem.getElementsByClassName("yes-no-widget")[0]?.remove();
+        containerElem.getElementsByClassName("gotcha-widget")[0]?.remove();
         renderWidget(containerElem, params!);
       },
     };
@@ -32,17 +32,31 @@ export const Factory: WidgetFactory = {
 export type GotchaWidgetProps = RenderParams;
 
 export function GotchaWidget(props: GotchaWidgetProps) {
-  onMount(() => {
-    window.addEventListener("message", (event) => {
+  let iframeElement: HTMLIFrameElement | null = null;
+
+  const handleMessage = (event: MessageEvent<any>) => {
+    if (
       // Always check the origin of the message
-      if (event.origin !== "http://localhost:8080") return;
-      props.callback?.(event.data);
-    });
+      event.origin !== "http://localhost:8080" ||
+      // Only listen for events coming from this iframe and no other
+      event.source !== iframeElement?.contentWindow
+    )
+      return;
+
+    props.callback?.(event.data);
+  };
+  onMount(() => {
+    window.addEventListener("message", handleMessage);
+  });
+  onCleanup(() => {
+    window.removeEventListener("message", handleMessage);
   });
 
+  // TODO: hardcoded URL
   return (
-    <div class="yes-no-widget">
+    <div class="gotcha-widget">
       <iframe
+        ref={(el) => (iframeElement = el)}
         src="http://localhost:8080/im-not-a-robot/index.html"
         width={304}
         height={78}

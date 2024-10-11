@@ -42,7 +42,6 @@ export class GreCaptcha {
     const innerContainer = document.createElement("div");
     innerContainer.style.width = "304px";
     innerContainer.style.height = "78px";
-    // this automatically gets sent when inside a form
     // <textarea id="g-response-id" name="g-response-area" style="display: none;">response</textarea>
     const formResponse = document.createElement("textarea");
     formResponse.id =
@@ -61,15 +60,12 @@ export class GreCaptcha {
       ...parameters,
       callback: (token: string) => {
         this.setResponseTextarea(token, widgetId);
-        parameters.callback && parameters.callback(token);
+        parameters.callback?.(token);
       },
-    };
-    let gotcha = {
-      widget,
     };
 
     widget.render(innerContainer, params);
-    return this.widgets.push(gotcha) - 1;
+    return this.widgets.push({ widget }) - 1;
   }
 
   reset(widgetId?: number) {
@@ -112,13 +108,15 @@ export class GreCaptcha {
         | "normal"
         | undefined,
       tabindex: parseInt(container.getAttribute("data-tabindex") || "0") || 0,
-      callback: (window as any)[container.getAttribute("data-callback") ?? ""],
-      "expired-callback": (window as any)[
-        container.getAttribute("data-expired-callback") ?? ""
-      ],
-      "error-callback": (window as any)[
-        container.getAttribute("data-error-callback") ?? ""
-      ],
+      callback:
+        (window as any)[container.getAttribute("data-callback") ?? ""] ?? null,
+      "expired-callback":
+        (window as any)[
+          container.getAttribute("data-expired-callback") ?? ""
+        ] ?? null,
+      "error-callback":
+        (window as any)[container.getAttribute("data-error-callback") ?? ""] ??
+        null,
     };
   }
 }
