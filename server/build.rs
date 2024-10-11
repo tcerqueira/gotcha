@@ -6,9 +6,8 @@ fn main() {
     let current_dir = env::current_dir().unwrap();
 
     let widget_api_dir = current_dir.join("widget-api");
-    let widget_api_handle = std::thread::spawn(move || {
-        npm_run_build(widget_api_dir);
-    });
+    let widget_api_handle = std::thread::spawn(move || npm_run_build(widget_api_dir));
+    widget_api_handle.join().unwrap();
 
     let widgets_dir = current_dir.join("widgets");
     std::fs::read_dir(widgets_dir)
@@ -21,7 +20,7 @@ fn main() {
             println!("cargo:rerun-if-changed={}/package.json", path.display());
             std::thread::spawn(move || npm_run_build(path))
         })
-        .chain(std::iter::once(widget_api_handle))
+        // .chain(std::iter::once(widget_api_handle))
         .for_each(|h| h.join().expect("failed joining build command"));
 
     // Tell Cargo to rerun this script if any these changes
