@@ -1,5 +1,5 @@
 import { render } from "solid-js/web";
-import { RenderParams, WidgetFactory } from "../lib";
+import { RenderParams, WidgetFactory } from "@gotcha-widget/lib";
 import { onCleanup, onMount } from "solid-js";
 
 export const Factory: WidgetFactory = {

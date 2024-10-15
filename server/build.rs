@@ -5,6 +5,10 @@ use std::process::Command;
 fn main() {
     let current_dir = env::current_dir().unwrap();
 
+    // widget-lib
+    let widget_lib_dir = current_dir.join("widget-lib");
+    npm_run_build(widget_lib_dir);
+    // widget-api
     let widget_api_dir = current_dir.join("widget-api");
     let widget_api_handle = std::thread::spawn(move || npm_run_build(widget_api_dir));
     widget_api_handle.join().unwrap();
@@ -24,13 +28,14 @@ fn main() {
         .for_each(|h| h.join().expect("failed joining build command"));
 
     // Tell Cargo to rerun this script if any these changes
+    println!("cargo:rerun-if-changed=server/widget-lib/src");
+    println!("cargo:rerun-if-changed=server/widget-lib/package.json");
     println!("cargo:rerun-if-changed=server/widget-api/src");
     println!("cargo:rerun-if-changed=server/widget-api/package.json");
 }
 
 fn npm_run_build(path: PathBuf) {
     let current_dir = env::current_dir().unwrap();
-    // Change dir
     env::set_current_dir(&path).unwrap();
 
     let npm_install_status = Command::new("npm")

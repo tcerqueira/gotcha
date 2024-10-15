@@ -18,6 +18,7 @@ export default defineConfig({
   },
   build: {
     outDir: path.resolve(__dirname, "../../dist/im-not-a-robot"),
+    emptyOutDir: true,
     target: "esnext",
   },
 });
