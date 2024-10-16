@@ -1,5 +1,5 @@
 import { render } from "solid-js/web";
-import { RenderParams, WidgetFactory } from "@gotcha-widget/lib";
+import { RenderParams, WidgetFactory, WidgetMessage } from "@gotcha-widget/lib";
 import { onCleanup, onMount } from "solid-js";
 
 export const Factory: WidgetFactory = {
@@ -43,7 +43,18 @@ export function GotchaWidget(props: GotchaWidgetProps) {
     )
       return;
 
-    props.callback?.(event.data);
+    let message = event.data as WidgetMessage;
+    switch (message.type) {
+      case "response-callback":
+        props.callback?.(message.response);
+        break;
+      case "expired-callback":
+        props["expired-callback"]?.();
+        break;
+      case "error-callback":
+        props["error-callback"]?.();
+        break;
+    }
   };
   onMount(() => {
     window.addEventListener("message", handleMessage);
@@ -52,12 +63,15 @@ export function GotchaWidget(props: GotchaWidgetProps) {
     window.removeEventListener("message", handleMessage);
   });
 
-  // TODO: hardcoded URL
+  // TODO: remove hardcoded URL
+  const url = new URL("http://localhost:8080/im-not-a-robot/index.html");
+  url.searchParams.append("token", props.sitekey);
+
   return (
     <div class="gotcha-widget">
       <iframe
         ref={(el) => (iframeElement = el)}
-        src="http://localhost:8080/im-not-a-robot/index.html"
+        src={url.href}
         width={304}
         height={78}
         role="presentation"

@@ -62,6 +62,14 @@ export class GreCaptcha {
         this.setResponseTextarea(token, widgetId);
         parameters.callback?.(token);
       },
+      "expired-callback": () => {
+        this.setResponseTextarea("", widgetId);
+        parameters["expired-callback"]?.();
+      },
+      "error-callback": () => {
+        this.setResponseTextarea("", widgetId);
+        parameters["error-callback"]?.();
+      },
     };
 
     widget.render(innerContainer, params);
@@ -76,24 +84,25 @@ export class GreCaptcha {
   }
 
   getResponse(widgetId?: number): string | null {
-    return this.getResponseTextarea(widgetId)?.textContent ?? null;
+    return this.getResponseElement(widgetId)?.textContent ?? null;
   }
 
-  private getResponseTextarea(widgetId?: number): Element | null {
-    const id = widgetId ?? 0;
+  private getResponseElement(widgetId: number = 0): Element | null {
     return document.getElementById(
-      id === 0 ? "g-recaptcha-response" : `g-recaptcha-response-${id}`,
+      widgetId === 0
+        ? "g-recaptcha-response"
+        : `g-recaptcha-response-${widgetId}`,
     );
   }
 
   private setResponseTextarea(response: string | null, widgetId?: number) {
-    let textarea = this.getResponseTextarea(widgetId);
+    let textarea = this.getResponseElement(widgetId);
     if (!textarea) return;
     textarea.textContent = response ?? "";
   }
 
-  private getWidget(widgetId?: number): Gotcha | undefined {
-    return this.widgets[widgetId ?? 0];
+  private getWidget(widgetId: number = 0): Gotcha | undefined {
+    return this.widgets[widgetId];
   }
 
   private getParamsFromContainer(container: Element): RenderParams {

@@ -24,10 +24,40 @@ export const defaultRenderParams: RenderParams = {
   tabindex: 0,
 };
 
-// TODO: define a secure response token that can be verified server side
-export function generateResponseToken(
+export type WidgetMessage =
+  | { type: "response-callback"; response: string }
+  | { type: "expired-callback" }
+  | { type: "error-callback" };
+
+const TARGET_ORIGIN = "*";
+
+export function invokeResponseCallback(
   success: boolean,
   secret: string,
-): string {
+  win: Window = window.parent,
+) {
+  const message: WidgetMessage = {
+    type: "response-callback",
+    response: generateResponseToken(success, secret || "not_found"),
+  };
+  win.postMessage(message, TARGET_ORIGIN);
+}
+
+export function invokeExpiredCallback(win: Window = window.parent) {
+  const message: WidgetMessage = {
+    type: "expired-callback",
+  };
+  win.postMessage(message, TARGET_ORIGIN);
+}
+
+export function invokeErrorCallback(win: Window = window.parent) {
+  const message: WidgetMessage = {
+    type: "error-callback",
+  };
+  win.postMessage(message, TARGET_ORIGIN);
+}
+
+// TODO: define a secure response token that can be verified server side
+function generateResponseToken(success: boolean, secret: string): string {
   return success ? `${secret}__no-shit-sherlock` : `${secret}__L-bozo`;
 }

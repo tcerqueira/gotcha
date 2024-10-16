@@ -1,15 +1,40 @@
-import { createSignal, type Component } from "solid-js";
+import {
+  invokeExpiredCallback,
+  invokeResponseCallback,
+} from "@gotcha-widget/lib";
+import { createMemo, createSignal, type Component } from "solid-js";
+
+function getQueryParam(param: string): string | null {
+  const searchParams = new URLSearchParams(window.location.search);
+  return searchParams.get(param);
+}
+
+type State = "blank" | "verifying" | "verified" | "expired";
 
 const App: Component = () => {
-  const [checked, setChecked] = createSignal(false);
-  const [verified, setVerified] = createSignal(false);
+  const [state, setState] = createSignal<State>("blank");
+  const checked = createMemo(
+    () => state() === "verifying" || state() === "verified",
+  );
+  const verified = createMemo(() => state() === "verified");
+  const expired = createMemo(() => state() === "expired");
+
+  const token = getQueryParam("token");
+  if (!token) {
+    return <span>Missing api token.</span>;
+  }
 
   const handleCheck = () => {
-    setChecked(true);
-    // Simulate verification process
+    setState("verifying");
+    // Simulate verification process. Should go to server and receive an encrypted response
     setTimeout(() => {
-      setVerified(true);
-      window.parent.postMessage("verified", "*");
+      setState("verified");
+      invokeResponseCallback(true, token);
+
+      setTimeout(() => {
+        setState("expired");
+        invokeExpiredCallback();
+      }, 10000);
     }, 1000);
   };
 
@@ -44,6 +69,9 @@ const App: Component = () => {
       )}
       {verified() && (
         <div class="mt-2 text-sm text-green-500">Verification successful!</div>
+      )}
+      {expired() && (
+        <div class="mt-2 text-sm text-red-500">Verification expired.</div>
       )}
     </div>
   );
