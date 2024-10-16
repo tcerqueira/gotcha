@@ -1,6 +1,7 @@
 import { getJsParams } from "./js-params";
 import { defaultRenderParams, RenderParams, Widget } from "@gotcha-widget/lib";
 import { Factory } from "./components/gotcha-widget";
+import { render } from "solid-js/web";
 
 type Gotcha = {
   widget: Widget;
@@ -35,24 +36,26 @@ export class GreCaptcha {
     if (element === null) {
       return null;
     }
-    const widgetId = this.widgets.length;
 
-    // create wrapper in case the target container already has elements
-    // <div style="width: 304px; height: 78px"></div>
-    const innerContainer = document.createElement("div");
-    innerContainer.style.width = "304px";
-    innerContainer.style.height = "78px";
-    // <textarea id="g-response-id" name="g-response-area" style="display: none;">response</textarea>
-    const formResponse = document.createElement("textarea");
-    formResponse.id =
+    const widgetId = this.widgets.length;
+    const containerId =
+      widgetId === 0
+        ? "g-recaptcha-container"
+        : `g-recaptcha-container-${widgetId}`;
+    const textareaId =
       widgetId === 0
         ? "g-recaptcha-response"
         : `g-recaptcha-response-${widgetId}`;
-    formResponse.name = "g-recaptcha-response";
-    formResponse.style.display = "none";
-    // add to the DOM
-    innerContainer.appendChild(formResponse);
-    element.appendChild(innerContainer);
+
+    const innerContainer = (
+      <div id={containerId} style="width: 304px; height: 78px">
+        <textarea
+          id={textareaId}
+          name="g-recaptcha-response"
+          style="display: none;"
+        ></textarea>
+      </div>
+    );
 
     const widget = Factory.create();
     const params = {
@@ -72,7 +75,8 @@ export class GreCaptcha {
       },
     };
 
-    widget.render(innerContainer, params);
+    render(() => innerContainer, element);
+    widget.render(document.getElementById(containerId)!, params);
     return this.widgets.push({ widget }) - 1;
   }
 
