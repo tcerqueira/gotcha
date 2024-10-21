@@ -44,7 +44,7 @@ export class GreCaptcha {
         : `g-recaptcha-response-${widgetId}`;
 
     const innerContainer = (
-      <div id={containerId} style="width: 304px; height: 78px">
+      <div id={containerId}>
         <textarea
           id={textareaId}
           name="g-recaptcha-response"

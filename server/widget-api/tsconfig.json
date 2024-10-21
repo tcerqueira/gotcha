@@ -3,7 +3,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "ESNext",
-    "allowJs": true,
+    // "allowJs": true,
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true,
