@@ -17,3 +17,24 @@ async fn site_verify() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn challenge() -> anyhow::Result<()> {
+    let TestServer { port, .. } = test_helpers::create_server().await;
+
+    let _response = reqwest::get(format!("http://localhost:{port}/api/challenge")).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn process_challenge() -> anyhow::Result<()> {
+    let TestServer { port, .. } = test_helpers::create_server().await;
+
+    let _response = HTTP_CLIENT
+        .post(format!("http://localhost:{port}/api/process-challenge"))
+        .send()
+        .await?;
+
+    Ok(())
+}

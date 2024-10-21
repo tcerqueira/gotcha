@@ -1,12 +1,3 @@
-export interface WidgetFactory {
-  create: () => Widget;
-}
-
-export interface Widget {
-  render: (container: Element, parameters: RenderParams) => void;
-  reset: () => void;
-}
-
 export type RenderParams = {
   sitekey: string;
   theme?: "dark" | "light";

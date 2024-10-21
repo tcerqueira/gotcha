@@ -1,33 +1,33 @@
 import { render } from "solid-js/web";
-import { RenderParams, WidgetFactory, WidgetMessage } from "@gotcha-widget/lib";
-import { onCleanup, onMount } from "solid-js";
+import { RenderParams, WidgetMessage } from "@gotcha-widget/lib";
+import { createResource, Match, onCleanup, onMount, Switch } from "solid-js";
 
-export const Factory: WidgetFactory = {
-  create: () => {
-    let containerElem: Element | undefined;
-    let params: RenderParams | undefined;
+export interface Widget {
+  render: (container: Element, parameters: RenderParams) => void;
+  reset: () => void;
+}
 
-    const renderWidget = (container: Element, parameters: RenderParams) => {
-      containerElem = container;
-      params = parameters;
+export function createWidget(): Widget {
+  let containerElem: Element | undefined;
+  let params: RenderParams | undefined;
 
-      render(
-        () => <GotchaWidget {...(params as RenderParams)} />,
-        containerElem,
-      );
-    };
+  const renderWidget = (container: Element, parameters: RenderParams) => {
+    containerElem = container;
+    params = parameters;
 
-    return {
-      render: renderWidget,
-      reset: () => {
-        // TODO: remove this hack, control state directly
-        if (!containerElem) return;
-        containerElem.getElementsByClassName("gotcha-widget")[0]?.remove();
-        renderWidget(containerElem, params!);
-      },
-    };
-  },
-};
+    render(() => <GotchaWidget {...(params as RenderParams)} />, containerElem);
+  };
+
+  return {
+    render: renderWidget,
+    reset: () => {
+      // TODO: remove this hack, control state directly
+      if (!containerElem) return;
+      containerElem.getElementsByClassName("gotcha-widget")[0]?.remove();
+      renderWidget(containerElem, params!);
+    },
+  };
+}
 
 export type GotchaWidgetProps = RenderParams;
 
@@ -64,19 +64,43 @@ export function GotchaWidget(props: GotchaWidgetProps) {
   });
 
   // TODO: remove hardcoded URL
-  const url = new URL("http://localhost:8080/im-not-a-robot/index.html");
-  url.searchParams.append("token", props.sitekey);
+  const [challenge] = createResource(props.sitekey, fetchChallenge);
 
   return (
     <div class="gotcha-widget">
-      <iframe
-        ref={(el) => (iframeElement = el)}
-        src={url.href}
-        width={304}
-        height={78}
-        role="presentation"
-        sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
-      ></iframe>
+      <Switch>
+        <Match when={challenge.loading}>
+          <p>Loading...</p>
+        </Match>
+        <Match when={challenge.error}>
+          <span>Error: {challenge.error}</span>
+        </Match>
+        <Match when={challenge()}>
+          <iframe
+            ref={(el) => (iframeElement = el)}
+            src={challenge()?.url}
+            width={challenge()?.width}
+            height={challenge()?.height}
+            role="presentation"
+            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
+          ></iframe>
+        </Match>
+      </Switch>
     </div>
   );
+}
+
+type Challenge = {
+  url: string;
+  width: number;
+  height: number;
+};
+
+async function fetchChallenge(token: string): Promise<Challenge> {
+  const origin = new URL(import.meta.url).origin;
+  const url = new URL(`${origin}/api/challenge`);
+  url.searchParams.append("token", token);
+
+  const response = await fetch(url);
+  return (await response.json()) as Challenge;
 }

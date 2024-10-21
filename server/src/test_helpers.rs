@@ -1,5 +1,5 @@
-use crate::{app, init_tracing};
-use std::net::SocketAddr;
+use crate::app;
+use std::{net::SocketAddr, sync::OnceLock};
 use tokio::task::JoinHandle;
 
 pub struct TestServer {
@@ -19,4 +19,13 @@ pub async fn create_server() -> TestServer {
     });
 
     TestServer { port, join_handle }
+}
+
+pub fn init_tracing() {
+    static TRACING: OnceLock<()> = OnceLock::new();
+    TRACING.get_or_init(|| {
+        tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .init();
+    });
 }

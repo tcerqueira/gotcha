@@ -1,14 +1,10 @@
 import { getJsParams } from "./js-params";
-import { defaultRenderParams, RenderParams, Widget } from "@gotcha-widget/lib";
-import { Factory } from "./components/gotcha-widget";
+import { defaultRenderParams, RenderParams } from "@gotcha-widget/lib";
 import { render } from "solid-js/web";
-
-type Gotcha = {
-  widget: Widget;
-};
+import { createWidget, Widget } from "./components/gotcha-widget";
 
 export class GreCaptcha {
-  widgets: Gotcha[] = [];
+  widgets: Widget[] = [];
 
   constructor() {
     const { onload, render, hl } = getJsParams();
@@ -57,7 +53,7 @@ export class GreCaptcha {
       </div>
     );
 
-    const widget = Factory.create();
+    const widget = createWidget();
     const params = {
       ...defaultRenderParams,
       ...parameters,
@@ -66,24 +62,24 @@ export class GreCaptcha {
         parameters.callback?.(token);
       },
       "expired-callback": () => {
-        this.setResponseTextarea("", widgetId);
+        this.setResponseTextarea(null, widgetId);
         parameters["expired-callback"]?.();
       },
       "error-callback": () => {
-        this.setResponseTextarea("", widgetId);
+        this.setResponseTextarea(null, widgetId);
         parameters["error-callback"]?.();
       },
     };
 
     render(() => innerContainer, element);
     widget.render(document.getElementById(containerId)!, params);
-    return this.widgets.push({ widget }) - 1;
+    return this.widgets.push(widget) - 1;
   }
 
   reset(widgetId?: number) {
     const gotcha = this.getWidget(widgetId);
     if (!gotcha) return;
-    gotcha.widget.reset();
+    gotcha.reset();
     this.setResponseTextarea(null, widgetId);
   }
 
@@ -105,7 +101,7 @@ export class GreCaptcha {
     textarea.textContent = response ?? "";
   }
 
-  private getWidget(widgetId: number = 0): Gotcha | undefined {
+  private getWidget(widgetId: number = 0): Widget | undefined {
     return this.widgets[widgetId];
   }
 

@@ -3,7 +3,7 @@ use axum::{
     Router,
 };
 use routes::{get_challenge, process_challenge, site_verify};
-use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod routes;
@@ -27,6 +27,7 @@ fn api() -> Router {
         .route("/challenge", get(get_challenge))
         .route("/process-challenge", post(process_challenge))
         .route("/siteverify", post(site_verify))
+        .layer(CorsLayer::permissive())
 }
 
 pub fn init_tracing() {
