@@ -71,7 +71,7 @@ const App: Component = () => {
         <div class="mt-2 text-sm text-green-500">Verification successful!</div>
       )}
       {expired() && (
-        <div class="mt-2 text-sm text-red-500">Verification expired.</div>
+        <div class="mt-2 text-sm text-red-500">Verification has expired.</div>
       )}
     </div>
   );

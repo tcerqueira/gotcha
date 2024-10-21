@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{Form, Json};
 use secrecy::Secret;
 use serde::{Deserialize, Serialize};
@@ -33,8 +35,23 @@ pub enum ErrorCodes {
     TimeoutOrDuplicate,
 }
 
+pub async fn get_challenge() {
+    todo!()
+}
+
 pub async fn site_verify(
-    Form(_verification): Form<VerificationRequest>,
+    Form(verification): Form<HashMap<String, String>>,
 ) -> Json<VerificationResponse> {
+    tracing::info!("{verification:?}");
+
+    Json(VerificationResponse {
+        success: false,
+        challenge_ts: OffsetDateTime::now_utc(),
+        hostname: "wtv".into(),
+        error_codes: None,
+    })
+}
+
+pub async fn process_challenge() {
     todo!()
 }
