@@ -1,4 +1,4 @@
-import "./index.css";
+import "./styles.css";
 import { GreCaptcha } from "./grecaptcha";
 import { getJsParams } from "./js-params";
 import { loadCss } from "./load-css";
@@ -11,5 +11,5 @@ loadCss()
     onload && onload();
   })
   .catch((error) => {
-    console.error("Error loading CSS:", error);
+    console.error("Error initializing Gotcha:", error);
   });

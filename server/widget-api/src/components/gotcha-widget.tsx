@@ -35,13 +35,13 @@ export function GotchaWidget(props: GotchaWidgetProps) {
   let iframeElement: HTMLIFrameElement | null = null;
 
   const handleMessage = (event: MessageEvent<any>) => {
-    if (
-      // Always check the origin of the message
-      event.origin !== "http://localhost:8080" ||
-      // Only listen for events coming from this iframe and no other
-      event.source !== iframeElement?.contentWindow
-    )
-      return;
+    // if (
+    //   // Always check the origin of the message
+    //   event.origin !== "http://localhost:8080" ||
+    //   // Only listen for events coming from this iframe and no other
+    //   event.source !== iframeElement?.contentWindow
+    // )
+    //   return;
 
     let message = event.data as WidgetMessage;
     switch (message.type) {
@@ -76,14 +76,23 @@ export function GotchaWidget(props: GotchaWidgetProps) {
           <span>Error: {challenge.error}</span>
         </Match>
         <Match when={challenge()}>
-          <iframe
-            ref={(el) => (iframeElement = el)}
-            src={challenge()?.url}
-            width={challenge()?.width}
-            height={challenge()?.height}
-            role="presentation"
-            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
-          ></iframe>
+          <div
+            class="border-2 border-purple-200 rounded box-content bg-gray-50"
+            style={{ width: `${challenge()?.width ?? 304}px` }}
+          >
+            <iframe
+              class="border-none overflow-hidden m-0 p-0 focus-visible:outline-none"
+              ref={(el) => (iframeElement = el)}
+              src={challenge()?.url}
+              width={challenge()?.width}
+              height={challenge()?.height}
+              role="presentation"
+              sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
+            ></iframe>
+            <div class="bg-gray-200">
+              <p class="text-right m-0">Gotcha</p>
+            </div>
+          </div>
         </Match>
       </Switch>
     </div>

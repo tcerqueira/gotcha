@@ -1,3 +1,5 @@
-/* @tailwind base; */
+.gotcha-widget {
+    @tailwind base;
+}
 @tailwind components;
 @tailwind utilities;
