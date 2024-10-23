@@ -1,5 +1,5 @@
-use crate::app;
-use std::{net::SocketAddr, sync::OnceLock};
+use crate::{app, get_configuration};
+use std::sync::OnceLock;
 use tokio::task::JoinHandle;
 
 pub struct TestServer {
@@ -8,14 +8,15 @@ pub struct TestServer {
 }
 
 pub async fn create_server() -> TestServer {
-    init_tracing();
+    // init_tracing();
+    let config = get_configuration().expect("failed to load configuration");
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 0));
+    let addr = format!("{}:{}", config.application.host, config.application.port);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     let port = listener.local_addr().unwrap().port();
 
     let join_handle = tokio::spawn(async move {
-        axum::serve(listener, app()).await.unwrap();
+        axum::serve(listener, app(config)).await.unwrap();
     });
 
     TestServer { port, join_handle }

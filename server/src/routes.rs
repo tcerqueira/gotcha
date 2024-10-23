@@ -1,11 +1,14 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use axum::extract::Query;
+use axum::extract::{Query, State};
 use axum::{Form, Json};
 use reqwest::Url;
 use secrecy::Secret;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+
+use crate::{AppState, Challenge};
 
 #[expect(dead_code)]
 #[derive(Debug, Deserialize)]
@@ -50,26 +53,17 @@ pub async fn site_verify(
     })
 }
 
-#[derive(Debug, Serialize)]
-pub struct Challenge {
-    url: String,
-    width: u16,
-    height: u16,
-}
-
-pub async fn get_challenge(Query(params): Query<HashMap<String, String>>) -> Json<Challenge> {
-    let challenges = [Challenge {
-        url: String::from("http://localhost:8080/im-not-a-robot/index.html"),
-        width: 304,
-        height: 78,
-    }];
-
-    let mut url = Url::parse(&challenges[0].url).unwrap();
+pub async fn get_challenge(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Json<Challenge> {
+    let challenge = &state.challenges[0];
+    let mut url = Url::parse(&challenge.url).unwrap();
     url.query_pairs_mut().append_pair("token", &params["token"]);
 
     Json(Challenge {
         url: url.to_string(),
-        ..challenges[0]
+        ..*challenge
     })
 }
 

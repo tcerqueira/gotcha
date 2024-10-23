@@ -1,11 +1,14 @@
-use std::net::SocketAddr;
-
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     gotcha_server::init_tracing();
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    let config = gotcha_server::get_configuration()?;
 
-    tracing::info!("listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, gotcha_server::app()).await.unwrap();
+    let addr = format!("{}:{}", config.application.host, config.application.port);
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+
+    tracing::info!("Listening on {}", listener.local_addr()?);
+    axum::serve(listener, gotcha_server::app(config))
+        .await
+        .unwrap();
+    Ok(())
 }

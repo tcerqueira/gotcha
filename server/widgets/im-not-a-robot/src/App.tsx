@@ -25,6 +25,8 @@ const App: Component = () => {
   }
 
   const handleCheck = () => {
+    if (state() == "verifying") return;
+
     setState("verifying");
     // Simulate verification process. Should go to server and receive an encrypted response
     setTimeout(() => {
