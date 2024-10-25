@@ -21,6 +21,6 @@
   },
   "dependencies": {
     "solid-js": "^1.8.11",
-    "@gotcha-widget/lib": "file:../../widget-lib"
+    "@gotcha-widget/lib": "github:tcerqueira/gotcha-widget-lib#master"
   }
 }

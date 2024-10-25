@@ -11,7 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@gotcha-widget/lib": "file:../widget-lib",
+    "@gotcha-widget/lib": "github:tcerqueira/gotcha-widget-lib#master",
     "solid-js": "^1.9.1"
   },
   "devDependencies": {

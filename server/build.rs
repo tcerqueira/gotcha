@@ -5,11 +5,6 @@ use std::process::Command;
 fn main() {
     let current_dir = env::current_dir().unwrap();
 
-    let widget_lib_dir = current_dir.join("widget-lib");
-    npm_run_build(widget_lib_dir);
-    println!("cargo::rerun-if-changed=widget-lib/src");
-    println!("cargo::rerun-if-changed=widget-lib/package.json");
-
     std::thread::scope(|s| {
         let widget_api_dir = current_dir.join("widget-api");
         s.spawn(move || npm_run_build(widget_api_dir));
