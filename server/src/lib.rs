@@ -6,18 +6,21 @@ use axum::{
 };
 use configuration::current_crate_dir;
 pub use configuration::{get_configuration, Config};
-use routes::{get_challenge, process_challenge, site_verify};
+use routes::{
+    internal::{get_challenge, process_challenge},
+    public::site_verify,
+};
 use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub mod configuration;
-mod routes;
+pub mod routes;
 pub mod test_helpers;
 
 #[derive(Debug)]
-struct AppState {
+pub struct AppState {
     challenges: Vec<Challenge>,
 }
 

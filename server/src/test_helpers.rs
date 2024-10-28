@@ -11,7 +11,7 @@ pub async fn create_server() -> TestServer {
     // init_tracing();
     let config = get_configuration().expect("failed to load configuration");
 
-    let addr = format!("{}:{}", config.application.host, config.application.port);
+    let addr = format!("{}:0", config.application.host);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     let port = listener.local_addr().unwrap().port();
 
