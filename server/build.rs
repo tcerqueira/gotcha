@@ -8,7 +8,7 @@ fn main() {
     std::thread::scope(|s| {
         let widget_api_dir = current_dir.join("widget-api");
         s.spawn(move || npm_run_build(widget_api_dir));
-        println!("cargo::rerun-if-changed=widget-api/src");
+        println!("cargo::rerun-if-changed=widget-api/src/");
         println!("cargo::rerun-if-changed=widget-api/package.json");
 
         let widgets_dir = current_dir.join("widgets");
@@ -18,7 +18,7 @@ fn main() {
             .filter(|entry| entry.metadata().unwrap().is_dir())
             .for_each(|dir| {
                 let path = dir.path();
-                println!("cargo::rerun-if-changed={}/src", path.display());
+                println!("cargo::rerun-if-changed={}/src/", path.display());
                 println!("cargo::rerun-if-changed={}/package.json", path.display());
                 s.spawn(move || npm_run_build(path));
             })

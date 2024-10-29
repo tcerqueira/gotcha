@@ -34,16 +34,16 @@ export type GotchaWidgetProps = RenderParams;
 export function GotchaWidget(props: GotchaWidgetProps) {
   let iframeElement: HTMLIFrameElement | null = null;
 
-  const handleMessage = (event: MessageEvent<any>) => {
-    // if (
-    //   // Always check the origin of the message
-    //   event.origin !== "http://localhost:8080" ||
-    //   // Only listen for events coming from this iframe and no other
-    //   event.source !== iframeElement?.contentWindow
-    // )
-    //   return;
+  const handleMessage = (event: MessageEvent<WidgetMessage>) => {
+    if (
+      // Always check the origin of the message
+      // event.origin !== "http://localhost:8080" ||
+      // Only listen for events coming from this iframe and no other
+      event.source !== iframeElement?.contentWindow
+    )
+      return;
 
-    let message = event.data as WidgetMessage;
+    let message = event.data;
     switch (message.type) {
       case "response-callback":
         props.callback?.(message.response);

@@ -2,15 +2,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Context;
 use axum::extract::{Query, State};
 use axum::Json;
-use jsonwebtoken::{EncodingKey, Header};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-use crate::{AppState, Challenge};
+use crate::{response_token, AppState, Challenge};
 
 pub async fn get_challenge(
     State(state): State<Arc<AppState>>,
@@ -36,21 +34,15 @@ pub struct ChallengeResponse {
     pub token: String,
 }
 
-pub static TMP_SECRET_KEY: &str = "bXktdGVzdGluZy1zZWNyZXQ="; // "my-testing-secret" in base64
 pub static TOKEN_TIMEOUT_SECS: u64 = 30;
 
 pub async fn process_challenge(
     Json(results): Json<ChallengeResults>,
 ) -> super::Result<Json<ChallengeResponse>> {
     Ok(Json(ChallengeResponse {
-        token: jsonwebtoken::encode(
-            &Header::new(jsonwebtoken::Algorithm::HS256),
-            &Claims::new(ResponseClaims {
-                success: results.success,
-            }),
-            &EncodingKey::from_base64_secret(TMP_SECRET_KEY).context("invalid secret")?,
-        )
-        .context("failed encoding to jwt")?,
+        token: response_token::encode(ResponseClaims {
+            success: results.success,
+        })?,
     }))
 }
 
@@ -68,9 +60,13 @@ pub struct ResponseClaims {
 }
 
 impl Claims {
-    fn new(response: ResponseClaims) -> Self {
+    pub fn new(response: ResponseClaims) -> Self {
+        Self::with_timeout(Duration::from_secs(TOKEN_TIMEOUT_SECS), response)
+    }
+
+    pub fn with_timeout(timeout: Duration, response: ResponseClaims) -> Self {
         Self {
-            exp: OffsetDateTime::now_utc() + Duration::from_secs(TOKEN_TIMEOUT_SECS),
+            exp: OffsetDateTime::now_utc() + timeout,
             custom: response,
         }
     }

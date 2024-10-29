@@ -16,6 +16,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub mod configuration;
+pub mod response_token;
 pub mod routes;
 pub mod test_helpers;
 

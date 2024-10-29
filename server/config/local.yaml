@@ -10,3 +10,6 @@ challenges:
   - url: "http://localhost:8080/wasm/index.html"
     width: 1280
     height: 720
+  # - url: "https://preview--fun-tac-tac-toe.gptengineer.run/"
+  #   width: 300
+  #   height: 600

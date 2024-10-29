@@ -1,0 +1,56 @@
+use axum::{
+    extract::rejection::FormRejection,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
+use thiserror::Error;
+use time::OffsetDateTime;
+
+use super::public::{ErrorCodes, VerificationResponse};
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error(transparent)]
+    Unexpected(#[from] anyhow::Error),
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        match self {
+            Error::Unexpected(err) => {
+                tracing::error!("internal server error (500): {:?}", err);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        }
+        .into_response()
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum VerificationError {
+    #[error(transparent)]
+    UserError(#[from] VerificationResponse),
+    #[error(transparent)]
+    BadRequest(#[from] FormRejection),
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error),
+}
+
+impl IntoResponse for VerificationError {
+    fn into_response(self) -> Response {
+        match self {
+            VerificationError::UserError(verification) => Json(verification).into_response(),
+            VerificationError::BadRequest(_) => Json(VerificationResponse::failure(
+                OffsetDateTime::UNIX_EPOCH,
+                "".to_string(),
+                vec![ErrorCodes::BadRequest],
+            ))
+            .into_response(),
+            VerificationError::UnexpectedError(error) => {
+                tracing::error!("Internal Server Error (500): {}", error);
+                (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+            }
+        }
+    }
+}
