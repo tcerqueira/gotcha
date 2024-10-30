@@ -33,11 +33,15 @@ export type GotchaWidgetProps = RenderParams;
 
 export function GotchaWidget(props: GotchaWidgetProps) {
   let iframeElement: HTMLIFrameElement | null = null;
+  const [challenge] = createResource(props.sitekey, fetchChallenge);
 
   const handleMessage = (event: MessageEvent<WidgetMessage>) => {
+    const challengeData = challenge();
+    if (!challengeData) return;
+
     if (
       // Always check the origin of the message
-      // event.origin !== "http://localhost:8080" ||
+      event.origin !== new URL(challengeData.url).origin ||
       // Only listen for events coming from this iframe and no other
       event.source !== iframeElement?.contentWindow
     )
@@ -62,9 +66,6 @@ export function GotchaWidget(props: GotchaWidgetProps) {
   onCleanup(() => {
     window.removeEventListener("message", handleMessage);
   });
-
-  // TODO: remove hardcoded URL
-  const [challenge] = createResource(props.sitekey, fetchChallenge);
 
   return (
     <div class="gotcha-widget">
