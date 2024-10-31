@@ -16,7 +16,7 @@ pub async fn create_server() -> TestServer {
     let port = listener.local_addr().unwrap().port();
 
     let join_handle = tokio::spawn(async move {
-        axum::serve(listener, app(config)).await.unwrap();
+        axum::serve(listener, app(config).await).await.unwrap();
     });
 
     TestServer { port, join_handle }

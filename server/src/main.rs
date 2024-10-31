@@ -11,7 +11,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Listening on {}", listener.local_addr()?);
     axum::serve(
         listener,
-        gotcha_server::app(config).into_make_service_with_connect_info::<SocketAddr>(),
+        gotcha_server::app(config)
+            .await
+            .into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await
     .unwrap();

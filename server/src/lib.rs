@@ -12,25 +12,20 @@ use routes::{
 };
 use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
+use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub mod configuration;
+pub mod db;
 pub mod response_token;
 pub mod routes;
 pub mod test_helpers;
 
 #[derive(Debug)]
 pub struct AppState {
-    challenges: Vec<Challenge>,
-}
-
-impl AppState {
-    fn new(config: Config) -> Self {
-        Self {
-            challenges: config.challenges,
-        }
-    }
+    pub challenges: Vec<Challenge>,
+    pub pool: PgPool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,21 +37,26 @@ pub struct Challenge {
     height: u16,
 }
 
-pub fn app(config: Config) -> Router {
+pub async fn app(config: Config) -> Router {
     let serve_dir = current_crate_dir()
-        .join(config.application.serve_dir.clone())
+        .join(config.application.serve_dir)
         .canonicalize()
         .unwrap();
     tracing::debug!("Serving files from: {:?}", serve_dir);
 
+    let state = AppState {
+        challenges: config.challenges,
+        pool: db::connect_database(config.database),
+    };
+
     Router::new()
-        .nest("/api", api(config))
+        .nest("/api", api(state))
         .fallback_service(ServeDir::new(serve_dir))
         .layer(TraceLayer::new_for_http())
 }
 
-fn api(config: Config) -> Router {
-    let state = Arc::new(AppState::new(config));
+fn api(state: AppState) -> Router {
+    let state = Arc::new(state);
     Router::new()
         .route("/challenge", get(get_challenge))
         .route("/process-challenge", post(process_challenge))

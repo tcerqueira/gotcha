@@ -20,3 +20,9 @@ thiserror = "1"
 reqwest = { version = "0.12", features = ["json"] }
 config = { version = "0.14", default-features = false, features = ["yaml"] }
 jsonwebtoken = "9"
+sqlx = { version = "0.8", features = [
+    "postgres",
+    "runtime-tokio",
+    "tls-native-tls",
+    "time",
+] }

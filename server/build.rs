@@ -23,6 +23,7 @@ fn main() {
                 s.spawn(move || npm_run_build(path));
             })
     });
+    println!("cargo:rerun-if-changed=../migrations/");
 }
 
 fn npm_run_build(path: PathBuf) {
