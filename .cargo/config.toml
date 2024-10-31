@@ -9,7 +9,9 @@ watch-server = [
 watch-client = [
     "watch",
     "-x",
-    "run -q -p gotcha-client",
+    "run -q --example client",
     "-i",
     "package-lock.json",
+    "-w",
+    "server/examples/client",
 ]

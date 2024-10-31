@@ -390,18 +390,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32085ea23f3234fc7846555e85283ba4de91e21016dc0455a16286d87a292d64"
 
 [[package]]
-name = "gotcha-client"
-version = "0.1.0"
-dependencies = [
- "axum",
- "tokio",
- "tower 0.4.13",
- "tower-http",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "gotcha-server"
 version = "0.1.0"
 dependencies = [

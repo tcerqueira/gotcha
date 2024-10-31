@@ -16,7 +16,7 @@ async fn main() {
 pub fn app() -> Router {
     let serve_dir = std::env::current_dir()
         .expect("Failed to get current directory")
-        .join("client")
+        .join("server/examples/client")
         .join("assets");
     tracing::debug!("Serving files from: {:?}", serve_dir);
 
