@@ -1,7 +1,4 @@
-import {
-  invokeExpiredCallback,
-  invokeResponseCallback,
-} from "@gotcha-widget/lib";
+import { onChallengeExpired, onChallengeResponse } from "@gotcha-widget/lib";
 import { createMemo, createSignal, type Component } from "solid-js";
 
 function getQueryParam(param: string): string | null {
@@ -29,13 +26,13 @@ const App: Component = () => {
 
     setState("verifying");
     // Simulate verification process. Should go to server and receive an encrypted response
-    setTimeout(() => {
+    setTimeout(async () => {
       setState("verified");
-      invokeResponseCallback(true, token);
+      await onChallengeResponse(true, token);
 
-      setTimeout(() => {
+      setTimeout(async () => {
         setState("expired");
-        invokeExpiredCallback();
+        await onChallengeExpired();
       }, 10000);
     }, 1000);
   };
