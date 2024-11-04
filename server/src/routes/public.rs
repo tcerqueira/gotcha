@@ -6,16 +6,17 @@ use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use time::OffsetDateTime;
+use tracing::instrument;
 
 use crate::response_token;
 
 use super::errors::VerificationError;
 
-#[expect(dead_code)]
 #[derive(Debug)]
 pub struct VerificationRequest {
     secret: Secret<String>,
     response: String,
+    #[expect(dead_code)]
     remoteip: Option<String>,
 }
 
@@ -40,6 +41,7 @@ pub enum ErrorCodes {
     TimeoutOrDuplicate,
 }
 
+#[instrument]
 pub async fn site_verify(
     WithRejection(Form(verification), _): WithRejection<
         Form<HashMap<String, String>>,

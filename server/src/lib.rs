@@ -4,14 +4,13 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use configuration::current_crate_dir;
+use configuration::{current_crate_dir, ApplicationConfig, ChallengeConfig};
 pub use configuration::{get_configuration, Config};
 use routes::{
     internal::{get_challenge, process_challenge},
     public::site_verify,
 };
-use serde::{Deserialize, Serialize};
-use serde_aux::field_attributes::deserialize_number_from_string;
+
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -24,29 +23,20 @@ pub mod test_helpers;
 
 #[derive(Debug)]
 pub struct AppState {
-    pub challenges: Vec<Challenge>,
+    pub challenges: Vec<ChallengeConfig>,
     pub pool: PgPool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Challenge {
-    url: String,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    width: u16,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    height: u16,
-}
-
-pub async fn app(config: Config) -> Router {
+pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
     let serve_dir = current_crate_dir()
-        .join(config.application.serve_dir)
+        .join(config.serve_dir)
         .canonicalize()
         .unwrap();
     tracing::debug!("Serving files from: {:?}", serve_dir);
 
     let state = AppState {
         challenges: config.challenges,
-        pool: db::connect_database(config.database),
+        pool,
     };
 
     Router::new()

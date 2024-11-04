@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use gotcha_server::{
     response_token::JWT_SECRET_KEY_B64,
-    routes::internal::{ChallengeResponse, ChallengeResults, Claims},
+    routes::internal::{ChallengeResponse, ChallengeResults, Claims, GetChallenge},
     test_helpers::{self, TestServer},
 };
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
@@ -15,10 +15,15 @@ async fn get_challenge() -> anyhow::Result<()> {
     let TestServer { port, .. } = test_helpers::create_server().await;
 
     let response = reqwest::get(format!(
-        "http://localhost:{port}/api/challenge?token=test_site_key"
+        "http://localhost:{port}/api/challenge?token=4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q"
     ))
     .await?;
     assert_eq!(response.status(), StatusCode::OK);
+
+    let challenge: GetChallenge = response.json().await?;
+    assert!(challenge
+        .url
+        .contains("token=4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q"));
 
     Ok(())
 }
@@ -29,7 +34,10 @@ async fn process_successful_challenge() -> anyhow::Result<()> {
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/process-challenge"))
-        .json(&ChallengeResults { success: true })
+        .json(&ChallengeResults {
+            challenge_id: uuid::Uuid::new_v4(),
+            success: true,
+        })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -52,7 +60,10 @@ async fn process_failed_challenge() -> anyhow::Result<()> {
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/process-challenge"))
-        .json(&ChallengeResults { success: false })
+        .json(&ChallengeResults {
+            challenge_id: uuid::Uuid::new_v4(),
+            success: false,
+        })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);

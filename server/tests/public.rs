@@ -230,7 +230,7 @@ mod verify_site {
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
 
-            let verification: VerificationResponse = dbg!(response.json().await?);
+            let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
             assert!(verification
                 .error_codes
@@ -258,7 +258,7 @@ mod verify_site {
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
 
-            let verification: VerificationResponse = dbg!(response.json().await?);
+            let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
             assert!(verification
                 .error_codes
@@ -284,7 +284,7 @@ mod verify_site {
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
 
-            let verification: VerificationResponse = dbg!(response.json().await?);
+            let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
             assert!(verification
                 .error_codes
@@ -306,7 +306,7 @@ mod verify_site {
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
 
-            let verification: VerificationResponse = dbg!(response.json().await?);
+            let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
             assert!(verification
                 .error_codes

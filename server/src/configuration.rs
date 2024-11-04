@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use crate::Challenge;
 use secrecy::Secret;
 use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
@@ -9,7 +8,6 @@ use serde_aux::field_attributes::deserialize_number_from_string;
 pub struct Config {
     pub application: ApplicationConfig,
     pub database: DatabaseConfig,
-    pub challenges: Vec<Challenge>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -18,6 +16,7 @@ pub struct ApplicationConfig {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub serve_dir: PathBuf,
+    pub challenges: Vec<ChallengeConfig>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -29,6 +28,15 @@ pub struct DatabaseConfig {
     pub host: String,
     pub database_name: String,
     pub require_ssl: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChallengeConfig {
+    pub url: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub width: u16,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub height: u16,
 }
 
 pub fn current_crate_dir() -> PathBuf {

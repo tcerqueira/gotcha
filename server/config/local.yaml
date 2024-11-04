@@ -1,15 +1,15 @@
 application:
   host: 0.0.0.0
   port: 8080
+  challenges:
+    - url: "http://localhost:8080/im-not-a-robot/index.html"
+      width: 304
+      height: 78
+    - url: "http://localhost:8080/wasm/index.html"
+      width: 1280
+      height: 720
+    # - url: "https://preview--fun-tac-tac-toe.gptengineer.run/"
+    #   width: 300
+    #   height: 600
 database:
   require_ssl: false
-challenges:
-  - url: "http://localhost:8080/im-not-a-robot/index.html"
-    width: 304
-    height: 78
-  - url: "http://localhost:8080/wasm/index.html"
-    width: 1280
-    height: 720
-  # - url: "https://preview--fun-tac-tac-toe.gptengineer.run/"
-  #   width: 300
-  #   height: 600

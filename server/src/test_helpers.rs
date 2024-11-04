@@ -1,6 +1,8 @@
-use crate::{app, get_configuration};
-use std::sync::OnceLock;
+use std::net::SocketAddr;
+
+use crate::{app, configuration, db, get_configuration};
 use tokio::task::JoinHandle;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub struct TestServer {
     pub port: u16,
@@ -8,25 +10,41 @@ pub struct TestServer {
 }
 
 pub async fn create_server() -> TestServer {
-    // init_tracing();
-    let config = get_configuration().expect("failed to load configuration");
+    init_tracing();
+    let configuration::Config {
+        application: app_conf,
+        database: db_conf,
+        ..
+    } = get_configuration().expect("failed to load configuration");
 
-    let addr = format!("{}:0", config.application.host);
+    let addr = format!("{}:0", app_conf.host);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     let port = listener.local_addr().unwrap().port();
 
     let join_handle = tokio::spawn(async move {
-        axum::serve(listener, app(config).await).await.unwrap();
+        let pool = db::connect_database(db_conf);
+        sqlx::migrate!("../migrations")
+            .run(&pool)
+            .await
+            .expect("failed to migrate db");
+
+        axum::serve(
+            listener,
+            app(app_conf, pool).into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await
+        .unwrap();
     });
 
     TestServer { port, join_handle }
 }
 
 pub fn init_tracing() {
-    static TRACING: OnceLock<()> = OnceLock::new();
-    TRACING.get_or_init(|| {
-        tracing_subscriber::fmt()
-            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-            .init();
-    });
+    let _ = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| format!("{}=debug", env!("CARGO_CRATE_NAME")).into()),
+        )
+        .with(tracing_subscriber::fmt::layer().with_test_writer())
+        .try_init();
 }

@@ -12,14 +12,16 @@ use super::public::{ErrorCodes, VerificationResponse};
 #[derive(Debug, Error)]
 pub enum Error {
     #[error(transparent)]
+    Sql(#[from] sqlx::Error),
+    #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
-            Error::Unexpected(err) => {
-                tracing::error!("internal server error (500): {:?}", err);
+            Error::Unexpected(_) | Error::Sql(_) => {
+                tracing::error!(error = %self, "Internal server error ocurred");
                 StatusCode::INTERNAL_SERVER_ERROR
             }
         }
