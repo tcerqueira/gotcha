@@ -34,27 +34,27 @@ Gotcha is a modular CAPTCHA system that aims to be compatible with Google's reCA
 ### Development Setup
 
 1. Start the database:
-```bash
+```sh
 docker-compose up -d
 ```
 
 2. Run database migrations (optional):
-```bash
+```sh
 sqlx migrate run
 ```
 
 2.5. Install `cargo-watch` once:
-```bash
+```sh
 cargo binstall cargo-watch
 ```
 
 3. Start the development server:
-```bash
+```sh
 cargo watch-server
 ```
 
 4. Run the example client:
-```bash
+```sh
 cargo watch-client
 ```
 
