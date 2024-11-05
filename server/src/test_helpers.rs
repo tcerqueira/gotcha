@@ -5,8 +5,8 @@ use tokio::task::JoinHandle;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub struct TestServer {
-    pub port: u16,
-    pub join_handle: JoinHandle<()>,
+    port: u16,
+    join_handle: JoinHandle<()>,
 }
 
 pub async fn create_server() -> TestServer {
@@ -47,4 +47,22 @@ pub fn init_tracing() {
         )
         .with(tracing_subscriber::fmt::layer().with_test_writer())
         .try_init();
+}
+
+impl TestServer {
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub fn join_handle(&self) -> &JoinHandle<()> {
+        &self.join_handle
+    }
+}
+
+impl Drop for TestServer {
+    fn drop(&mut self) {
+        tokio::runtime::Handle::current().spawn(async move {
+            tracing::info!("server destroyed");
+        });
+    }
 }

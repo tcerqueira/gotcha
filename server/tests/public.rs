@@ -13,7 +13,7 @@ mod verify_site {
             internal::ResponseClaims,
             public::{ErrorCodes, VerificationResponse},
         },
-        test_helpers::{self, TestServer},
+        test_helpers,
     };
     use reqwest::StatusCode;
 
@@ -21,7 +21,8 @@ mod verify_site {
 
     #[tokio::test]
     async fn sucessful_challenge() -> anyhow::Result<()> {
-        let TestServer { port, .. } = test_helpers::create_server().await;
+        let server = test_helpers::create_server().await;
+        let port = server.port();
         let token = response_token::encode(ResponseClaims { success: true })?;
 
         let response = HTTP_CLIENT
@@ -40,7 +41,8 @@ mod verify_site {
 
     #[tokio::test]
     async fn failed_challenge() -> anyhow::Result<()> {
-        let TestServer { port, .. } = test_helpers::create_server().await;
+        let server = test_helpers::create_server().await;
+        let port = server.port();
         let token = response_token::encode(ResponseClaims { success: false })?;
 
         let response = HTTP_CLIENT
@@ -59,7 +61,8 @@ mod verify_site {
 
     #[tokio::test]
     async fn missing_secret() -> anyhow::Result<()> {
-        let TestServer { port, .. } = test_helpers::create_server().await;
+        let server = test_helpers::create_server().await;
+        let port = server.port();
         let token = response_token::encode(ResponseClaims { success: true })?;
 
         let response = HTTP_CLIENT
@@ -81,7 +84,8 @@ mod verify_site {
 
     #[tokio::test]
     async fn missing_response() -> anyhow::Result<()> {
-        let TestServer { port, .. } = test_helpers::create_server().await;
+        let server = test_helpers::create_server().await;
+        let port = server.port();
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
@@ -102,7 +106,8 @@ mod verify_site {
 
     #[tokio::test]
     async fn missing_secret_and_response() -> anyhow::Result<()> {
-        let TestServer { port, .. } = test_helpers::create_server().await;
+        let server = test_helpers::create_server().await;
+        let port = server.port();
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
@@ -129,7 +134,8 @@ mod verify_site {
 
     #[tokio::test]
     async fn invalid_secret() -> anyhow::Result<()> {
-        let TestServer { port, .. } = test_helpers::create_server().await;
+        let server = test_helpers::create_server().await;
+        let port = server.port();
         let token = response_token::encode(ResponseClaims { success: true })?;
 
         let response = HTTP_CLIENT
@@ -151,7 +157,8 @@ mod verify_site {
 
     #[tokio::test]
     async fn bad_request() -> anyhow::Result<()> {
-        let TestServer { port, .. } = test_helpers::create_server().await;
+        let server = test_helpers::create_server().await;
+        let port = server.port();
         let token = response_token::encode(ResponseClaims { success: true })?;
 
         let response = HTTP_CLIENT
@@ -187,7 +194,8 @@ mod verify_site {
 
         #[tokio::test]
         async fn expired_signature() -> anyhow::Result<()> {
-            let TestServer { port, .. } = test_helpers::create_server().await;
+            let server = test_helpers::create_server().await;
+            let port = server.port();
             let token = response_token::encode_with_timeout(
                 Duration::from_secs(0),
                 ResponseClaims { success: true },
@@ -220,7 +228,8 @@ mod verify_site {
 
         #[tokio::test]
         async fn invalid_token() -> anyhow::Result<()> {
-            let TestServer { port, .. } = test_helpers::create_server().await;
+            let server = test_helpers::create_server().await;
+            let port = server.port();
             let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..eyJleHAiOjE3MzAzMDIyNDYsInN1Y2Nlc3MiOnRydWV9.9VBstXEca0JEPksQbMOEXdL_MxBvjiDgLbp0JnfsXMw";
             //                                                ^ extra dot
             let response = HTTP_CLIENT
@@ -242,7 +251,8 @@ mod verify_site {
 
         #[tokio::test]
         async fn invalid_signature() -> anyhow::Result<()> {
-            let TestServer { port, .. } = test_helpers::create_server().await;
+            let server = test_helpers::create_server().await;
+            let port = server.port();
             let token = jsonwebtoken::encode(
                 &Header::new(JWT_ALGORITHM),
                 &Claims::new(ResponseClaims { success: true }),
@@ -270,7 +280,8 @@ mod verify_site {
 
         #[tokio::test]
         async fn invalid_algorithm() -> anyhow::Result<()> {
-            let TestServer { port, .. } = test_helpers::create_server().await;
+            let server = test_helpers::create_server().await;
+            let port = server.port();
             let token = jsonwebtoken::encode(
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
                 &Claims::new(ResponseClaims { success: true }),
@@ -296,7 +307,8 @@ mod verify_site {
 
         #[tokio::test]
         async fn invalid_base64() -> anyhow::Result<()> {
-            let TestServer { port, .. } = test_helpers::create_server().await;
+            let server = test_helpers::create_server().await;
+            let port = server.port();
             let token = "header-garbage_ç~,-º´.eyJleHAiOjE3MzAzMDIyNDYsInN1Y2Nlc3MiOnRydWV9.9VBstXEca0JEPksQbMOEXdL_MxBvjiDgLbp0JnfsXMw";
 
             let response = HTTP_CLIENT

@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 use gotcha_server::{
     response_token::JWT_SECRET_KEY_B64,
     routes::internal::{ChallengeResponse, ChallengeResults, Claims, GetChallenge},
-    test_helpers::{self, TestServer},
+    test_helpers,
 };
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
 use reqwest::{Client, StatusCode};
@@ -12,7 +12,8 @@ static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
 #[tokio::test]
 async fn get_challenge() -> anyhow::Result<()> {
-    let TestServer { port, .. } = test_helpers::create_server().await;
+    let server = test_helpers::create_server().await;
+    let port = server.port();
 
     let response = reqwest::get(format!(
         "http://localhost:{port}/api/challenge?token=4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q"
@@ -30,14 +31,12 @@ async fn get_challenge() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn process_successful_challenge() -> anyhow::Result<()> {
-    let TestServer { port, .. } = test_helpers::create_server().await;
+    let server = test_helpers::create_server().await;
+    let port = server.port();
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/process-challenge"))
-        .json(&ChallengeResults {
-            challenge_id: uuid::Uuid::new_v4(),
-            success: true,
-        })
+        .json(&ChallengeResults { success: true })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -56,14 +55,12 @@ async fn process_successful_challenge() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn process_failed_challenge() -> anyhow::Result<()> {
-    let TestServer { port, .. } = test_helpers::create_server().await;
+    let server = test_helpers::create_server().await;
+    let port = server.port();
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/process-challenge"))
-        .json(&ChallengeResults {
-            challenge_id: uuid::Uuid::new_v4(),
-            success: false,
-        })
+        .json(&ChallengeResults { success: false })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);

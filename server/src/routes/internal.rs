@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
 use axum::extract::{ConnectInfo, Query, State};
 use axum::Json;
 use reqwest::Url;
@@ -9,8 +10,7 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tracing::instrument;
 
-use crate::db::CreateChallenge;
-use crate::{db, response_token, AppState};
+use crate::{response_token, AppState};
 
 #[derive(Debug, Deserialize)]
 pub struct QueryChallenge {
@@ -19,7 +19,6 @@ pub struct QueryChallenge {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetChallenge {
-    pub id: uuid::Uuid,
     pub url: String,
     pub width: u16,
     pub height: u16,
@@ -32,21 +31,10 @@ pub async fn get_challenge(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> super::Result<Json<GetChallenge>> {
     let challenge = &state.challenges[0];
-    let mut url = Url::parse(&challenge.url).expect("malformed challenge url in config");
+    let mut url = Url::parse(&challenge.url).context("malformed challenge url in config")?;
     url.query_pairs_mut().append_pair("token", &params.token);
 
-    let id = db::create_challenge(
-        &state.pool,
-        &CreateChallenge {
-            api_key: &params.token,
-            encoding_key: "aaa",
-            ip_addr: addr.ip(),
-        },
-    )
-    .await?;
-
     Ok(Json(GetChallenge {
-        id,
         url: url.to_string(),
         width: challenge.width,
         height: challenge.height,
@@ -55,7 +43,6 @@ pub async fn get_challenge(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeResults {
-    pub challenge_id: uuid::Uuid,
     // this should be more complex and computed server side
     pub success: bool,
 }
