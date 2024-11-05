@@ -6,12 +6,12 @@ fn main() {
     let current_dir = env::current_dir().unwrap();
 
     std::thread::scope(|s| {
-        let widget_api_dir = current_dir.join("widget-api");
-        s.spawn(move || npm_run_build(widget_api_dir));
-        println!("cargo::rerun-if-changed=widget-api/src/");
-        println!("cargo::rerun-if-changed=widget-api/package.json");
+        let api_dir = current_dir.join("..").join("widget-api");
+        println!("cargo::rerun-if-changed={}/src/", api_dir.display());
+        println!("cargo::rerun-if-changed={}/package.json", api_dir.display());
+        s.spawn(move || npm_run_build(api_dir));
 
-        let widgets_dir = current_dir.join("widgets");
+        let widgets_dir = current_dir.join("..").join("widgets");
         std::fs::read_dir(widgets_dir)
             .unwrap()
             .flatten()
@@ -26,7 +26,8 @@ fn main() {
     println!("cargo:rerun-if-changed=../migrations/");
 }
 
-fn npm_run_build(path: PathBuf) {
+fn npm_run_build(path: impl Into<PathBuf>) {
+    let path = path.into();
     let npm_install_status = Command::new("npm")
         .current_dir(path.clone())
         .arg("install")
