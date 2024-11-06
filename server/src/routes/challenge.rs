@@ -45,6 +45,7 @@ pub async fn get_challenge(
 pub struct ChallengeResults {
     // this should be more complex and computed server side
     pub success: bool,
+    pub secret: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

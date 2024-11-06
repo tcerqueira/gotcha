@@ -5,13 +5,13 @@ watch-server = [
     "run -q -p gotcha-server",
     "-i",
     "package-lock.json",
+    "-i",
+    "server/examples/client",
 ]
 watch-client = [
     "watch",
     "-x",
     "run -q --example client",
-    "-i",
-    "package-lock.json",
     "-w",
-    "server/examples/client",
+    "server/examples",
 ]

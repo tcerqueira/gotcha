@@ -1,5 +1,7 @@
-use axum::Router;
-use std::net::SocketAddr;
+use axum::{http::StatusCode, routing::post, Form, Router};
+use gotcha_server::routes::public::VerificationResponse;
+use reqwest::Client;
+use std::{collections::HashMap, net::SocketAddr, sync::LazyLock};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -13,7 +15,7 @@ async fn main() {
     axum::serve(listener, app()).await.unwrap();
 }
 
-pub fn app() -> Router {
+fn app() -> Router {
     let serve_dir = std::env::current_dir()
         .expect("Failed to get current directory")
         .join("server/examples/client")
@@ -21,11 +23,41 @@ pub fn app() -> Router {
     tracing::debug!("Serving files from: {:?}", serve_dir);
 
     Router::new()
+        .route("/submit", post(submit))
         .fallback_service(ServeDir::new(serve_dir))
         .layer(TraceLayer::new_for_http())
 }
 
-pub fn init_tracing() {
+static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+
+async fn submit(Form(data): Form<HashMap<String, String>>) -> Result<StatusCode, StatusCode> {
+    let token = match data.get("g-recaptcha-response").map(String::as_str) {
+        None | Some("") => return Err(StatusCode::FORBIDDEN),
+        Some(v) => v,
+    };
+    let verification: VerificationResponse = HTTP_CLIENT
+        .post("http://localhost:8080/api/siteverify")
+        .form(&[
+            (
+                "secret",
+                "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+            ),
+            ("response", token),
+        ])
+        .send()
+        .await
+        .map_err(|_| StatusCode::BAD_REQUEST)?
+        .json()
+        .await
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    match verification.success {
+        true => Ok(StatusCode::OK),
+        false => Err(StatusCode::FORBIDDEN),
+    }
+}
+
+fn init_tracing() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()

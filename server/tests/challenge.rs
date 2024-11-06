@@ -36,7 +36,10 @@ async fn process_successful_challenge() -> anyhow::Result<()> {
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/process-challenge"))
-        .json(&ChallengeResults { success: true })
+        .json(&ChallengeResults {
+            success: true,
+            secret: "4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q".into(),
+        })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -60,7 +63,10 @@ async fn process_failed_challenge() -> anyhow::Result<()> {
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/process-challenge"))
-        .json(&ChallengeResults { success: false })
+        .json(&ChallengeResults {
+            success: false,
+            secret: "4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q".into(),
+        })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);

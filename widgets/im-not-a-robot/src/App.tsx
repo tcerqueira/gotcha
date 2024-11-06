@@ -16,9 +16,9 @@ const App: Component = () => {
   const verified = createMemo(() => state() === "verified");
   const expired = createMemo(() => state() === "expired");
 
-  const token = getQueryParam("secret");
-  if (!token) {
-    return <span>Missing api token.</span>;
+  const secret = getQueryParam("secret");
+  if (!secret) {
+    return <span>Missing api secret.</span>;
   }
 
   const handleCheck = () => {
@@ -28,7 +28,7 @@ const App: Component = () => {
     // Simulate verification process. Should go to server and receive an encrypted response
     setTimeout(async () => {
       setState("verified");
-      await onChallengeResponse(true, token);
+      await onChallengeResponse("http://localhost:8080", secret, true);
 
       setTimeout(async () => {
         setState("expired");
