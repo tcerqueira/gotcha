@@ -14,7 +14,7 @@
     "noImplicitOverride": true,
 
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "sourceMap": true,
     "declaration": true,
 

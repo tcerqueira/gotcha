@@ -35,7 +35,7 @@ async fn process_successful_challenge() -> anyhow::Result<()> {
     let port = server.port();
 
     let response = HTTP_CLIENT
-        .post(format!("http://localhost:{port}/api/process-challenge"))
+        .post(format!("http://localhost:{port}/api/challenge/process"))
         .json(&ChallengeResults {
             success: true,
             secret: "4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q".into(),
@@ -62,7 +62,7 @@ async fn process_failed_challenge() -> anyhow::Result<()> {
     let port = server.port();
 
     let response = HTTP_CLIENT
-        .post(format!("http://localhost:{port}/api/process-challenge"))
+        .post(format!("http://localhost:{port}/api/challenge/process"))
         .json(&ChallengeResults {
             success: false,
             secret: "4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q".into(),

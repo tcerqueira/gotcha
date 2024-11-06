@@ -1,15 +1,8 @@
 use std::sync::Arc;
 
-use axum::{
-    routing::{get, post},
-    Router,
-};
+use axum::Router;
 use configuration::{current_crate_dir, ApplicationConfig, ChallengeConfig};
 pub use configuration::{get_configuration, Config};
-use routes::{
-    challenge::{get_challenge, process_challenge},
-    public::site_verify,
-};
 
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
@@ -48,11 +41,10 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
 fn api(state: AppState) -> Router {
     let state = Arc::new(state);
     Router::new()
-        .route("/challenge", get(get_challenge))
-        .route("/process-challenge", post(process_challenge))
-        .route("/siteverify", post(site_verify))
+        .nest("/", routes::public(&state))
+        .nest("/challenge", routes::challenge(&state))
+        .nest("/console", routes::console(&state))
         .layer(CorsLayer::permissive())
-        .with_state(state)
 }
 
 pub fn init_tracing() {
