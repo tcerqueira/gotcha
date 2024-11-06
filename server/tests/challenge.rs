@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use gotcha_server::{
     response_token::JWT_SECRET_KEY_B64,
-    routes::internal::{ChallengeResponse, ChallengeResults, Claims, GetChallenge},
+    routes::challenge::{ChallengeResponse, ChallengeResults, Claims, GetChallenge},
     test_helpers,
 };
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};

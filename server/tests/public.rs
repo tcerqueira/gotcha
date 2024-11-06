@@ -10,7 +10,7 @@ mod verify_site {
     use gotcha_server::{
         response_token,
         routes::{
-            internal::ResponseClaims,
+            challenge::ResponseClaims,
             public::{ErrorCodes, VerificationResponse},
         },
         test_helpers,
@@ -186,7 +186,7 @@ mod verify_site {
     }
 
     mod response {
-        use gotcha_server::routes::internal::Claims;
+        use gotcha_server::routes::challenge::Claims;
         use jsonwebtoken::{EncodingKey, Header};
         use response_token::{JWT_ALGORITHM, JWT_SECRET_KEY_B64};
 

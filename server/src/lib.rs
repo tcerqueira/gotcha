@@ -7,7 +7,7 @@ use axum::{
 use configuration::{current_crate_dir, ApplicationConfig, ChallengeConfig};
 pub use configuration::{get_configuration, Config};
 use routes::{
-    internal::{get_challenge, process_challenge},
+    challenge::{get_challenge, process_challenge},
     public::site_verify,
 };
 

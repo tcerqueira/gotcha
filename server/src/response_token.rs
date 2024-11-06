@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::Context;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
-use crate::routes::internal::{Claims, ResponseClaims};
+use crate::routes::challenge::{Claims, ResponseClaims};
 
 pub static JWT_SECRET_KEY_B64: &str = "bXktdGVzdGluZy1zZWNyZXQ="; // "my-testing-secret" in base64
 pub static JWT_ALGORITHM: Algorithm = Algorithm::HS256;
