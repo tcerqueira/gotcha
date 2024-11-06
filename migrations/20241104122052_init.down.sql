@@ -1,2 +1,2 @@
-drop table api_key;
+drop table api_secret;
 drop table configuration;

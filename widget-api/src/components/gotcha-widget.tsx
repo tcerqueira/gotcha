@@ -109,7 +109,7 @@ type Challenge = {
 async function fetchChallenge(token: string): Promise<Challenge> {
   const origin = new URL(import.meta.url).origin;
   const url = new URL(`${origin}/api/challenge`);
-  url.searchParams.append("token", token);
+  url.searchParams.append("secret", token);
 
   const response = await fetch(url);
   return (await response.json()) as Challenge;

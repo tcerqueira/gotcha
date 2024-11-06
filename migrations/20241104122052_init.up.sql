@@ -5,11 +5,11 @@ create table public.configuration (
     constraint configuration_pkey primary key (id)
 );
 
-create table public.api_key (
+create table public.api_secret (
     key character varying not null,
     config uuid not null,
     encoding_key character varying not null,
     created_at timestamp with time zone not null default now(),
-    constraint api_key_pkey primary key (key),
-    constraint api_key_config_fkey foreign key (config) references configuration (id)
+    constraint api_secret_pkey primary key (key),
+    constraint api_secret_config_fkey foreign key (config) references configuration (id)
 );

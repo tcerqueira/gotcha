@@ -14,7 +14,7 @@ use crate::{response_token, AppState};
 
 #[derive(Debug, Deserialize)]
 pub struct QueryChallenge {
-    token: String,
+    secret: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ pub async fn get_challenge(
 ) -> super::Result<Json<GetChallenge>> {
     let challenge = &state.challenges[0];
     let mut url = Url::parse(&challenge.url).context("malformed challenge url in config")?;
-    url.query_pairs_mut().append_pair("token", &params.token);
+    url.query_pairs_mut().append_pair("secret", &params.secret);
 
     Ok(Json(GetChallenge {
         url: url.to_string(),

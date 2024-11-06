@@ -54,8 +54,8 @@ pub async fn site_verify(
     let verification = verification
         .map_err(|errs| VerificationResponse::failure(challenge_ts, hostname.clone(), errs))?;
 
-    // TODO: actually validate api_key
-    if !valid_api_key(verification.secret.expose_secret())? {
+    // TODO: actually validate token
+    if !valid_secret(verification.secret.expose_secret())? {
         return Err(VerificationError::UserError(VerificationResponse::failure(
             challenge_ts,
             hostname.clone(),
@@ -87,7 +87,7 @@ pub async fn site_verify(
     }))
 }
 
-fn valid_api_key(secret: &str) -> anyhow::Result<bool> {
+fn valid_secret(secret: &str) -> anyhow::Result<bool> {
     Ok(!secret.is_empty())
 }
 

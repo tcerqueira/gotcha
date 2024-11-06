@@ -16,7 +16,7 @@ async fn get_challenge() -> anyhow::Result<()> {
     let port = server.port();
 
     let response = reqwest::get(format!(
-        "http://localhost:{port}/api/challenge?token=4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q"
+        "http://localhost:{port}/api/challenge?secret=4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q"
     ))
     .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -24,7 +24,7 @@ async fn get_challenge() -> anyhow::Result<()> {
     let challenge: GetChallenge = response.json().await?;
     assert!(challenge
         .url
-        .contains("token=4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q"));
+        .contains("secret=4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q"));
 
     Ok(())
 }

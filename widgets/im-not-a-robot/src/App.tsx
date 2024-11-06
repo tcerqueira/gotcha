@@ -16,7 +16,7 @@ const App: Component = () => {
   const verified = createMemo(() => state() === "verified");
   const expired = createMemo(() => state() === "expired");
 
-  const token = getQueryParam("token");
+  const token = getQueryParam("secret");
   if (!token) {
     return <span>Missing api token.</span>;
   }
