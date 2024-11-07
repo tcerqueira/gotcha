@@ -1,7 +1,8 @@
 use std::net::SocketAddr;
 
 use crate::{app, configuration, db, get_configuration};
-use tokio::task::JoinHandle;
+use sqlx::PgExecutor;
+use tokio::sync::oneshot::Sender;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub static DEMO_JWT_SECRET_KEY_B64: &str =
@@ -11,12 +12,12 @@ pub static DEMO_API_SECRET_B64: &str =
 pub static DEMO_API_SECRET_B64URL: &str =
     "4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
 
-pub struct TestServer {
+pub struct TestContext {
     port: u16,
-    join_handle: JoinHandle<()>,
+    shutdown_signal: Option<Sender<()>>,
 }
 
-pub async fn create_server() -> TestServer {
+pub async fn create_test_context() -> TestContext {
     init_tracing();
     let configuration::Config {
         application: app_conf,
@@ -27,24 +28,36 @@ pub async fn create_server() -> TestServer {
     let addr = format!("{}:0", app_conf.host);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     let port = listener.local_addr().unwrap().port();
+    let (shutdown_signal, shutdown_receiver) = tokio::sync::oneshot::channel();
 
-    let join_handle = tokio::spawn(async move {
-        let pool = db::connect_database(db_conf);
-        sqlx::migrate!("../migrations")
-            .run(&pool)
-            .await
-            .expect("failed to migrate db");
+    let pool = db::connect_database(db_conf);
+    sqlx::migrate!("../migrations")
+        .run(&pool)
+        .await
+        .expect("failed to migrate db");
+    populate_demo(&pool).await;
 
+    tokio::spawn(async move {
+        let app_pool = pool.clone();
         axum::serve(
             listener,
-            app(app_conf, pool).into_make_service_with_connect_info::<SocketAddr>(),
+            app(app_conf, app_pool).into_make_service_with_connect_info::<SocketAddr>(),
         )
+        .with_graceful_shutdown(async move { shutdown_receiver.await.unwrap() })
         .await
         .unwrap();
+
+        rollback_demo(&pool).await;
     });
 
-    TestServer { port, join_handle }
+    TestContext {
+        port,
+        shutdown_signal: Some(shutdown_signal),
+    }
 }
+
+async fn populate_demo(_exec: impl PgExecutor<'_> + Send) {}
+async fn rollback_demo(_exec: impl PgExecutor<'_> + Send) {}
 
 pub fn init_tracing() {
     let _ = tracing_subscriber::registry()
@@ -56,20 +69,16 @@ pub fn init_tracing() {
         .try_init();
 }
 
-impl TestServer {
+impl TestContext {
     pub fn port(&self) -> u16 {
         self.port
     }
-
-    pub fn join_handle(&self) -> &JoinHandle<()> {
-        &self.join_handle
-    }
 }
 
-impl Drop for TestServer {
+impl Drop for TestContext {
     fn drop(&mut self) {
-        tokio::runtime::Handle::current().spawn(async move {
-            tracing::info!("server destroyed");
-        });
+        if let Some(shutdown_signal) = self.shutdown_signal.take() {
+            let _ = shutdown_signal.send(());
+        }
     }
 }

@@ -11,7 +11,7 @@ static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
 #[tokio::test]
 async fn get_challenge() -> anyhow::Result<()> {
-    let server = test_helpers::create_server().await;
+    let server = test_helpers::create_test_context().await;
     let port = server.port();
 
     let response = reqwest::get(format!(
@@ -30,7 +30,7 @@ async fn get_challenge() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn process_successful_challenge() -> anyhow::Result<()> {
-    let server = test_helpers::create_server().await;
+    let server = test_helpers::create_test_context().await;
     let port = server.port();
 
     let response = HTTP_CLIENT
@@ -57,7 +57,7 @@ async fn process_successful_challenge() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn process_failed_challenge() -> anyhow::Result<()> {
-    let server = test_helpers::create_server().await;
+    let server = test_helpers::create_test_context().await;
     let port = server.port();
 
     let response = HTTP_CLIENT
@@ -84,7 +84,7 @@ async fn process_failed_challenge() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn process_challenge_with_invalid_secret() -> anyhow::Result<()> {
-    let server = test_helpers::create_server().await;
+    let server = test_helpers::create_test_context().await;
     let port = server.port();
 
     let response = HTTP_CLIENT

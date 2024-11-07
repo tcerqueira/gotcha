@@ -24,9 +24,6 @@ pub fn connect_database(config: DatabaseConfig) -> PgPool {
     pool_options.connect_lazy_with(conn_options)
 }
 
-pub async fn populate_demo() {}
-pub async fn rollback_demo() {}
-
 pub async fn fetch_encoding_key(
     exec: impl PgExecutor<'_> + Send,
     api_secret: &str,
