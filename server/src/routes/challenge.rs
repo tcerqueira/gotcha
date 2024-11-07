@@ -10,7 +10,9 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tracing::instrument;
 
-use crate::{response_token, AppState};
+use crate::{db, response_token, AppState};
+
+use super::errors::Error;
 
 #[derive(Debug, Deserialize)]
 pub struct QueryChallenge {
@@ -53,14 +55,21 @@ pub struct ChallengeResponse {
     pub token: String,
 }
 
-#[instrument]
+#[instrument(skip(state))]
 pub async fn process_challenge(
+    State(state): State<Arc<AppState>>,
     Json(results): Json<ChallengeResults>,
 ) -> super::Result<Json<ChallengeResponse>> {
     Ok(Json(ChallengeResponse {
-        token: response_token::encode(ResponseClaims {
-            success: results.success,
-        })?,
+        token: response_token::encode(
+            ResponseClaims {
+                success: results.success,
+            },
+            &db::fetch_encoding_key(&state.pool, &results.secret)
+                .await
+                .context("failed to fecth encoding key by api secret while processing challenge")?
+                .ok_or(Error::InvalidSecret)?,
+        )?,
     }))
 }
 

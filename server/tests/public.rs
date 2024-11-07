@@ -13,7 +13,7 @@ mod verify_site {
             challenge::ResponseClaims,
             public::{ErrorCodes, VerificationResponse},
         },
-        test_helpers,
+        test_helpers::{self, DEMO_API_SECRET_B64},
     };
     use reqwest::StatusCode;
 
@@ -23,11 +23,14 @@ mod verify_site {
     async fn sucessful_challenge() -> anyhow::Result<()> {
         let server = test_helpers::create_server().await;
         let port = server.port();
-        let token = response_token::encode(ResponseClaims { success: true })?;
+        let token = response_token::encode(
+            ResponseClaims { success: true },
+            test_helpers::DEMO_JWT_SECRET_KEY_B64,
+        )?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", "api_key"), ("response", &token)])
+            .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -43,11 +46,14 @@ mod verify_site {
     async fn failed_challenge() -> anyhow::Result<()> {
         let server = test_helpers::create_server().await;
         let port = server.port();
-        let token = response_token::encode(ResponseClaims { success: false })?;
+        let token = response_token::encode(
+            ResponseClaims { success: false },
+            test_helpers::DEMO_JWT_SECRET_KEY_B64,
+        )?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", "api_key"), ("response", &token)])
+            .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -63,7 +69,10 @@ mod verify_site {
     async fn missing_secret() -> anyhow::Result<()> {
         let server = test_helpers::create_server().await;
         let port = server.port();
-        let token = response_token::encode(ResponseClaims { success: true })?;
+        let token = response_token::encode(
+            ResponseClaims { success: true },
+            test_helpers::DEMO_JWT_SECRET_KEY_B64,
+        )?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
@@ -89,7 +98,7 @@ mod verify_site {
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", "api_key")])
+            .form(&[("secret", DEMO_API_SECRET_B64)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -136,11 +145,15 @@ mod verify_site {
     async fn invalid_secret() -> anyhow::Result<()> {
         let server = test_helpers::create_server().await;
         let port = server.port();
-        let token = response_token::encode(ResponseClaims { success: true })?;
+        let token = response_token::encode(
+            ResponseClaims { success: true },
+            test_helpers::DEMO_JWT_SECRET_KEY_B64,
+        )?;
 
+        let invalid_secret = "AAABBBCC";
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", ""), ("response", &token)])
+            .form(&[("secret", invalid_secret), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -159,7 +172,10 @@ mod verify_site {
     async fn bad_request() -> anyhow::Result<()> {
         let server = test_helpers::create_server().await;
         let port = server.port();
-        let token = response_token::encode(ResponseClaims { success: true })?;
+        let token = response_token::encode(
+            ResponseClaims { success: true },
+            test_helpers::DEMO_JWT_SECRET_KEY_B64,
+        )?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
@@ -188,7 +204,8 @@ mod verify_site {
     mod response {
         use gotcha_server::routes::challenge::Claims;
         use jsonwebtoken::{EncodingKey, Header};
-        use response_token::{JWT_ALGORITHM, JWT_SECRET_KEY_B64};
+        use response_token::JWT_ALGORITHM;
+        use test_helpers::DEMO_JWT_SECRET_KEY_B64;
 
         use super::*;
 
@@ -199,13 +216,14 @@ mod verify_site {
             let token = response_token::encode_with_timeout(
                 Duration::from_secs(0),
                 ResponseClaims { success: true },
+                test_helpers::DEMO_JWT_SECRET_KEY_B64,
             )?;
             // expired by 1 second
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", "api_key"), ("response", &token)])
+                .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -234,7 +252,7 @@ mod verify_site {
             //                                                ^ extra dot
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", "api_key"), ("response", token)])
+                .form(&[("secret", DEMO_API_SECRET_B64), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -263,7 +281,7 @@ mod verify_site {
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", "api_key"), ("response", &token)])
+                .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -285,12 +303,12 @@ mod verify_site {
             let token = jsonwebtoken::encode(
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
                 &Claims::new(ResponseClaims { success: true }),
-                &EncodingKey::from_base64_secret(JWT_SECRET_KEY_B64)?,
+                &EncodingKey::from_base64_secret(DEMO_JWT_SECRET_KEY_B64)?,
             )?;
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", "api_key"), ("response", &token)])
+                .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -313,7 +331,7 @@ mod verify_site {
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", "api_key"), ("response", token)])
+                .form(&[("secret", DEMO_API_SECRET_B64), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);

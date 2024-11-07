@@ -1,6 +1,7 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, sync::Arc};
 
-use axum::{Form, Json};
+use anyhow::Context;
+use axum::{extract::State, Form, Json};
 use axum_extra::extract::WithRejection;
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
@@ -8,7 +9,7 @@ use thiserror::Error;
 use time::OffsetDateTime;
 use tracing::instrument;
 
-use crate::response_token;
+use crate::{db, response_token, AppState};
 
 use super::errors::VerificationError;
 
@@ -41,8 +42,9 @@ pub enum ErrorCodes {
     TimeoutOrDuplicate,
 }
 
-#[instrument]
+#[instrument(skip(state))]
 pub async fn site_verify(
+    State(state): State<Arc<AppState>>,
     WithRejection(Form(verification), _): WithRejection<
         Form<HashMap<String, String>>,
         VerificationError,
@@ -54,16 +56,16 @@ pub async fn site_verify(
     let verification = verification
         .map_err(|errs| VerificationResponse::failure(challenge_ts, hostname.clone(), errs))?;
 
-    // TODO: actually validate token
-    if !valid_secret(verification.secret.expose_secret())? {
-        return Err(VerificationError::UserError(VerificationResponse::failure(
+    let enc_key = db::fetch_encoding_key(&state.pool, verification.secret.expose_secret())
+        .await
+        .context("failed to fetch encoding key bey api secret while verifying challenge")?
+        .ok_or(VerificationError::UserError(VerificationResponse::failure(
             challenge_ts,
             hostname.clone(),
             vec![ErrorCodes::InvalidInputSecret],
-        )));
-    }
+        )))?;
 
-    let claims = response_token::decode(&verification.response)
+    let claims = response_token::decode(&verification.response, &enc_key)
         .map_err(jsonwebtoken::errors::Error::into_kind)
         .map_err(|err| match err {
             jsonwebtoken::errors::ErrorKind::ExpiredSignature => ErrorCodes::TimeoutOrDuplicate,
@@ -85,10 +87,6 @@ pub async fn site_verify(
         hostname,
         error_codes: None,
     }))
-}
-
-fn valid_secret(secret: &str) -> anyhow::Result<bool> {
-    Ok(!secret.is_empty())
 }
 
 impl VerificationResponse {

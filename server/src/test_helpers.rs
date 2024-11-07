@@ -4,6 +4,13 @@ use crate::{app, configuration, db, get_configuration};
 use tokio::task::JoinHandle;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+pub static DEMO_JWT_SECRET_KEY_B64: &str =
+    "dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m";
+pub static DEMO_API_SECRET_B64: &str =
+    "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
+pub static DEMO_API_SECRET_B64URL: &str =
+    "4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
+
 pub struct TestServer {
     port: u16,
     join_handle: JoinHandle<()>,

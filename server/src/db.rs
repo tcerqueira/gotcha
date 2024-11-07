@@ -3,7 +3,7 @@ use std::time::Duration;
 use secrecy::ExposeSecret;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
-    PgPool,
+    PgExecutor, PgPool,
 };
 
 use crate::configuration::DatabaseConfig;
@@ -22,4 +22,19 @@ pub fn connect_database(config: DatabaseConfig) -> PgPool {
         });
 
     pool_options.connect_lazy_with(conn_options)
+}
+
+pub async fn populate_demo() {}
+pub async fn rollback_demo() {}
+
+pub async fn fetch_encoding_key(
+    exec: impl PgExecutor<'_> + Send,
+    api_secret: &str,
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar!(
+        "select encoding_key from api_secret where key = $1",
+        api_secret
+    )
+    .fetch_optional(exec)
+    .await
 }

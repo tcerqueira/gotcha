@@ -11,6 +11,8 @@ use super::public::{ErrorCodes, VerificationResponse};
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error("Invalid secret, check your allowed-origins")]
+    InvalidSecret,
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
     #[error(transparent)]
@@ -22,10 +24,10 @@ impl IntoResponse for Error {
         match self {
             Error::Unexpected(_) | Error::Sql(_) => {
                 tracing::error!(error = %self, "Internal server error ocurred");
-                StatusCode::INTERNAL_SERVER_ERROR
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
+            Error::InvalidSecret => (StatusCode::FORBIDDEN, self.to_string()).into_response(),
         }
-        .into_response()
     }
 }
 
