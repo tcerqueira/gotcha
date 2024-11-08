@@ -642,6 +642,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "config",
+ "gotcha-server-macros",
  "jsonwebtoken",
  "reqwest",
  "secrecy",
@@ -656,6 +657,15 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "gotcha-server-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

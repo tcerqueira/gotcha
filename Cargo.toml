@@ -1,5 +1,5 @@
 [workspace]
-members = ["server"]
+members = ["server", "server-macros"]
 resolver = "2"
 
 # Speed up compile time checks for sqlx queries

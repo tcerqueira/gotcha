@@ -2,16 +2,15 @@ use std::sync::LazyLock;
 
 use gotcha_server::{
     routes::challenge::{ChallengeResponse, ChallengeResults, Claims, GetChallenge},
-    test_helpers::{self, DEMO_API_SECRET_B64, DEMO_API_SECRET_B64URL, DEMO_JWT_SECRET_KEY_B64},
+    test_helpers::{DEMO_API_SECRET_B64, DEMO_API_SECRET_B64URL, DEMO_JWT_SECRET_KEY_B64},
 };
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
 use reqwest::{Client, StatusCode};
 
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
-#[tokio::test]
-async fn get_challenge() -> anyhow::Result<()> {
-    let server = test_helpers::create_test_context().await;
+#[gotcha_server_macros::integration_test]
+async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
     let response = reqwest::get(format!(
@@ -28,9 +27,8 @@ async fn get_challenge() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn process_successful_challenge() -> anyhow::Result<()> {
-    let server = test_helpers::create_test_context().await;
+#[gotcha_server_macros::integration_test]
+async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
     let response = HTTP_CLIENT
@@ -55,9 +53,8 @@ async fn process_successful_challenge() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn process_failed_challenge() -> anyhow::Result<()> {
-    let server = test_helpers::create_test_context().await;
+#[gotcha_server_macros::integration_test]
+async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
     let response = HTTP_CLIENT
@@ -82,9 +79,8 @@ async fn process_failed_challenge() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn process_challenge_with_invalid_secret() -> anyhow::Result<()> {
-    let server = test_helpers::create_test_context().await;
+#[gotcha_server_macros::integration_test]
+async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
     let response = HTTP_CLIENT

@@ -47,12 +47,24 @@ fn api(state: AppState) -> Router {
         .layer(CorsLayer::permissive())
 }
 
+#[cfg(test)]
 pub fn init_tracing() {
-    tracing_subscriber::registry()
+    let _ = tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| format!("{}=debug", env!("CARGO_CRATE_NAME")).into()),
         )
         .with(tracing_subscriber::fmt::layer())
-        .init();
+        .try_init();
+}
+
+#[cfg(not(test))]
+pub fn init_tracing() {
+    let _ = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| format!("{}=debug", env!("CARGO_CRATE_NAME")).into()),
+        )
+        .with(tracing_subscriber::fmt::layer().with_test_writer())
+        .try_init();
 }

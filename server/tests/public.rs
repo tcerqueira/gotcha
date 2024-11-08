@@ -5,8 +5,6 @@ use reqwest::Client;
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
 mod verify_site {
-    use std::time::Duration;
-
     use gotcha_server::{
         response_token,
         routes::{
@@ -19,9 +17,8 @@ mod verify_site {
 
     use super::*;
 
-    #[tokio::test]
-    async fn sucessful_challenge() -> anyhow::Result<()> {
-        let server = test_helpers::create_test_context().await;
+    #[gotcha_server_macros::integration_test]
+    async fn sucessful_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let token = response_token::encode(
             ResponseClaims { success: true },
@@ -42,9 +39,8 @@ mod verify_site {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn failed_challenge() -> anyhow::Result<()> {
-        let server = test_helpers::create_test_context().await;
+    #[gotcha_server_macros::integration_test]
+    async fn failed_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let token = response_token::encode(
             ResponseClaims { success: false },
@@ -65,9 +61,8 @@ mod verify_site {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn missing_secret() -> anyhow::Result<()> {
-        let server = test_helpers::create_test_context().await;
+    #[gotcha_server_macros::integration_test]
+    async fn missing_secret(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let token = response_token::encode(
             ResponseClaims { success: true },
@@ -91,9 +86,8 @@ mod verify_site {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn missing_response() -> anyhow::Result<()> {
-        let server = test_helpers::create_test_context().await;
+    #[gotcha_server_macros::integration_test]
+    async fn missing_response(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
 
         let response = HTTP_CLIENT
@@ -113,9 +107,8 @@ mod verify_site {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn missing_secret_and_response() -> anyhow::Result<()> {
-        let server = test_helpers::create_test_context().await;
+    #[gotcha_server_macros::integration_test]
+    async fn missing_secret_and_response(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
 
         let response = HTTP_CLIENT
@@ -141,9 +134,8 @@ mod verify_site {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn invalid_secret() -> anyhow::Result<()> {
-        let server = test_helpers::create_test_context().await;
+    #[gotcha_server_macros::integration_test]
+    async fn invalid_secret(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let token = response_token::encode(
             ResponseClaims { success: true },
@@ -168,9 +160,8 @@ mod verify_site {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn bad_request() -> anyhow::Result<()> {
-        let server = test_helpers::create_test_context().await;
+    #[gotcha_server_macros::integration_test]
+    async fn bad_request(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let token = response_token::encode(
             ResponseClaims { success: true },
@@ -195,13 +186,15 @@ mod verify_site {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn duplicate() -> anyhow::Result<()> {
+    #[gotcha_server_macros::integration_test]
+    async fn duplicate(_server: TestContext) -> anyhow::Result<()> {
         // TODO
         Ok(())
     }
 
     mod response {
+        use std::time::Duration;
+
         use gotcha_server::routes::challenge::Claims;
         use jsonwebtoken::{EncodingKey, Header};
         use response_token::JWT_ALGORITHM;
@@ -209,9 +202,8 @@ mod verify_site {
 
         use super::*;
 
-        #[tokio::test]
-        async fn expired_signature() -> anyhow::Result<()> {
-            let server = test_helpers::create_test_context().await;
+        #[gotcha_server_macros::integration_test]
+        async fn expired_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let token = response_token::encode_with_timeout(
                 Duration::from_secs(0),
@@ -238,15 +230,14 @@ mod verify_site {
             Ok(())
         }
 
-        #[tokio::test]
-        async fn immature_signature() -> anyhow::Result<()> {
+        #[gotcha_server_macros::integration_test]
+        async fn immature_signature(_server: TestContext) -> anyhow::Result<()> {
             // TODO
             Ok(())
         }
 
-        #[tokio::test]
-        async fn invalid_token() -> anyhow::Result<()> {
-            let server = test_helpers::create_test_context().await;
+        #[gotcha_server_macros::integration_test]
+        async fn invalid_token(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..eyJleHAiOjE3MzAzMDIyNDYsInN1Y2Nlc3MiOnRydWV9.9VBstXEca0JEPksQbMOEXdL_MxBvjiDgLbp0JnfsXMw";
             //                                                ^ extra dot
@@ -267,9 +258,8 @@ mod verify_site {
             Ok(())
         }
 
-        #[tokio::test]
-        async fn invalid_signature() -> anyhow::Result<()> {
-            let server = test_helpers::create_test_context().await;
+        #[gotcha_server_macros::integration_test]
+        async fn invalid_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let token = jsonwebtoken::encode(
                 &Header::new(JWT_ALGORITHM),
@@ -296,9 +286,8 @@ mod verify_site {
             Ok(())
         }
 
-        #[tokio::test]
-        async fn invalid_algorithm() -> anyhow::Result<()> {
-            let server = test_helpers::create_test_context().await;
+        #[gotcha_server_macros::integration_test]
+        async fn invalid_algorithm(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let token = jsonwebtoken::encode(
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
@@ -323,9 +312,8 @@ mod verify_site {
             Ok(())
         }
 
-        #[tokio::test]
-        async fn invalid_base64() -> anyhow::Result<()> {
-            let server = test_helpers::create_test_context().await;
+        #[gotcha_server_macros::integration_test]
+        async fn invalid_base64(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let token = "header-garbage_ç~,-º´.eyJleHAiOjE3MzAzMDIyNDYsInN1Y2Nlc3MiOnRydWV9.9VBstXEca0JEPksQbMOEXdL_MxBvjiDgLbp0JnfsXMw";
 

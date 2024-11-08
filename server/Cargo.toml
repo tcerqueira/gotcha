@@ -29,3 +29,6 @@ sqlx = { version = "0.8", features = [
     "ipnetwork",
 ] }
 uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+gotcha-server-macros = { path = "../server-macros" }
