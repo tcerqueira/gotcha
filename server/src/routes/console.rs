@@ -1,7 +1,21 @@
-use axum::http::StatusCode;
+use axum::{http::StatusCode, Json};
+use serde::{Deserialize, Serialize};
 
-pub async fn gen_api_secret() -> StatusCode {
-    todo!()
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiSecretRequest {
+    pub console_id: uuid::Uuid,
+    pub hostnames: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiSecretResponse {
+    secret: String,
+}
+
+pub async fn gen_api_secret(
+    Json(_request): Json<ApiSecretRequest>,
+) -> super::Result<Json<ApiSecretResponse>> {
+    Ok(Json(ApiSecretResponse { secret: "".into() }))
 }
 
 pub async fn add_origin() -> StatusCode {

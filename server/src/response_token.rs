@@ -5,7 +5,6 @@ use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 use crate::routes::challenge::{Claims, ResponseClaims};
 
-// pub static JWT_SECRET_KEY_B64: &str = "bXktdGVzdGluZy1zZWNyZXQ="; // "my-testing-secret" in base64
 pub static JWT_ALGORITHM: Algorithm = Algorithm::HS256;
 
 pub fn encode(response_claims: ResponseClaims, enc_key_b64: &str) -> anyhow::Result<String> {

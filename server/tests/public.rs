@@ -11,7 +11,6 @@ mod verify_site {
             challenge::ResponseClaims,
             public::{ErrorCodes, VerificationResponse},
         },
-        test_helpers::{self, DEMO_API_SECRET_B64},
     };
     use reqwest::StatusCode;
 
@@ -20,14 +19,14 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn sucessful_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
-        let token = response_token::encode(
-            ResponseClaims { success: true },
-            test_helpers::DEMO_JWT_SECRET_KEY_B64,
-        )?;
+        let api_secret = server.db_api_secret().await;
+        let enc_key = server.db_enconding_key().await;
+
+        let token = response_token::encode(ResponseClaims { success: true }, &enc_key)?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
+            .form(&[("secret", &api_secret), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -42,14 +41,14 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn failed_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
-        let token = response_token::encode(
-            ResponseClaims { success: false },
-            test_helpers::DEMO_JWT_SECRET_KEY_B64,
-        )?;
+        let api_secret = server.db_api_secret().await;
+        let enc_key = server.db_enconding_key().await;
+
+        let token = response_token::encode(ResponseClaims { success: false }, &enc_key)?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
+            .form(&[("secret", &api_secret), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -64,10 +63,9 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn missing_secret(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
-        let token = response_token::encode(
-            ResponseClaims { success: true },
-            test_helpers::DEMO_JWT_SECRET_KEY_B64,
-        )?;
+        let enc_key = server.db_enconding_key().await;
+
+        let token = response_token::encode(ResponseClaims { success: true }, &enc_key)?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
@@ -89,10 +87,11 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn missing_response(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
+        let api_secret = server.db_api_secret().await;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", DEMO_API_SECRET_B64)])
+            .form(&[("secret", api_secret)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -137,10 +136,9 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn invalid_secret(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
-        let token = response_token::encode(
-            ResponseClaims { success: true },
-            test_helpers::DEMO_JWT_SECRET_KEY_B64,
-        )?;
+        let enc_key = server.db_enconding_key().await;
+
+        let token = response_token::encode(ResponseClaims { success: true }, &enc_key)?;
 
         let invalid_secret = "AAABBBCC";
         let response = HTTP_CLIENT
@@ -163,15 +161,11 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn bad_request(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
-        let token = response_token::encode(
-            ResponseClaims { success: true },
-            test_helpers::DEMO_JWT_SECRET_KEY_B64,
-        )?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
             // .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(format!("secret=api_key&response={token}"))
+            .body("secret=api_key&response=response_token")
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -198,24 +192,26 @@ mod verify_site {
         use gotcha_server::routes::challenge::Claims;
         use jsonwebtoken::{EncodingKey, Header};
         use response_token::JWT_ALGORITHM;
-        use test_helpers::DEMO_JWT_SECRET_KEY_B64;
 
         use super::*;
 
         #[gotcha_server_macros::integration_test]
         async fn expired_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
+            let api_secret = server.db_api_secret().await;
+            let enc_key = server.db_enconding_key().await;
+
             let token = response_token::encode_with_timeout(
                 Duration::from_secs(0),
                 ResponseClaims { success: true },
-                test_helpers::DEMO_JWT_SECRET_KEY_B64,
+                &enc_key,
             )?;
             // expired by 1 second
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
+                .form(&[("secret", api_secret), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -239,11 +235,13 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn invalid_token(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
+            let api_secret = server.db_api_secret().await;
+
             let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..eyJleHAiOjE3MzAzMDIyNDYsInN1Y2Nlc3MiOnRydWV9.9VBstXEca0JEPksQbMOEXdL_MxBvjiDgLbp0JnfsXMw";
             //                                                ^ extra dot
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", DEMO_API_SECRET_B64), ("response", token)])
+                .form(&[("secret", api_secret.as_str()), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -261,6 +259,8 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn invalid_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
+            let api_secret = server.db_api_secret().await;
+
             let token = jsonwebtoken::encode(
                 &Header::new(JWT_ALGORITHM),
                 &Claims::new(ResponseClaims { success: true }),
@@ -271,7 +271,7 @@ mod verify_site {
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
+                .form(&[("secret", api_secret), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -289,15 +289,18 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn invalid_algorithm(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
+            let api_secret = server.db_api_secret().await;
+            let enc_key = server.db_enconding_key().await;
+
             let token = jsonwebtoken::encode(
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
                 &Claims::new(ResponseClaims { success: true }),
-                &EncodingKey::from_base64_secret(DEMO_JWT_SECRET_KEY_B64)?,
+                &EncodingKey::from_base64_secret(&enc_key)?,
             )?;
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", DEMO_API_SECRET_B64), ("response", &token)])
+                .form(&[("secret", api_secret), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -315,11 +318,13 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn invalid_base64(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
+            let api_secret = server.db_api_secret().await;
+
             let token = "header-garbage_ç~,-º´.eyJleHAiOjE3MzAzMDIyNDYsInN1Y2Nlc3MiOnRydWV9.9VBstXEca0JEPksQbMOEXdL_MxBvjiDgLbp0JnfsXMw";
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", DEMO_API_SECRET_B64), ("response", token)])
+                .form(&[("secret", api_secret.as_str()), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);

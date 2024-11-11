@@ -1,16 +1,14 @@
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
 use crate::{app, configuration, db, get_configuration};
+
 use anyhow::Context;
-use sqlx::{PgExecutor, PgPool};
+use base64::prelude::*;
+use rand::Rng;
+use sqlx::PgPool;
 use tokio::sync::oneshot::Sender;
 
-pub static DEMO_JWT_SECRET_KEY_B64: &str =
-    "dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m";
-pub static DEMO_API_SECRET_B64: &str =
-    "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
-pub static DEMO_API_SECRET_B64URL: &str =
-    "4BdwFU84HLqceCQbE90%2BU5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
+static DEMO_CONSOLE_LABEL_PREFIX: &str = "console_for_integration_tests";
 
 #[derive(Debug, Clone)]
 pub struct TestContext {
@@ -19,6 +17,7 @@ pub struct TestContext {
 
 #[derive(Debug)]
 struct InnerContext {
+    test_id: uuid::Uuid,
     addr: SocketAddr,
     shutdown_signal: Sender<()>,
     pool: PgPool,
@@ -56,7 +55,8 @@ impl TestContext {
             .run(&pool)
             .await
             .context("failed to migrate db")?;
-        populate_demo(&pool).await;
+        let test_id = uuid::Uuid::new_v4();
+        populate_demo(&pool, &test_id).await?;
 
         let app_pool = pool.clone();
         let _join_handle = tokio::spawn(async move {
@@ -71,6 +71,7 @@ impl TestContext {
 
         Ok(Self {
             inner: Arc::new(InnerContext {
+                test_id,
                 addr,
                 shutdown_signal,
                 pool,
@@ -81,7 +82,7 @@ impl TestContext {
     pub async fn teardown(self) -> anyhow::Result<()> {
         let ctx = Arc::try_unwrap(self.inner)
             .expect("test context references should not leak after the test");
-        rollback_demo(&ctx.pool).await;
+        let _ = rollback_demo(&ctx.pool, &ctx.test_id).await;
         let _ = ctx.shutdown_signal.send(());
         tracing::info!("Shutting down server on {}", ctx.addr);
         Ok(())
@@ -91,10 +92,56 @@ impl TestContext {
         self.inner.addr.port()
     }
 
-    pub fn pool(&self) -> &PgPool {
-        &self.inner.pool
+    pub async fn db_console(&self) -> uuid::Uuid {
+        db::fetch_configuration(
+            &self.inner.pool,
+            &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{}", self.inner.test_id),
+        )
+        .await
+        .unwrap()
+        .expect("expected a console to be created on setup")
+    }
+
+    pub async fn db_api_secret(&self) -> String {
+        db::fetch_api_secrets(&self.inner.pool, &self.db_console().await)
+            .await
+            .unwrap()
+            .swap_remove(0)
+    }
+
+    pub async fn db_enconding_key(&self) -> String {
+        db::fetch_encoding_key(&self.inner.pool, &self.db_api_secret().await)
+            .await
+            .unwrap()
+            .expect("expected a encoding key to be created on setup")
     }
 }
 
-async fn populate_demo(_exec: impl PgExecutor<'_> + Send) {}
-async fn rollback_demo(_exec: impl PgExecutor<'_> + Send) {}
+async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> {
+    let mut txn = pool.begin().await?;
+
+    let mut rng = rand::thread_rng();
+    let console_id =
+        db::insert_configuration(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))
+            .await?;
+    db::insert_api_secret(
+        &mut *txn,
+        &BASE64_STANDARD.encode(rng.gen::<u64>().to_le_bytes()),
+        &console_id,
+        &BASE64_STANDARD.encode(rng.gen::<u64>().to_le_bytes()),
+    )
+    .await?;
+
+    txn.commit().await?;
+    Ok(())
+}
+
+async fn rollback_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> {
+    let mut txn = pool.begin().await?;
+    let id = db::fetch_configuration(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))
+        .await?
+        .expect("expected a console to be created on setup");
+    db::delete_configuration(&mut *txn, &id).await?;
+    txn.commit().await?;
+    Ok(())
+}

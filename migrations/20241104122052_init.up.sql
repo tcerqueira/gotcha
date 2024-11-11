@@ -12,4 +12,5 @@ create table public.api_secret (
     created_at timestamp with time zone not null default now(),
     constraint api_secret_pkey primary key (key),
     constraint api_secret_config_fkey foreign key (config) references configuration (id)
+        on delete cascade
 );
