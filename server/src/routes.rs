@@ -5,7 +5,7 @@ use axum::{
     Router,
 };
 use challenge::{get_challenge, process_challenge};
-use console::{add_origin, gen_api_secret, remove_origin};
+use console::{add_origin, create_console, gen_api_secret, remove_origin};
 use public::site_verify;
 
 use crate::AppState;
@@ -35,8 +35,9 @@ pub fn public(state: &Arc<AppState>) -> Router {
 pub fn console(state: &Arc<AppState>) -> Router {
     let state = Arc::clone(state);
     Router::new()
-        .route("/api-secret", post(gen_api_secret))
-        .route("/allowed-origin", post(add_origin))
-        .route("/allowed-origin", delete(remove_origin))
+        .route("/", post(create_console))
+        .route("/secret", post(gen_api_secret))
+        .route("/origin", post(add_origin))
+        .route("/origin", delete(remove_origin))
         .with_state(state)
 }

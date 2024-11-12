@@ -66,7 +66,7 @@ pub async fn insert_api_secret(
     Ok(())
 }
 
-pub async fn fetch_console(
+pub async fn fetch_console_by_label(
     exec: impl PgExecutor<'_> + Send,
     label: &str,
 ) -> sqlx::Result<Option<uuid::Uuid>> {

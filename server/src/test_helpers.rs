@@ -1,10 +1,12 @@
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
-use crate::{app, configuration, db, get_configuration};
+use crate::{
+    app, configuration,
+    crypto::{self, KEY_SIZE},
+    db, get_configuration,
+};
 
 use anyhow::Context;
-use base64::prelude::*;
-use rand::Rng;
 use sqlx::PgPool;
 use tokio::sync::oneshot::Sender;
 
@@ -92,8 +94,12 @@ impl TestContext {
         self.inner.addr.port()
     }
 
+    pub fn pool(&self) -> &PgPool {
+        &self.inner.pool
+    }
+
     pub async fn db_console(&self) -> uuid::Uuid {
-        db::fetch_console(
+        db::fetch_console_by_label(
             &self.inner.pool,
             &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{}", self.inner.test_id),
         )
@@ -120,14 +126,13 @@ impl TestContext {
 async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> {
     let mut txn = pool.begin().await?;
 
-    let mut rng = rand::thread_rng();
     let console_id =
         db::insert_console(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}")).await?;
     db::insert_api_secret(
         &mut *txn,
-        &BASE64_STANDARD.encode(rng.gen::<u64>().to_le_bytes()),
+        &crypto::gen_base64_key::<KEY_SIZE>(),
         &console_id,
-        &BASE64_STANDARD.encode(rng.gen::<u64>().to_le_bytes()),
+        &crypto::gen_base64_key::<KEY_SIZE>(),
     )
     .await?;
 
@@ -137,9 +142,10 @@ async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> 
 
 async fn rollback_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> {
     let mut txn = pool.begin().await?;
-    let id = db::fetch_console(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))
-        .await?
-        .expect("expected a console to be created on setup");
+    let id =
+        db::fetch_console_by_label(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))
+            .await?
+            .expect("expected a console to be created on setup");
     db::delete_console(&mut *txn, &id).await?;
     txn.commit().await?;
     Ok(())
