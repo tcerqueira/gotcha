@@ -12,7 +12,7 @@ use tracing::instrument;
 
 use crate::{db, response_token, AppState};
 
-use super::errors::Error;
+use super::errors::ChallengeError;
 
 #[derive(Debug, Deserialize)]
 pub struct QueryChallenge {
@@ -68,7 +68,7 @@ pub async fn process_challenge(
             &db::fetch_encoding_key(&state.pool, &results.secret)
                 .await
                 .context("failed to fecth encoding key by api secret while processing challenge")?
-                .ok_or(Error::InvalidSecret)?,
+                .ok_or(ChallengeError::InvalidSecret)?,
         )?,
     }))
 }

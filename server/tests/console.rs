@@ -57,7 +57,17 @@ async fn gen_api_secret(server: TestContext) -> anyhow::Result<()> {
 }
 
 #[gotcha_server_macros::integration_test]
-async fn gen_api_secret_configuration_not_found(_server: TestContext) -> anyhow::Result<()> {
+async fn gen_api_secret_configuration_not_found(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let console_id = uuid::Uuid::new_v4();
+
+    let response = HTTP_CLIENT
+        .post(format!("http://localhost:{port}/api/console/secret"))
+        .json(&ApiSecretRequest { console_id })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
     Ok(())
 }
 

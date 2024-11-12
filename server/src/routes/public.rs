@@ -49,7 +49,7 @@ pub async fn site_verify(
         Form<HashMap<String, String>>,
         VerificationError,
     >,
-) -> Result<Json<VerificationResponse>, VerificationError> {
+) -> super::Result<Json<VerificationResponse>> {
     let verification: Result<VerificationRequest, Vec<ErrorCodes>> = verification.try_into();
     // TODO: fetch from DB
     let (challenge_ts, hostname) = (OffsetDateTime::now_utc(), "unknown".to_string());
@@ -59,11 +59,11 @@ pub async fn site_verify(
     let enc_key = db::fetch_encoding_key(&state.pool, verification.secret.expose_secret())
         .await
         .context("failed to fetch encoding key bey api secret while verifying challenge")?
-        .ok_or(VerificationError::UserError(VerificationResponse::failure(
+        .ok_or(VerificationResponse::failure(
             challenge_ts,
             hostname.clone(),
             vec![ErrorCodes::InvalidInputSecret],
-        )))?;
+        ))?;
 
     let claims = response_token::decode(&verification.response, &enc_key)
         .map_err(jsonwebtoken::errors::Error::into_kind)
@@ -72,11 +72,7 @@ pub async fn site_verify(
             _ => ErrorCodes::InvalidInputResponse,
         })
         .map_err(|err_code| {
-            VerificationError::UserError(VerificationResponse::failure(
-                challenge_ts,
-                hostname.clone(),
-                vec![err_code],
-            ))
+            VerificationResponse::failure(challenge_ts, hostname.clone(), vec![err_code])
         })?;
 
     // TODO: check database to see if it's a duplicate
