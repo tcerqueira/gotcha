@@ -4,14 +4,14 @@ with
     where
       key = '4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q'
     returning
-      config
+    console_id
   ),
-  deleted_configuration as (
-    delete from public.configuration
+  deleted_console as (
+    delete from public.console
     where
       id = (
         select
-          config
+        console_id
         from
           deleted_api_secret
       )
@@ -20,4 +20,4 @@ with
 select
   *
 from
-  deleted_configuration;
+  deleted_console;

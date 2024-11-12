@@ -93,7 +93,7 @@ impl TestContext {
     }
 
     pub async fn db_console(&self) -> uuid::Uuid {
-        db::fetch_configuration(
+        db::fetch_console(
             &self.inner.pool,
             &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{}", self.inner.test_id),
         )
@@ -122,8 +122,7 @@ async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> 
 
     let mut rng = rand::thread_rng();
     let console_id =
-        db::insert_configuration(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))
-            .await?;
+        db::insert_console(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}")).await?;
     db::insert_api_secret(
         &mut *txn,
         &BASE64_STANDARD.encode(rng.gen::<u64>().to_le_bytes()),
@@ -138,10 +137,10 @@ async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> 
 
 async fn rollback_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> {
     let mut txn = pool.begin().await?;
-    let id = db::fetch_configuration(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))
+    let id = db::fetch_console(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))
         .await?
         .expect("expected a console to be created on setup");
-    db::delete_configuration(&mut *txn, &id).await?;
+    db::delete_console(&mut *txn, &id).await?;
     txn.commit().await?;
     Ok(())
 }
