@@ -5,7 +5,6 @@ use axum::{
     Json,
 };
 use thiserror::Error;
-use time::OffsetDateTime;
 
 use super::public::{ErrorCodes, VerificationResponse};
 
@@ -88,12 +87,9 @@ impl IntoResponse for VerificationError {
     fn into_response(self) -> Response {
         match self {
             VerificationError::UserError(verification) => Json(verification).into_response(),
-            VerificationError::BadRequest(_) => Json(VerificationResponse::failure(
-                OffsetDateTime::UNIX_EPOCH,
-                "".to_string(),
-                vec![ErrorCodes::BadRequest],
-            ))
-            .into_response(),
+            VerificationError::BadRequest(_) => {
+                Json(VerificationResponse::failure(vec![ErrorCodes::BadRequest])).into_response()
+            }
         }
     }
 }

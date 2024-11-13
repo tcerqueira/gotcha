@@ -6,11 +6,8 @@ static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
 mod verify_site {
     use gotcha_server::{
-        response_token,
-        routes::{
-            challenge::ResponseClaims,
-            public::{ErrorCodes, VerificationResponse},
-        },
+        response_token::{self, ResponseClaims},
+        routes::public::{ErrorCodes, VerificationResponse},
     };
     use reqwest::StatusCode;
 
@@ -189,9 +186,8 @@ mod verify_site {
     mod response {
         use std::time::Duration;
 
-        use gotcha_server::routes::challenge::Claims;
         use jsonwebtoken::{EncodingKey, Header};
-        use response_token::JWT_ALGORITHM;
+        use response_token::{Claims, JWT_ALGORITHM};
 
         use super::*;
 

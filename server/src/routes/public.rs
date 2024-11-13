@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt::Display, sync::Arc};
 use anyhow::Context;
 use axum::{extract::State, Form, Json};
 use axum_extra::extract::WithRejection;
+use jsonwebtoken::errors::ErrorKind;
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -51,50 +52,38 @@ pub async fn site_verify(
     >,
 ) -> super::Result<Json<VerificationResponse>> {
     let verification: Result<VerificationRequest, Vec<ErrorCodes>> = verification.try_into();
-    // TODO: fetch from DB
-    let (challenge_ts, hostname) = (OffsetDateTime::now_utc(), "unknown".to_string());
-    let verification = verification
-        .map_err(|errs| VerificationResponse::failure(challenge_ts, hostname.clone(), errs))?;
+
+    let verification = verification.map_err(VerificationResponse::failure)?;
 
     let enc_key = db::fetch_encoding_key(&state.pool, verification.secret.expose_secret())
         .await
         .context("failed to fetch encoding key bey api secret while verifying challenge")?
-        .ok_or(VerificationResponse::failure(
-            challenge_ts,
-            hostname.clone(),
-            vec![ErrorCodes::InvalidInputSecret],
-        ))?;
+        .ok_or(VerificationResponse::failure(vec![
+            ErrorCodes::InvalidInputSecret,
+        ]))?;
 
     let claims = response_token::decode(&verification.response, &enc_key)
-        .map_err(jsonwebtoken::errors::Error::into_kind)
-        .map_err(|err| match err {
-            jsonwebtoken::errors::ErrorKind::ExpiredSignature => ErrorCodes::TimeoutOrDuplicate,
+        .map_err(|err| match err.into_kind() {
+            ErrorKind::ExpiredSignature => ErrorCodes::TimeoutOrDuplicate,
             _ => ErrorCodes::InvalidInputResponse,
         })
-        .map_err(|err_code| {
-            VerificationResponse::failure(challenge_ts, hostname.clone(), vec![err_code])
-        })?;
-
-    // TODO: check database to see if it's a duplicate
+        .map_err(|err_code| VerificationResponse::failure(vec![err_code]))?;
 
     Ok(Json(VerificationResponse {
-        success: claims.success,
-        challenge_ts,
-        hostname,
+        success: claims.custom.success,
+        challenge_ts: claims.iat(),
+        // TODO: add 'sub' or custom claim
+        hostname: "".into(),
         error_codes: None,
     }))
 }
 
 impl VerificationResponse {
-    pub fn failure(
-        challenge_ts: OffsetDateTime,
-        hostname: String,
-        errors: Vec<ErrorCodes>,
-    ) -> Self {
+    pub fn failure(errors: Vec<ErrorCodes>) -> Self {
         Self {
             success: false,
-            challenge_ts,
-            hostname,
+            challenge_ts: OffsetDateTime::UNIX_EPOCH,
+            hostname: "".into(),
             error_codes: Some(errors),
         }
     }
@@ -132,7 +121,7 @@ impl Display for VerificationResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "verification: callenge loaded at {} in `{}` - {:?}",
+            "verification: challenge loaded at {} in `{}` - {:?}",
             self.challenge_ts, self.hostname, self.error_codes
         )
     }

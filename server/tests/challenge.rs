@@ -1,6 +1,9 @@
 use std::sync::LazyLock;
 
-use gotcha_server::routes::challenge::{ChallengeResponse, ChallengeResults, Claims, GetChallenge};
+use gotcha_server::{
+    response_token::Claims,
+    routes::challenge::{ChallengeResponse, ChallengeResults, GetChallenge},
+};
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
 use reqwest::{Client, StatusCode};
 

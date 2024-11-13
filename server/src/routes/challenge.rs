@@ -1,15 +1,14 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Context;
 use axum::extract::{ConnectInfo, Query, State};
 use axum::Json;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
 use tracing::instrument;
 
+use crate::response_token::ResponseClaims;
 use crate::{db, response_token, AppState};
 
 use super::errors::ChallengeError;
@@ -58,6 +57,7 @@ pub struct ChallengeResponse {
 #[instrument(skip(state))]
 pub async fn process_challenge(
     State(state): State<Arc<AppState>>,
+    ConnectInfo(_addr): ConnectInfo<SocketAddr>,
     Json(results): Json<ChallengeResults>,
 ) -> super::Result<Json<ChallengeResponse>> {
     Ok(Json(ChallengeResponse {
@@ -71,32 +71,4 @@ pub async fn process_challenge(
                 .ok_or(ChallengeError::InvalidSecret)?,
         )?,
     }))
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    #[serde(with = "time::serde::timestamp")]
-    exp: OffsetDateTime,
-    #[serde(flatten)]
-    pub custom: ResponseClaims,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ResponseClaims {
-    pub success: bool,
-}
-
-pub static TOKEN_TIMEOUT_SECS: u64 = 30;
-
-impl Claims {
-    pub fn new(response: ResponseClaims) -> Self {
-        Self::with_timeout(Duration::from_secs(TOKEN_TIMEOUT_SECS), response)
-    }
-
-    pub fn with_timeout(timeout: Duration, response: ResponseClaims) -> Self {
-        Self {
-            exp: OffsetDateTime::now_utc() + timeout,
-            custom: response,
-        }
-    }
 }
