@@ -21,20 +21,17 @@ const App: Component = () => {
     return <span>Missing api secret.</span>;
   }
 
-  const handleCheck = () => {
-    if (state() == "verifying") return;
+  const handleCheck = async () => {
+    if (checked()) return;
 
     setState("verifying");
-    // Simulate verification process. Should go to server and receive an encrypted response
-    setTimeout(async () => {
-      setState("verified");
-      await onChallengeResponse("http://localhost:8080", secret, true);
+    await onChallengeResponse("http://localhost:8080", secret, true);
+    setState("verified");
 
-      setTimeout(async () => {
-        setState("expired");
-        await onChallengeExpired();
-      }, 10000);
-    }, 1000);
+    setTimeout(async () => {
+      setState("expired");
+      await onChallengeExpired();
+    }, 30000);
   };
 
   return (
