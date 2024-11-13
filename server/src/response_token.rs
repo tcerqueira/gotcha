@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{net::SocketAddr, time::Duration};
 
 use anyhow::Context;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -20,6 +20,7 @@ pub struct Claims {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseClaims {
     pub success: bool,
+    pub authority: SocketAddr,
 }
 
 pub fn encode(response_claims: ResponseClaims, enc_key_b64: &str) -> anyhow::Result<String> {

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, sync::Arc};
+use std::{collections::HashMap, fmt::Display, net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
 use axum::{extract::State, Form, Json};
@@ -27,7 +27,8 @@ pub struct VerificationResponse {
     pub success: bool,
     #[serde(with = "time::serde::iso8601")]
     pub challenge_ts: OffsetDateTime,
-    pub hostname: String,
+    #[serde(rename = "hostname", with = "none_as_empty_string")]
+    pub authority: Option<SocketAddr>,
     #[serde(rename = "error-codes", skip_serializing_if = "Option::is_none")]
     pub error_codes: Option<Vec<ErrorCodes>>,
 }
@@ -72,8 +73,7 @@ pub async fn site_verify(
     Ok(Json(VerificationResponse {
         success: claims.custom.success,
         challenge_ts: claims.iat(),
-        // TODO: add 'sub' or custom claim
-        hostname: "".into(),
+        authority: Some(claims.custom.authority),
         error_codes: None,
     }))
 }
@@ -83,7 +83,7 @@ impl VerificationResponse {
         Self {
             success: false,
             challenge_ts: OffsetDateTime::UNIX_EPOCH,
-            hostname: "".into(),
+            authority: None,
             error_codes: Some(errors),
         }
     }
@@ -121,8 +121,39 @@ impl Display for VerificationResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "verification: challenge loaded at {} in `{}` - {:?}",
-            self.challenge_ts, self.hostname, self.error_codes
+            "verification: challenge loaded at {} in `{:?}` - {:?}",
+            self.challenge_ts, self.authority, self.error_codes
         )
+    }
+}
+
+mod none_as_empty_string {
+    use serde::{self, Deserialize, Deserializer, Serializer};
+    use std::{fmt::Display, str::FromStr};
+
+    pub fn serialize<S, T>(value: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: Display,
+    {
+        match value {
+            Some(addr) => serializer.serialize_str(&addr.to_string()),
+            None => serializer.serialize_str(""),
+        }
+    }
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: FromStr,
+        <T as FromStr>::Err: Display,
+    {
+        match String::deserialize(deserializer)?.as_str() {
+            "" => Ok(None),
+            s => s
+                .parse()
+                .map(Some)
+                .map_err(|e| serde::de::Error::custom(format!("Invalid socket address: {}", e))),
+        }
     }
 }

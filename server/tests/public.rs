@@ -5,6 +5,8 @@ use reqwest::Client;
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
 mod verify_site {
+    use std::net::SocketAddr;
+
     use gotcha_server::{
         response_token::{self, ResponseClaims},
         routes::public::{ErrorCodes, VerificationResponse},
@@ -19,7 +21,13 @@ mod verify_site {
         let api_secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(ResponseClaims { success: true }, &enc_key)?;
+        let token = response_token::encode(
+            ResponseClaims {
+                success: true,
+                authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+            },
+            &enc_key,
+        )?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
@@ -41,7 +49,13 @@ mod verify_site {
         let api_secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(ResponseClaims { success: false }, &enc_key)?;
+        let token = response_token::encode(
+            ResponseClaims {
+                success: false,
+                authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+            },
+            &enc_key,
+        )?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
@@ -62,7 +76,13 @@ mod verify_site {
         let port = server.port();
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(ResponseClaims { success: true }, &enc_key)?;
+        let token = response_token::encode(
+            ResponseClaims {
+                success: true,
+                authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+            },
+            &enc_key,
+        )?;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
@@ -135,7 +155,13 @@ mod verify_site {
         let port = server.port();
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(ResponseClaims { success: true }, &enc_key)?;
+        let token = response_token::encode(
+            ResponseClaims {
+                success: true,
+                authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+            },
+            &enc_key,
+        )?;
 
         let invalid_secret = "AAABBBCC";
         let response = HTTP_CLIENT
@@ -199,7 +225,10 @@ mod verify_site {
 
             let token = response_token::encode_with_timeout(
                 Duration::from_secs(0),
-                ResponseClaims { success: true },
+                ResponseClaims {
+                    success: true,
+                    authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                },
                 &enc_key,
             )?;
             // expired by 1 second
@@ -259,7 +288,10 @@ mod verify_site {
 
             let token = jsonwebtoken::encode(
                 &Header::new(JWT_ALGORITHM),
-                &Claims::new(ResponseClaims { success: true }),
+                &Claims::new(ResponseClaims {
+                    success: true,
+                    authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                }),
                 &EncodingKey::from_base64_secret(
                     "bXktd3Jvbmctc2VjcmV0", /* `my-wrong-secret` in base64 */
                 )?,
@@ -290,7 +322,10 @@ mod verify_site {
 
             let token = jsonwebtoken::encode(
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
-                &Claims::new(ResponseClaims { success: true }),
+                &Claims::new(ResponseClaims {
+                    success: true,
+                    authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                }),
                 &EncodingKey::from_base64_secret(&enc_key)?,
             )?;
 

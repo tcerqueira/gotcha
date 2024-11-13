@@ -57,13 +57,14 @@ pub struct ChallengeResponse {
 #[instrument(skip(state))]
 pub async fn process_challenge(
     State(state): State<Arc<AppState>>,
-    ConnectInfo(_addr): ConnectInfo<SocketAddr>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(results): Json<ChallengeResults>,
 ) -> super::Result<Json<ChallengeResponse>> {
     Ok(Json(ChallengeResponse {
         token: response_token::encode(
             ResponseClaims {
                 success: results.success,
+                authority: addr,
             },
             &db::fetch_encoding_key(&state.pool, &results.secret)
                 .await
