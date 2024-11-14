@@ -12,17 +12,10 @@ static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 #[gotcha_server_macros::integration_test]
 async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let api_secret = server.db_api_secret().await;
-    let api_secret_url = urlencoding::encode(&api_secret);
 
-    let response = reqwest::get(format!(
-        "http://localhost:{port}/api/challenge?secret={api_secret_url}"
-    ))
-    .await?;
+    let response = reqwest::get(format!("http://localhost:{port}/api/challenge")).await?;
     assert_eq!(response.status(), StatusCode::OK);
-
-    let challenge: GetChallenge = response.json().await?;
-    assert!(challenge.url.contains(&format!("secret={api_secret_url}")));
+    let _challenge: GetChallenge = response.json().await?;
 
     Ok(())
 }
