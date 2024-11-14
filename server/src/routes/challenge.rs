@@ -2,16 +2,17 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::extract::{ConnectInfo, State};
-use axum::Json;
+use axum::{
+    extract::{ConnectInfo, State},
+    Json,
+};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
+use super::errors::ChallengeError;
 use crate::response_token::ResponseClaims;
 use crate::{db, response_token, AppState};
-
-use super::errors::ChallengeError;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetChallenge {

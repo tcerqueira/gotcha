@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use axum::Router;
 use configuration::{current_crate_dir, ApplicationConfig, ChallengeConfig};
-pub use configuration::{get_configuration, Config};
-
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+pub use configuration::{get_configuration, Config};
 
 pub mod configuration;
 pub mod crypto;

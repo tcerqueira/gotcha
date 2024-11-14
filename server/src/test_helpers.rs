@@ -1,14 +1,14 @@
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
+use anyhow::Context;
+use sqlx::PgPool;
+use tokio::sync::oneshot::Sender;
+
 use crate::{
     app, configuration,
     crypto::{self, KEY_SIZE},
     db, get_configuration,
 };
-
-use anyhow::Context;
-use sqlx::PgPool;
-use tokio::sync::oneshot::Sender;
 
 static DEMO_CONSOLE_LABEL_PREFIX: &str = "console_for_integration_tests";
 
@@ -40,12 +40,12 @@ where
 
 impl TestContext {
     pub async fn setup() -> anyhow::Result<Self> {
-        crate::init_tracing();
         let configuration::Config {
             application: app_conf,
             database: db_conf,
             ..
         } = get_configuration().context("failed to load configuration")?;
+        crate::init_tracing();
 
         let addr = format!("{}:0", app_conf.host);
         let listener = tokio::net::TcpListener::bind(addr).await?;
