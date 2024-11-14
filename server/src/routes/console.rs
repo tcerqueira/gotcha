@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgDatabaseError;
+use tracing::instrument;
 
 use super::errors::ConsoleError;
 use crate::{
@@ -20,6 +21,7 @@ pub struct ConsoleResponse {
     pub id: uuid::Uuid,
 }
 
+#[instrument(skip(state))]
 pub async fn create_console(
     State(state): State<Arc<AppState>>,
     Json(request): Json<ConsoleRequest>,
@@ -39,6 +41,7 @@ pub struct ApiSecretResponse {
     pub secret: String,
 }
 
+#[instrument(skip(state))]
 pub async fn gen_api_secret(
     State(state): State<Arc<AppState>>,
     Json(request): Json<ApiSecretRequest>,

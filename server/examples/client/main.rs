@@ -32,7 +32,7 @@ static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
 async fn submit(Form(data): Form<HashMap<String, String>>) -> Result<StatusCode, StatusCode> {
     let token = match data.get("g-recaptcha-response").map(String::as_str) {
-        None | Some("") => return Err(StatusCode::FORBIDDEN),
+        None => return Err(StatusCode::FORBIDDEN),
         Some(v) => v,
     };
     let verification: VerificationResponse = HTTP_CLIENT

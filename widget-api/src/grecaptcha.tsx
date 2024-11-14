@@ -1,5 +1,4 @@
 import { getJsParams } from "./js-params";
-import { defaultRenderParams, RenderParams } from "@gotcha-widget/lib";
 import { render } from "solid-js/web";
 import { createWidget, Widget } from "./components/gotcha-widget";
 
@@ -129,3 +128,41 @@ export class GreCaptcha {
     };
   }
 }
+
+/**
+ * Configuration parameters for rendering the captcha widget
+ */
+export type RenderParams = {
+  /** API key for site verification */
+  sitekey: string;
+  /** Widget theme appearance */
+  theme?: "dark" | "light";
+  /** Widget size configuration */
+  size?: "compact" | "normal" | "invisible";
+  /** Badge position in the widget */
+  badge?: "bottomright" | "bottomleft" | "inline";
+  /** Tab index for accessibility */
+  tabindex?: number;
+  /** Callback function on successful verification */
+  callback?: (token: string) => void;
+  /** Callback function when challenge expires */
+  "expired-callback"?: () => void;
+  /** Callback function on error */
+  "error-callback"?: () => void;
+  /** For plugin owners to not interfere with existing reCAPTCHA installations on a page.
+   * If true, this reCAPTCHA instance will be part of a separate ID space
+   */
+  isolated?: boolean;
+};
+
+/**
+ * Default configuration parameters for the widget
+ */
+const defaultRenderParams: RenderParams = {
+  sitekey: "",
+  theme: "light",
+  size: "normal",
+  badge: "bottomright",
+  tabindex: 0,
+  isolated: false,
+};

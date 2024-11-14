@@ -1,6 +1,7 @@
 import { render } from "solid-js/web";
-import { RenderParams, WidgetMessage } from "@gotcha-widget/lib";
+import { WidgetMessage } from "@gotcha-widget/lib";
 import { createResource, Match, onCleanup, onMount, Switch } from "solid-js";
+import { RenderParams } from "../grecaptcha";
 
 export interface Widget {
   render: (container: Element, parameters: RenderParams) => void;
@@ -35,7 +36,7 @@ export function GotchaWidget(props: GotchaWidgetProps) {
   let iframeElement: HTMLIFrameElement | null = null;
   const [challenge] = createResource(props.sitekey, fetchChallenge);
 
-  const handleMessage = (event: MessageEvent<WidgetMessage>) => {
+  const handleMessage = async (event: MessageEvent<WidgetMessage>) => {
     const challengeData = challenge();
     if (!challengeData) return;
 
@@ -50,7 +51,12 @@ export function GotchaWidget(props: GotchaWidgetProps) {
     let message = event.data;
     switch (message.type) {
       case "response-callback":
-        props.callback?.(message.response);
+        let response = await processChallenge(props.sitekey, message.success);
+        if (response !== null) {
+          props.callback?.(response);
+        } else {
+          props["error-callback"]?.();
+        }
         break;
       case "expired-callback":
         props["expired-callback"]?.();
@@ -106,11 +112,37 @@ type Challenge = {
   height: number;
 };
 
-async function fetchChallenge(token: string): Promise<Challenge> {
+async function fetchChallenge(secret: string): Promise<Challenge> {
   const origin = new URL(import.meta.url).origin;
   const url = new URL(`${origin}/api/challenge`);
-  url.searchParams.append("secret", token);
+  url.searchParams.append("secret", secret);
 
   const response = await fetch(url);
   return (await response.json()) as Challenge;
+}
+
+type ChallengeResponse = {
+  token: string;
+};
+
+async function processChallenge(
+  secret: string,
+  success: boolean,
+): Promise<string | null> {
+  try {
+    const origin = new URL(import.meta.url).origin;
+    const url = new URL(`${origin}/api/challenge/process`);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ success, secret }),
+    });
+    const { token }: ChallengeResponse = await response.json();
+
+    return token;
+  } catch (e) {
+    return null;
+  }
 }

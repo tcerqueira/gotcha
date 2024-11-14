@@ -1,10 +1,12 @@
 import { onChallengeExpired, onChallengeResponse } from "@gotcha-widget/lib";
-import { createMemo, createSignal, type Component } from "solid-js";
-
-function getQueryParam(param: string): string | null {
-  const searchParams = new URLSearchParams(window.location.search);
-  return searchParams.get(param);
-}
+import {
+  createMemo,
+  createSignal,
+  Match,
+  Show,
+  Switch,
+  type Component,
+} from "solid-js";
 
 type State = "blank" | "verifying" | "verified" | "expired";
 
@@ -13,19 +15,12 @@ const App: Component = () => {
   const checked = createMemo(
     () => state() === "verifying" || state() === "verified",
   );
-  const verified = createMemo(() => state() === "verified");
-  const expired = createMemo(() => state() === "expired");
-
-  const secret = getQueryParam("secret");
-  if (!secret) {
-    return <span>Missing api secret.</span>;
-  }
 
   const handleCheck = async () => {
     if (checked()) return;
 
     setState("verifying");
-    await onChallengeResponse("http://localhost:8080", secret, true);
+    await onChallengeResponse(true);
     setState("verified");
 
     setTimeout(async () => {
@@ -43,7 +38,7 @@ const App: Component = () => {
           }`}
           onClick={handleCheck}
         >
-          {checked() && (
+          <Show when={checked()}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-5 w-5 text-white"
@@ -56,19 +51,23 @@ const App: Component = () => {
                 clip-rule="evenodd"
               />
             </svg>
-          )}
+          </Show>
         </div>
         <span class="text-gray-700">I'm not a robot</span>
       </div>
-      {checked() && !verified() && (
-        <div class="mt-2 text-sm text-gray-500">Verifying...</div>
-      )}
-      {verified() && (
-        <div class="mt-2 text-sm text-green-500">Verification successful!</div>
-      )}
-      {expired() && (
-        <div class="mt-2 text-sm text-red-500">Verification has expired.</div>
-      )}
+      <Switch>
+        <Match when={state() === "verifying"}>
+          <div class="mt-2 text-sm text-gray-500">Verifying...</div>
+        </Match>
+        <Match when={state() === "verified"}>
+          <div class="mt-2 text-sm text-green-500">
+            Verification successful!
+          </div>
+        </Match>
+        <Match when={state() === "expired"}>
+          <div class="mt-2 text-sm text-red-500">Verification has expired.</div>
+        </Match>
+      </Switch>
     </div>
   );
 };

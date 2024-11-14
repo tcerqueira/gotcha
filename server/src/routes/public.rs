@@ -10,9 +10,8 @@ use thiserror::Error;
 use time::OffsetDateTime;
 use tracing::instrument;
 
-use crate::{db, response_token, AppState};
-
 use super::errors::VerificationError;
+use crate::{db, response_token, AppState};
 
 #[derive(Debug)]
 pub struct VerificationRequest {
