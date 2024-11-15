@@ -13,7 +13,6 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
     let pool = db::connect_database(db_conf);
-    sqlx::migrate!("../migrations").run(&pool).await?;
 
     tracing::info!("Listening on {}", listener.local_addr()?);
     axum::serve(

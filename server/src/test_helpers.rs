@@ -53,10 +53,6 @@ impl TestContext {
         let (shutdown_signal, shutdown_receiver) = tokio::sync::oneshot::channel();
 
         let pool = db::connect_database(db_conf);
-        sqlx::migrate!("../migrations")
-            .run(&pool)
-            .await
-            .context("failed to migrate db")?;
         let test_id = uuid::Uuid::new_v4();
         populate_demo(&pool, &test_id).await?;
 
