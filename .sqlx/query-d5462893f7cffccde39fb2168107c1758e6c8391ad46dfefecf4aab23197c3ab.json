@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select encoding_key from api_secret where key = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "encoding_key",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d5462893f7cffccde39fb2168107c1758e6c8391ad46dfefecf4aab23197c3ab"
+}

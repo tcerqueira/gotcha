@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select key from api_secret where console_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "key",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ba0549811cf32421ae990d28ad762f5347fb41ef9dd3fbd6e34bf6e4630e1632"
+}
