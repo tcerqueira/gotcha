@@ -26,7 +26,7 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
         .join(config.serve_dir)
         .canonicalize()
         .unwrap();
-    tracing::debug!("Serving files from: {:?}", serve_dir);
+    tracing::info!("Serving files from: {:?}", serve_dir);
 
     let state = AppState {
         challenges: config.challenges,

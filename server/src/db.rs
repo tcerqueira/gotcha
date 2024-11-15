@@ -3,6 +3,7 @@ use std::time::Duration;
 use secrecy::ExposeSecret;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
+    prelude::FromRow,
     PgExecutor, PgPool,
 };
 
@@ -95,4 +96,17 @@ pub async fn delete_console(
         .execute(exec)
         .await?;
     Ok(res.rows_affected())
+}
+
+#[derive(Debug, FromRow)]
+pub struct DbChallenge {
+    pub url: String,
+    pub width: i16,
+    pub height: i16,
+}
+
+pub async fn fetch_challenges(exec: impl PgExecutor<'_> + Send) -> sqlx::Result<Vec<DbChallenge>> {
+    sqlx::query_as!(DbChallenge, "select url, width, height from challenge")
+        .fetch_all(exec)
+        .await
 }

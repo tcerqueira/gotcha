@@ -14,3 +14,13 @@ create table public.api_secret (
     constraint api_secret_console_id_fkey foreign key (console_id) references console (id)
         on delete cascade
 );
+
+create table public.challenge (
+    url character varying not null,
+    width smallint not null default 400,
+    height smallint not null default 600,
+    created_at timestamp with time zone not null default now(),
+    constraint challenge_pkey primary key (url),
+    constraint width_positive check (width > 0),
+    constraint height_positive check (height > 0)
+);
