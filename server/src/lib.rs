@@ -45,6 +45,7 @@ fn api(state: AppState) -> Router {
         .nest("/", routes::public(&state))
         .nest("/challenge", routes::challenge(&state))
         .nest("/console", routes::console(&state))
+        .nest("/admin", routes::admin(&state))
         .layer(CorsLayer::permissive())
 }
 
@@ -56,4 +57,16 @@ pub fn init_tracing() {
         )
         .with(tracing_subscriber::fmt::layer().with_test_writer())
         .try_init();
+}
+
+pub async fn db_dev_populate(pool: &PgPool) -> sqlx::Result<()> {
+    db::insert_challenge(
+        pool,
+        &db::DbChallenge {
+            url: "http://localhost:8080/im-not-a-robot/index.html".into(),
+            width: 304,
+            height: 78,
+        },
+    )
+    .await
 }

@@ -110,3 +110,38 @@ pub async fn fetch_challenges(exec: impl PgExecutor<'_> + Send) -> sqlx::Result<
         .fetch_all(exec)
         .await
 }
+
+pub async fn insert_challenge(
+    exec: impl PgExecutor<'_> + Send,
+    challenge: &DbChallenge,
+) -> sqlx::Result<()> {
+    sqlx::query!(
+        "insert into challenge (url, width, height) values ($1, $2, $3)",
+        challenge.url,
+        challenge.width,
+        challenge.height
+    )
+    .execute(exec)
+    .await?;
+    Ok(())
+}
+
+pub async fn delete_challenge(
+    exec: impl PgExecutor<'_> + Send,
+    challenge_url: &str,
+) -> sqlx::Result<u64> {
+    let res = sqlx::query!("delete from challenge where url = $1", challenge_url)
+        .execute(exec)
+        .await?;
+    Ok(res.rows_affected())
+}
+
+pub async fn delete_challenge_like(
+    exec: impl PgExecutor<'_> + Send,
+    url_pattern: &str,
+) -> sqlx::Result<u64> {
+    let res = sqlx::query!("delete from challenge where url like $1", url_pattern)
+        .execute(exec)
+        .await?;
+    Ok(res.rows_affected())
+}

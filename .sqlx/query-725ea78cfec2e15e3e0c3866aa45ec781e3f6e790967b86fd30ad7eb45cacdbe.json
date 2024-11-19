@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from challenge where url like $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "725ea78cfec2e15e3e0c3866aa45ec781e3f6e790967b86fd30ad7eb45cacdbe"
+}

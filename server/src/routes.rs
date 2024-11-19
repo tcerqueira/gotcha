@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
+use admin::{add_challenge, remove_challenge, require_auth_mw};
 use axum::{
+    middleware,
     routing::{delete, get, post},
     Router,
 };
@@ -10,6 +12,7 @@ use public::site_verify;
 
 use crate::AppState;
 
+pub mod admin;
 pub mod challenge;
 pub mod console;
 mod errors;
@@ -39,5 +42,17 @@ pub fn console(state: &Arc<AppState>) -> Router {
         .route("/secret", post(gen_api_secret))
         .route("/origin", post(add_origin))
         .route("/origin", delete(remove_origin))
+        .with_state(state)
+}
+
+pub fn admin(state: &Arc<AppState>) -> Router {
+    let state = Arc::clone(state);
+    Router::new()
+        .route("/challenge", post(add_challenge))
+        .route("/challenge", delete(remove_challenge))
+        .layer(middleware::from_fn_with_state(
+            Arc::clone(&state),
+            require_auth_mw,
+        ))
         .with_state(state)
 }

@@ -15,6 +15,8 @@ pub enum Error {
     #[error(transparent)]
     Console(#[from] ConsoleError),
     #[error(transparent)]
+    Admin(#[from] AdminError),
+    #[error(transparent)]
     Verification(#[from] VerificationError),
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
@@ -32,6 +34,7 @@ impl IntoResponse for Error {
             Error::Challenge(err) => err.into_response(),
             Error::Console(err) => err.into_response(),
             Error::Verification(err) => err.into_response(),
+            Error::Admin(err) => err.into_response(),
         }
     }
 }
@@ -71,6 +74,33 @@ impl IntoResponse for ConsoleError {
         match self {
             ConsoleError::NotFound { what } => (StatusCode::NOT_FOUND, what).into_response(),
             ConsoleError::Forbidden => StatusCode::FORBIDDEN.into_response(),
+        }
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum AdminError {
+    #[error("{what} resource already exists")]
+    NotUnique { what: String },
+    #[error("Dimensions out of range: width and height must be greater than 0")]
+    InvalidDimensions,
+    #[error("Could not parse URL")]
+    InvalidUrl,
+    #[error("Challenge not found: url('{0}')")]
+    NotFound(String),
+}
+
+impl IntoResponse for AdminError {
+    fn into_response(self) -> Response {
+        match self {
+            AdminError::NotUnique { what: _ } => {
+                (StatusCode::CONFLICT, self.to_string()).into_response()
+            }
+            AdminError::InvalidDimensions => {
+                (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()).into_response()
+            }
+            AdminError::InvalidUrl => (StatusCode::BAD_REQUEST, self.to_string()).into_response(),
+            AdminError::NotFound(_) => (StatusCode::NOT_FOUND, self.to_string()).into_response(),
         }
     }
 }

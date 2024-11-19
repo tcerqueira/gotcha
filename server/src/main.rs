@@ -13,6 +13,10 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
     let pool = db::connect_database(db_conf);
+    // aka 'dev' profile
+    if cfg!(debug_assertions) {
+        let _ = gotcha_server::db_dev_populate(&pool).await;
+    }
 
     tracing::info!("Listening on {}", listener.local_addr()?);
     axum::serve(
