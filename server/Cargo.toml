@@ -3,6 +3,10 @@ name = "gotcha-server"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+# default = ["aws-lambda"]
+aws-lambda = ["dep:lambda_http"]
+
 [dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 axum = { version = "0.7", features = ["macros"] }
@@ -31,7 +35,7 @@ sqlx = { version = "0.8", features = [
 uuid = { version = "1", features = ["v4", "serde"] }
 rand = { version = "0.8", features = ["min_const_gen"] }
 base64 = "0.22"
-urlencoding = "2"
+lambda_http = { version = "0.13", optional = true }
 
 [dev-dependencies]
 gotcha-server-macros = { path = "../server-macros" }

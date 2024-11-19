@@ -7,6 +7,16 @@ use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+#[cfg(feature = "aws-lambda")]
+mod aws_lambda {
+    pub use axum::extract::ConnectInfo;
+    pub use lambda_http::{http::Request, request::RequestContext, RequestExt};
+    pub use std::net::SocketAddr;
+    pub use tower::util::MapRequest;
+}
+#[cfg(feature = "aws-lambda")]
+use aws_lambda::*;
+
 pub use configuration::{get_configuration, Config};
 
 pub mod configuration;
@@ -44,12 +54,41 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
 
 fn api(state: AppState) -> Router {
     let state = Arc::new(state);
-    Router::new()
+    let router = Router::new()
         .nest("/", routes::public(&state))
         .nest("/challenge", routes::challenge(&state))
         .nest("/console", routes::console(&state))
         .nest("/admin", routes::admin(&state))
-        .layer(CorsLayer::permissive())
+        .layer(CorsLayer::permissive());
+
+    #[cfg(feature = "aws-lambda")]
+    let router = router.layer(MapRequest::<Router, _>::layer(extract_lambda_source_ip));
+    router
+}
+
+#[cfg(feature = "aws-lambda")]
+fn extract_lambda_source_ip<B>(mut request: Request<B>) -> Request<B> {
+    if request
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .is_some()
+    {
+        return request;
+    }
+
+    let Some(RequestContext::ApiGatewayV2(cx)) = request.request_context_ref() else {
+        return request;
+    };
+
+    let Some(source_ip) = &cx.http.source_ip else {
+        return request;
+    };
+
+    if let Ok(addr) = source_ip.parse::<SocketAddr>() {
+        request.extensions_mut().insert(ConnectInfo(addr));
+    }
+
+    request
 }
 
 pub fn init_tracing() {

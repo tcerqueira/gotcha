@@ -2,10 +2,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::{
-    extract::{ConnectInfo, State},
-    Json,
-};
+use axum::extract::ConnectInfo;
+use axum::{extract::State, Json};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -24,7 +22,6 @@ pub struct GetChallenge {
 #[instrument(skip(state))]
 pub async fn get_challenge(
     State(state): State<Arc<AppState>>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> super::Result<Json<GetChallenge>> {
     // let challenge = &state.challenges[0];
     let challenges = db::fetch_challenges(&state.pool).await?;
