@@ -1,13 +1,15 @@
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
+use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use tokio::sync::oneshot::Sender;
 
 use crate::{
     app, configuration,
     crypto::{self, KEY_SIZE},
-    db, get_configuration,
+    db::{self, DbChallenge},
+    get_configuration,
 };
 
 static DEMO_CONSOLE_LABEL_PREFIX: &str = "console_for_integration_tests";
@@ -23,6 +25,7 @@ struct InnerContext {
     addr: SocketAddr,
     shutdown_signal: Sender<()>,
     pool: PgPool,
+    admin_auth_key: String,
 }
 
 pub async fn with_test_context<F, Fut, R>(test: F) -> R
@@ -57,6 +60,7 @@ impl TestContext {
         populate_demo(&pool, &test_id).await?;
 
         let app_pool = pool.clone();
+        let admin_auth_key = app_conf.admin_auth_key.expose_secret().into();
         let _join_handle = tokio::spawn(async move {
             axum::serve(
                 listener,
@@ -73,6 +77,7 @@ impl TestContext {
                 addr,
                 shutdown_signal,
                 pool,
+                admin_auth_key,
             }),
         })
     }
@@ -92,6 +97,10 @@ impl TestContext {
 
     pub fn pool(&self) -> &PgPool {
         &self.inner.pool
+    }
+
+    pub fn admin_auth_key(&self) -> &str {
+        &self.inner.admin_auth_key
     }
 
     pub async fn db_console(&self) -> uuid::Uuid {
@@ -116,6 +125,10 @@ impl TestContext {
             .await
             .unwrap()
             .expect("expected a encoding key to be created on setup")
+    }
+
+    pub async fn db_challenges(&self) -> Vec<DbChallenge> {
+        db::fetch_challenges(&self.inner.pool).await.unwrap()
     }
 }
 

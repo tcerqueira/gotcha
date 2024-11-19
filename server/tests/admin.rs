@@ -1,9 +1,6 @@
 use std::sync::LazyLock;
 
-use gotcha_server::{
-    db,
-    routes::admin::{AddChallenge, DeleteChallenge},
-};
+use gotcha_server::routes::admin::{AddChallenge, DeleteChallenge};
 use reqwest::{Client, StatusCode};
 
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
@@ -11,12 +8,13 @@ static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let pool = server.pool();
+    let auth_key = server.admin_auth_key();
     let nonce = uuid::Uuid::new_v4();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&AddChallenge {
             url: url.clone(),
             width: 50,
@@ -26,7 +24,7 @@ async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
 
-    let challenges = db::fetch_challenges(pool).await?;
+    let challenges = server.db_challenges().await;
     assert!(challenges.iter().any(|c| c.url == url));
 
     Ok(())
@@ -35,9 +33,11 @@ async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_bad_url(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
+    let auth_key = server.admin_auth_key();
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&AddChallenge {
             url: "bad_url::integration-test.com/index.html".into(),
             width: 50,
@@ -53,9 +53,11 @@ async fn add_challenge_bad_url(server: TestContext) -> anyhow::Result<()> {
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_negative_dimensions(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
+    let auth_key = server.admin_auth_key();
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&serde_json::json!({
             "url": "https://integration-test.com/index.html",
             "width": -1,
@@ -71,9 +73,11 @@ async fn add_challenge_negative_dimensions(server: TestContext) -> anyhow::Resul
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_zero_dimensions(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
+    let auth_key = server.admin_auth_key();
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&AddChallenge {
             url: "https://integration-test.com/index.html".into(),
             width: 50,
@@ -89,11 +93,13 @@ async fn add_challenge_zero_dimensions(server: TestContext) -> anyhow::Result<()
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
+    let auth_key = server.admin_auth_key();
     let nonce = uuid::Uuid::new_v4();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&AddChallenge {
             url: url.clone(),
             width: 50,
@@ -105,6 +111,7 @@ async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()>
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&AddChallenge {
             url: url.clone(),
             width: 50,
@@ -120,11 +127,13 @@ async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()>
 #[gotcha_server_macros::integration_test]
 async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
+    let auth_key = server.admin_auth_key();
     let nonce = uuid::Uuid::new_v4();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&AddChallenge {
             url: url.clone(),
             width: 50,
@@ -136,6 +145,7 @@ async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> 
 
     let response = HTTP_CLIENT
         .delete(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&DeleteChallenge { url })
         .send()
         .await?;
@@ -147,15 +157,56 @@ async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> 
 #[gotcha_server_macros::integration_test]
 async fn remove_challenge_not_found(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
+    let auth_key = server.admin_auth_key();
     let nonce = uuid::Uuid::new_v4();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
         .delete(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", format!("Bearer {auth_key}"))
         .json(&DeleteChallenge { url })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn challenge_endpoint_missing_auth_key(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let nonce = uuid::Uuid::new_v4();
+
+    let response = HTTP_CLIENT
+        .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .json(&AddChallenge {
+            url: format!("https://integration-test.com/index.html?nonce={nonce}"),
+            width: 50,
+            height: 50,
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn challenge_endpoint_wrong_auth_key(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let nonce = uuid::Uuid::new_v4();
+
+    let response = HTTP_CLIENT
+        .post(format!("http://localhost:{port}/api/admin/challenge"))
+        .header("Authorization", "Bearer wrong-auth-key")
+        .json(&AddChallenge {
+            url: format!("https://integration-test.com/index.html?nonce={nonce}"),
+            width: 50,
+            height: 50,
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
     Ok(())
 }

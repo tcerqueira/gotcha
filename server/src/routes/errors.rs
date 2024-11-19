@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use axum_extra::typed_header::TypedHeaderRejection;
 use thiserror::Error;
 
 use super::public::{ErrorCodes, VerificationResponse};
@@ -88,6 +89,8 @@ pub enum AdminError {
     InvalidUrl,
     #[error("Challenge not found: url('{0}')")]
     NotFound(String),
+    #[error(transparent)]
+    Unauthorized(#[from] TypedHeaderRejection),
 }
 
 impl IntoResponse for AdminError {
@@ -101,6 +104,9 @@ impl IntoResponse for AdminError {
             }
             AdminError::InvalidUrl => (StatusCode::BAD_REQUEST, self.to_string()).into_response(),
             AdminError::NotFound(_) => (StatusCode::NOT_FOUND, self.to_string()).into_response(),
+            AdminError::Unauthorized(err) => {
+                (StatusCode::UNAUTHORIZED, err.to_string()).into_response()
+            }
         }
     }
 }

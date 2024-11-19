@@ -2,15 +2,18 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Request, State},
+    http::StatusCode,
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Response},
     Json,
 };
 use axum_extra::{
+    extract::WithRejection,
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
 use reqwest::Url;
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgDatabaseError;
 use tracing::instrument;
@@ -92,10 +95,14 @@ pub async fn remove_challenge(
 
 #[instrument(skip_all)]
 pub async fn require_auth_mw(
-    State(_state): State<Arc<AppState>>,
-    _auth_header: Option<TypedHeader<Authorization<Bearer>>>,
+    State(state): State<Arc<AppState>>,
+    WithRejection(auth_header, _): WithRejection<TypedHeader<Authorization<Bearer>>, AdminError>,
     request: Request,
     next: Next,
 ) -> Response {
-    next.run(request).await
+    if state.admin_auth_key.expose_secret() == auth_header.token() {
+        next.run(request).await
+    } else {
+        StatusCode::UNAUTHORIZED.into_response()
+    }
 }

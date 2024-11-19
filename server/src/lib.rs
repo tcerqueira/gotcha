@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use configuration::{current_crate_dir, ApplicationConfig, ChallengeConfig};
+use secrecy::Secret;
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -19,6 +20,7 @@ pub mod test_helpers;
 pub struct AppState {
     pub challenges: Vec<ChallengeConfig>,
     pub pool: PgPool,
+    pub admin_auth_key: Secret<String>,
 }
 
 pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
@@ -31,6 +33,7 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
     let state = AppState {
         challenges: config.challenges,
         pool,
+        admin_auth_key: config.admin_auth_key,
     };
 
     Router::new()
