@@ -47,6 +47,29 @@ jobs:
         run: cargo sqlx prepare --check --workspace -- --all-targets --all-features
       - run: cargo test --all-features
 
+  lambda:
+    name: Lambda build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-lambda
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo build-lambda
+
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
