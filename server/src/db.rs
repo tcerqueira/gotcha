@@ -67,6 +67,32 @@ pub async fn insert_api_secret(
     Ok(())
 }
 
+pub async fn with_console_insert_api_secret(
+    exec: impl PgExecutor<'_> + Send,
+    console_label: &str,
+    secret_key: &str,
+    enc_key: &str,
+) -> sqlx::Result<()> {
+    sqlx::query!(
+        r#"with
+      console as (insert into public.console (label) values ($1) returning id)
+    insert into
+      public.api_secret (key, console_id, encoding_key)
+    values
+      (
+        $2,
+        (select id from console),
+        $3
+      )"#,
+        console_label,
+        secret_key,
+        enc_key
+    )
+    .execute(exec)
+    .await?;
+    Ok(())
+}
+
 pub async fn fetch_console_by_label(
     exec: impl PgExecutor<'_> + Send,
     label: &str,

@@ -9,9 +9,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[cfg(feature = "aws-lambda")]
 mod aws_lambda {
-    pub use axum::extract::ConnectInfo;
-    pub use lambda_http::{http::Request, request::RequestContext, RequestExt};
-    pub use std::net::SocketAddr;
+    pub use crate::routes::challenge::extract_lambda_source_ip;
     pub use tower::util::MapRequest;
 }
 #[cfg(feature = "aws-lambda")]
@@ -66,31 +64,6 @@ fn api(state: AppState) -> Router {
     router
 }
 
-#[cfg(feature = "aws-lambda")]
-fn extract_lambda_source_ip<B>(mut request: Request<B>) -> Request<B> {
-    if request
-        .extensions()
-        .get::<ConnectInfo<SocketAddr>>()
-        .is_some()
-    {
-        return request;
-    }
-
-    let Some(RequestContext::ApiGatewayV2(cx)) = request.request_context_ref() else {
-        return request;
-    };
-
-    let Some(source_ip) = &cx.http.source_ip else {
-        return request;
-    };
-
-    if let Ok(addr) = source_ip.parse::<SocketAddr>() {
-        request.extensions_mut().insert(ConnectInfo(addr));
-    }
-
-    request
-}
-
 pub fn init_tracing() {
     let _ = tracing_subscriber::registry()
         .with(
@@ -102,13 +75,24 @@ pub fn init_tracing() {
 }
 
 pub async fn db_dev_populate(pool: &PgPool) -> sqlx::Result<()> {
-    db::insert_challenge(
-        pool,
+    let mut txn = pool.begin().await?;
+
+    let _ = db::insert_challenge(
+        &mut *txn,
         &db::DbChallenge {
             url: "http://localhost:8080/im-not-a-robot/index.html".into(),
             width: 304,
             height: 78,
         },
     )
-    .await
+    .await;
+    let _ = db::with_console_insert_api_secret(
+        &mut *txn,
+        "demo",
+        "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+        "dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m",
+    )
+    .await;
+
+    txn.commit().await
 }

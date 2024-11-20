@@ -12,6 +12,13 @@ use super::errors::ChallengeError;
 use crate::{db, response_token, AppState};
 use crate::{db::DbChallenge, response_token::ResponseClaims};
 
+#[cfg(feature = "aws-lambda")]
+mod aws_lambda {
+    pub use lambda_http::{http::Request, request::RequestContext, RequestExt};
+}
+#[cfg(feature = "aws-lambda")]
+use aws_lambda::*;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetChallenge {
     pub url: String,
@@ -23,7 +30,6 @@ pub struct GetChallenge {
 pub async fn get_challenge(
     State(state): State<Arc<AppState>>,
 ) -> super::Result<Json<GetChallenge>> {
-    // let challenge = &state.challenges[0];
     let challenges = db::fetch_challenges(&state.pool).await?;
     let challenge = choose_challenge(challenges);
 
@@ -60,6 +66,31 @@ pub async fn process_challenge(
                 .ok_or(ChallengeError::InvalidSecret)?,
         )?,
     }))
+}
+
+#[cfg(feature = "aws-lambda")]
+pub fn extract_lambda_source_ip<B>(mut request: Request<B>) -> Request<B> {
+    if request
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .is_some()
+    {
+        return request;
+    }
+
+    let Some(RequestContext::ApiGatewayV2(cx)) = request.request_context_ref() else {
+        return request;
+    };
+
+    let Some(source_ip) = &cx.http.source_ip else {
+        return request;
+    };
+
+    if let Ok(addr) = source_ip.parse::<SocketAddr>() {
+        request.extensions_mut().insert(ConnectInfo(addr));
+    }
+
+    request
 }
 
 fn choose_challenge(mut challenges: Vec<DbChallenge>) -> DbChallenge {
