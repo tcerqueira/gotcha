@@ -33,6 +33,7 @@ where
     F: FnOnce(TestContext) -> Fut,
     Fut: Future<Output = R>,
 {
+    std::env::set_var("SERVER_DIR", "../");
     let ctx = TestContext::setup()
         .await
         .expect("failed to setup test environment");

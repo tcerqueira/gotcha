@@ -21,7 +21,7 @@ serde-aux = "4"
 secrecy = { version = "0.8", features = ["serde"] }
 anyhow = "1"
 thiserror = "1"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "native-tls-vendored"] }
 config = { version = "0.14", default-features = false, features = ["yaml"] }
 jsonwebtoken = "9"
 sqlx = { version = "0.8", features = [

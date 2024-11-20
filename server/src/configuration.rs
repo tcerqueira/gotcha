@@ -40,12 +40,14 @@ pub struct ChallengeConfig {
     pub height: u16,
 }
 
-pub fn current_crate_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+pub fn server_dir() -> PathBuf {
+    std::env::var("SERVER_DIR").map_or(std::env::current_dir().unwrap(), |p| {
+        std::env::current_dir().unwrap().join(p)
+    })
 }
 
 pub fn get_configuration() -> Result<Config, config::ConfigError> {
-    let configuration_directory = current_crate_dir().join("config");
+    let configuration_directory = server_dir().join("config");
     tracing::debug!("Loading config from: {configuration_directory:?}");
     // Detect the running environment.
     // Default to `local` if unspecified.

@@ -2,6 +2,12 @@
 members = ["server", "server-macros"]
 resolver = "2"
 
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+
 # Speed up compile time checks for sqlx queries
 [profile.dev.package.sqlx-macros]
 opt-level = 3

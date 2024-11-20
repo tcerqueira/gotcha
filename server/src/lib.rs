@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::Router;
-use configuration::{current_crate_dir, ApplicationConfig, ChallengeConfig};
+use configuration::{server_dir, ApplicationConfig, ChallengeConfig};
 use secrecy::Secret;
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
@@ -32,10 +32,7 @@ pub struct AppState {
 }
 
 pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
-    let serve_dir = current_crate_dir()
-        .join(config.serve_dir)
-        .canonicalize()
-        .unwrap();
+    let serve_dir = server_dir().join(config.serve_dir).canonicalize().unwrap();
     tracing::info!("Serving files from: {:?}", serve_dir);
 
     let state = AppState {
