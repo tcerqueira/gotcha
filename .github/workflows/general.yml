@@ -3,10 +3,12 @@ on:
   push:
     branches:
       - master
+      - dev
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - master
+      - dev
   workflow_dispatch:
 
 env:

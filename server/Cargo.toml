@@ -40,3 +40,7 @@ lambda_http = { version = "0.13", optional = true }
 [dev-dependencies]
 gotcha-server-macros = { path = "../server-macros" }
 serde_json = "1"
+
+[package.metadata.lambda.deploy]
+env = { "APP_ENVIRONMENT" = "production" }
+tags = { "organization" = "gotcha" }

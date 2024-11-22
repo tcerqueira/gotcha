@@ -15,4 +15,5 @@ watch-client = [
     "-w",
     "server/examples",
 ]
-build-lambda = "lambda build --release --arm64 --output-format zip --include dist/ --include config/ --features aws-lambda"
+build-lambda = "lambda build --release --arm64 --features aws-lambda"
+deploy-lambda = "lambda deploy gotcha-server --include dist/ --include config/"

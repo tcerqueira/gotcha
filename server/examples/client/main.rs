@@ -31,10 +31,11 @@ fn app() -> Router {
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
 async fn submit(Form(data): Form<HashMap<String, String>>) -> Result<StatusCode, StatusCode> {
-    let token = match data.get("g-recaptcha-response").map(String::as_str) {
-        None => return Err(StatusCode::FORBIDDEN),
-        Some(v) => v,
-    };
+    let token = data
+        .get("g-recaptcha-response")
+        .ok_or(StatusCode::FORBIDDEN)?
+        .as_str();
+
     let verification: VerificationResponse = HTTP_CLIENT
         .post("http://localhost:8080/api/siteverify")
         .form(&[
@@ -46,7 +47,7 @@ async fn submit(Form(data): Form<HashMap<String, String>>) -> Result<StatusCode,
         ])
         .send()
         .await
-        .map_err(|_| StatusCode::BAD_REQUEST)?
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
         .json()
         .await
         .map_err(|_| StatusCode::BAD_REQUEST)?;

@@ -1,0 +1,40 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCargoLambdaIam",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:AttachRolePolicy",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::597088030785:role/AWSLambdaBasicExecutionRole",
+        "arn:aws:iam::597088030785:role/cargo-lambda-role*"
+      ]
+    },
+    {
+      "Sid": "CDKAssumeRole",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": ["arn:aws:iam::597088030785:role/cdk-*"]
+    },
+    {
+      "Sid": "AllowCargoLambdaUser",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:UpdateFunctionCode",
+        "lambda:TagResource",
+        "lambda:GetLayerVersion",
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:PublishVersion"
+      ],
+      "Resource": ["arn:aws:lambda:*:*:function:*"]
+    }
+  ]
+}
