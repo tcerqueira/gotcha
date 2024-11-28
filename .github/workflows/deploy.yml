@@ -1,9 +1,7 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Deploy
 on:
   push:
-    branches:
-      - master
-  pull_request:
     branches:
       - master
   workflow_dispatch:
@@ -13,6 +11,7 @@ env:
 
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -24,10 +23,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18"
-          cache: "npm"
-          cache-dependency-path: "infra/package-lock.json"
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
       - name: Install cargo-lambda
         uses: baptiste0928/cargo-install@v3
         with:
