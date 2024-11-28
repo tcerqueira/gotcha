@@ -9,15 +9,9 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::errors::ChallengeError;
+use crate::extractors::ThisOrigin;
 use crate::{db, response_token, AppState};
 use crate::{db::DbChallenge, response_token::ResponseClaims};
-
-#[cfg(feature = "aws-lambda")]
-mod aws_lambda {
-    pub use lambda_http::{http::Request, request::RequestContext, RequestExt};
-}
-#[cfg(feature = "aws-lambda")]
-use aws_lambda::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetChallenge {
@@ -29,9 +23,14 @@ pub struct GetChallenge {
 #[instrument(skip(state))]
 pub async fn get_challenge(
     State(state): State<Arc<AppState>>,
+    ThisOrigin(origin): ThisOrigin,
 ) -> super::Result<Json<GetChallenge>> {
     let challenges = db::fetch_challenges(&state.pool).await?;
-    let challenge = choose_challenge(challenges);
+    let challenge = choose_challenge(challenges).unwrap_or_else(|| DbChallenge {
+        url: format!("{origin}/im-not-a-robot/index.html"),
+        width: 304,
+        height: 78,
+    });
 
     Ok(Json(challenge.try_into()?))
 }
@@ -68,40 +67,11 @@ pub async fn process_challenge(
     }))
 }
 
-#[cfg(feature = "aws-lambda")]
-pub fn extract_lambda_source_ip<B>(mut request: Request<B>) -> Request<B> {
-    if request
-        .extensions()
-        .get::<ConnectInfo<SocketAddr>>()
-        .is_some()
-    {
-        return request;
-    }
-
-    let Some(RequestContext::ApiGatewayV2(cx)) = request.request_context_ref() else {
-        return request;
-    };
-
-    let Some(source_ip) = &cx.http.source_ip else {
-        return request;
-    };
-
-    if let Ok(addr) = source_ip.parse::<SocketAddr>() {
-        request.extensions_mut().insert(ConnectInfo(addr));
-    }
-
-    request
-}
-
-fn choose_challenge(mut challenges: Vec<DbChallenge>) -> DbChallenge {
+fn choose_challenge(mut challenges: Vec<DbChallenge>) -> Option<DbChallenge> {
     match &challenges[..] {
-        [] => DbChallenge {
-            url: "http://localhost:8080/im-not-a-robot/index.html".into(),
-            width: 304,
-            height: 78,
-        },
+        [] => None,
         // _ => challenges.swap_remove(rand::thread_rng().gen_range(0..challenges.len())),
-        _ => challenges.swap_remove(0),
+        _ => Some(challenges.swap_remove(0)),
     }
 }
 
@@ -109,7 +79,8 @@ impl TryFrom<DbChallenge> for GetChallenge {
     type Error = anyhow::Error;
 
     fn try_from(db_challenge: DbChallenge) -> Result<Self, Self::Error> {
-        let url = Url::parse(&db_challenge.url).context("malformed challenge url")?;
+        let url = Url::parse(&db_challenge.url)
+            .with_context(|| format!("malformed challenge url: {}", db_challenge.url))?;
 
         Ok(GetChallenge {
             url: url.to_string(),

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use axum::Router;
+use axum::{Extension, Router};
 use configuration::{server_dir, ApplicationConfig, ChallengeConfig};
+use extractors::ThisOrigin;
 use secrecy::Secret;
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
@@ -9,8 +10,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[cfg(feature = "aws-lambda")]
 mod aws_lambda {
-    pub use crate::routes::challenge::extract_lambda_source_ip;
-    pub use tower::util::MapRequest;
+    pub use tower::util::MapRequestLayer;
 }
 #[cfg(feature = "aws-lambda")]
 use aws_lambda::*;
@@ -20,6 +20,7 @@ pub use configuration::{get_configuration, Config};
 pub mod configuration;
 pub mod crypto;
 pub mod db;
+pub mod extractors;
 pub mod response_token;
 pub mod routes;
 pub mod test_helpers;
@@ -40,25 +41,29 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
         pool,
         admin_auth_key: config.admin_auth_key,
     };
+    let origin = format!("http://localhost:{}", config.port);
 
-    Router::new()
+    let router = Router::new()
         .nest("/api", api(state))
         .fallback_service(ServeDir::new(serve_dir))
-        .layer(TraceLayer::new_for_http())
+        .layer(TraceLayer::new_for_http());
+
+    #[cfg(feature = "aws-lambda")]
+    let router = router
+        .layer(MapRequestLayer::new(extractors::extract_lambda_source_ip))
+        .layer(MapRequestLayer::new(extractors::extract_lambda_origin));
+
+    router.layer(Extension(ThisOrigin(origin)))
 }
 
 fn api(state: AppState) -> Router {
     let state = Arc::new(state);
-    let router = Router::new()
+    Router::new()
         .nest("/", routes::public(&state))
         .nest("/challenge", routes::challenge(&state))
         .nest("/console", routes::console(&state))
         .nest("/admin", routes::admin(&state))
-        .layer(CorsLayer::permissive());
-
-    #[cfg(feature = "aws-lambda")]
-    let router = router.layer(MapRequest::<Router, _>::layer(extract_lambda_source_ip));
-    router
+        .layer(CorsLayer::permissive())
 }
 
 pub fn init_tracing() {
