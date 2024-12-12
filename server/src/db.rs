@@ -56,7 +56,7 @@ pub async fn insert_api_secret(
     enc_key: &str,
 ) -> sqlx::Result<()> {
     let _ = sqlx::query!(
-        "insert into api_secret (key, console_id, encoding_key) values ($1, $2, $3)",
+        "insert into api_secret (key, console_id, encoding_key, secret) values ($1, $2, $3, $1)",
         secret_key,
         console_id,
         enc_key,
@@ -75,14 +75,14 @@ pub async fn with_console_insert_api_secret(
 ) -> sqlx::Result<()> {
     sqlx::query!(
         r#"with
-      console as (insert into public.console (label) values ($1) returning id)
+      console as (insert into public.console (label, user_id) values ($1, 'demo|user') returning id)
     insert into
-      public.api_secret (key, console_id, encoding_key)
+      public.api_secret (key, console_id, encoding_key, secret)
     values
       (
         $2,
         (select id from console),
-        $3
+        $3, $2
       )"#,
         console_label,
         secret_key,
@@ -107,7 +107,7 @@ pub async fn insert_console(
     label: &str,
 ) -> sqlx::Result<uuid::Uuid> {
     sqlx::query_scalar!(
-        "insert into console (label) values ($1) returning id",
+        "insert into console (label, user_id) values ($1, 'demo|user') returning id",
         label
     )
     .fetch_one(exec)

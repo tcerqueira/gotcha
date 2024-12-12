@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "insert into console (label) values ($1) returning id",
+  "query": "insert into console (label, user_id) values ($1, 'demo|user') returning id",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       false
     ]
   },
-  "hash": "85c0aac412fb543cc1800c4472dfa54607d84a14c6db28e4cd8c66b423070a56"
+  "hash": "857966af8882e3d3ae59beee473ab2c885ff6a75263278fb108d38ff46b46fd1"
 }

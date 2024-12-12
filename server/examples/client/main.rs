@@ -1,4 +1,4 @@
-use axum::{http::StatusCode, routing::post, Form, Router};
+use axum::{http::StatusCode, routing::post, Form, Json, Router};
 use gotcha_server::routes::public::VerificationResponse;
 use reqwest::Client;
 use std::{collections::HashMap, net::SocketAddr, sync::LazyLock};
@@ -30,7 +30,9 @@ fn app() -> Router {
 
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
-async fn submit(Form(data): Form<HashMap<String, String>>) -> Result<StatusCode, StatusCode> {
+async fn submit(
+    Form(data): Form<HashMap<String, String>>,
+) -> Result<(StatusCode, Json<VerificationResponse>), StatusCode> {
     let token = data
         .get("g-recaptcha-response")
         .ok_or(StatusCode::FORBIDDEN)?
@@ -53,7 +55,7 @@ async fn submit(Form(data): Form<HashMap<String, String>>) -> Result<StatusCode,
         .map_err(|_| StatusCode::BAD_REQUEST)?;
 
     match verification.success {
-        true => Ok(StatusCode::OK),
+        true => Ok((StatusCode::OK, Json(verification))),
         false => Err(StatusCode::FORBIDDEN),
     }
 }

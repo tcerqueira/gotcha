@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with\n      console as (insert into public.console (label, user_id) values ($1, 'demo|user') returning id)\n    insert into\n      public.api_secret (key, console_id, encoding_key, secret)\n    values\n      (\n        $2,\n        (select id from console),\n        $3, $2\n      )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "14a8657ad1afb6bcb8fa9865d6424699cc572a2a5073c9c3b07007aa9289c190"
+}
