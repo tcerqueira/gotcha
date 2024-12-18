@@ -3,7 +3,7 @@ use std::sync::{Arc, LazyLock};
 use axum::{Extension, Router};
 use configuration::{server_dir, ApplicationConfig, ChallengeConfig};
 use extractors::ThisOrigin;
-use http_cache_reqwest::{Cache, CacheMode, HttpCache, HttpCacheOptions, MokaManager};
+use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use secrecy::Secret;
@@ -33,7 +33,9 @@ pub static HTTP_CACHE_CLIENT: LazyLock<ClientWithMiddleware> = LazyLock::new(|| 
     ClientBuilder::new(Client::new())
         .with(Cache(HttpCache {
             mode: CacheMode::Default,
-            manager: MokaManager::default(),
+            manager: CACacheManager {
+                path: "/tmp/gotcha/".into(),
+            },
             options: HttpCacheOptions::default(),
         }))
         .build()
