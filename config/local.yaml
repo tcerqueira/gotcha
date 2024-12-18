@@ -2,6 +2,7 @@ application:
   host: 0.0.0.0
   port: 8080
   admin_auth_key: "Esl5FRt0GG7RY2FEdm8NYQJU"
+  auth_origin: "https://dev-650a4wh1mgk55eiy.us.auth0.com"
   challenges:
     - url: "http://localhost:8080/im-not-a-robot/index.html"
       width: 304

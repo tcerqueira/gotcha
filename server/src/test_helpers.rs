@@ -2,14 +2,15 @@ use std::{future::Future, net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
 use secrecy::ExposeSecret;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use tokio::sync::oneshot::Sender;
+use tokio::sync::{oneshot::Sender, OnceCell};
 
 use crate::{
     app, configuration,
     crypto::{self, KEY_SIZE},
     db::{self, DbChallenge},
-    get_configuration,
+    get_configuration, HTTP_CLIENT,
 };
 
 static DEMO_CONSOLE_LABEL_PREFIX: &str = "console_for_integration_tests";
@@ -45,7 +46,7 @@ where
 impl TestContext {
     pub async fn setup() -> anyhow::Result<Self> {
         let configuration::Config {
-            application: app_conf,
+            application: mut app_conf,
             database: db_conf,
             ..
         } = get_configuration().context("failed to load configuration")?;
@@ -54,6 +55,7 @@ impl TestContext {
         let addr = format!("{}:0", app_conf.host);
         let listener = tokio::net::TcpListener::bind(addr).await?;
         let addr = listener.local_addr()?;
+        app_conf.port = addr.port();
         let (shutdown_signal, shutdown_receiver) = tokio::sync::oneshot::channel();
 
         let pool = db::connect_database(db_conf);
@@ -90,6 +92,10 @@ impl TestContext {
         let _ = ctx.shutdown_signal.send(());
         tracing::info!("Shutting down server on {}", ctx.addr);
         Ok(())
+    }
+
+    pub fn test_id(&self) -> &uuid::Uuid {
+        &self.inner.test_id
     }
 
     pub fn port(&self) -> u16 {
@@ -157,6 +163,49 @@ async fn rollback_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> 
             .await?
             .expect("expected a console to be created on setup");
     db::delete_console(&mut *txn, &id).await?;
+    db::delete_challenge_like(&mut *txn, &format!("%{test_id}")).await?;
     txn.commit().await?;
     Ok(())
+}
+
+pub async fn auth_jwt() -> &'static str {
+    #[derive(Debug, Serialize)]
+    struct TokenRequest {
+        client_id: &'static str,
+        client_secret: &'static str,
+        audience: &'static str,
+        grant_type: &'static str,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct TokenResponse {
+        access_token: String,
+        #[expect(dead_code)]
+        token_type: String,
+    }
+
+    static AUTH_JWT: OnceCell<String> = OnceCell::const_new();
+    AUTH_JWT
+        .get_or_init(|| async {
+            HTTP_CLIENT
+                .post("https://dev-650a4wh1mgk55eiy.us.auth0.com/oauth/token")
+                .json(&TokenRequest {
+                    client_id: std::env::var("TEST_AUTH_CLIENT_ID")
+                        .expect("env var TEST_AUTH_CLIENT_ID not set")
+                        .leak(),
+                    client_secret: std::env::var("TEST_AUTH_CLIENT_SECRET")
+                        .expect("env var TEST_AUTH_CLIENT_SECRET not set")
+                        .leak(),
+                    audience: "https://console-rust-backend",
+                    grant_type: "client_credentials",
+                })
+                .send()
+                .await
+                .unwrap()
+                .json::<TokenResponse>()
+                .await
+                .unwrap()
+                .access_token
+        })
+        .await
 }

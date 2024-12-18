@@ -1,8 +1,11 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use axum::{Extension, Router};
 use configuration::{server_dir, ApplicationConfig, ChallengeConfig};
 use extractors::ThisOrigin;
+use http_cache_reqwest::{Cache, CacheMode, HttpCache, HttpCacheOptions, MokaManager};
+use reqwest::Client;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use secrecy::Secret;
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
@@ -25,11 +28,23 @@ pub mod response_token;
 pub mod routes;
 pub mod test_helpers;
 
+pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+pub static HTTP_CACHE_CLIENT: LazyLock<ClientWithMiddleware> = LazyLock::new(|| {
+    ClientBuilder::new(Client::new())
+        .with(Cache(HttpCache {
+            mode: CacheMode::Default,
+            manager: MokaManager::default(),
+            options: HttpCacheOptions::default(),
+        }))
+        .build()
+});
+
 #[derive(Debug)]
 pub struct AppState {
     pub challenges: Vec<ChallengeConfig>,
     pub pool: PgPool,
     pub admin_auth_key: Secret<String>,
+    pub auth_origin: String,
 }
 
 pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
@@ -40,6 +55,7 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
         challenges: config.challenges,
         pool,
         admin_auth_key: config.admin_auth_key,
+        auth_origin: config.auth_origin,
     };
     let origin = format!("http://localhost:{}", config.port);
 
@@ -79,15 +95,6 @@ pub fn init_tracing() {
 pub async fn db_dev_populate(pool: &PgPool) -> sqlx::Result<()> {
     let mut txn = pool.begin().await?;
 
-    let _ = db::insert_challenge(
-        &mut *txn,
-        &db::DbChallenge {
-            url: "http://localhost:8080/im-not-a-robot/index.html".into(),
-            width: 304,
-            height: 78,
-        },
-    )
-    .await;
     let _ = db::with_console_insert_api_secret(
         &mut *txn,
         "demo",

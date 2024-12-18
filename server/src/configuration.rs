@@ -17,6 +17,7 @@ pub struct ApplicationConfig {
     pub port: u16,
     pub serve_dir: PathBuf,
     pub admin_auth_key: Secret<String>,
+    pub auth_origin: String,
     pub challenges: Vec<ChallengeConfig>,
 }
 

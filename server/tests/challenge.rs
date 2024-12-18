@@ -1,13 +1,10 @@
-use std::sync::LazyLock;
-
 use gotcha_server::{
     response_token::Claims,
     routes::challenge::{ChallengeResponse, ChallengeResults, GetChallenge},
+    HTTP_CLIENT,
 };
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
-use reqwest::{Client, StatusCode};
-
-static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+use reqwest::StatusCode;
 
 #[gotcha_server_macros::integration_test]
 async fn get_challenge(server: TestContext) -> anyhow::Result<()> {

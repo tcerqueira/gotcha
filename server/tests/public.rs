@@ -1,19 +1,12 @@
-use std::sync::LazyLock;
-
-use reqwest::Client;
-
-static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
-
 mod verify_site {
     use std::net::SocketAddr;
 
     use gotcha_server::{
         response_token::{self, ResponseClaims},
         routes::public::{ErrorCodes, VerificationResponse},
+        HTTP_CLIENT,
     };
     use reqwest::StatusCode;
-
-    use super::*;
 
     #[gotcha_server_macros::integration_test]
     async fn sucessful_challenge(server: TestContext) -> anyhow::Result<()> {

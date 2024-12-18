@@ -1,14 +1,11 @@
-use std::sync::LazyLock;
-
 use gotcha_server::{
     crypto::KEY_SIZE,
     db,
     routes::console::{ApiSecretRequest, ApiSecretResponse, ConsoleRequest, ConsoleResponse},
+    test_helpers, HTTP_CLIENT,
 };
 use rand::distributions::{Alphanumeric, DistString};
-use reqwest::{Client, StatusCode};
-
-static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+use reqwest::StatusCode;
 
 #[gotcha_server_macros::integration_test]
 async fn create_console(server: TestContext) -> anyhow::Result<()> {
@@ -18,6 +15,10 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
     let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console"))
+        .header(
+            "authorization",
+            format!("Bearer {}", test_helpers::auth_jwt().await),
+        )
         .json(&ConsoleRequest {
             label: label.clone(),
         })
@@ -28,7 +29,7 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
     let ConsoleResponse { id } = response.json().await?;
     let db_id = db::fetch_console_by_label(pool, &label)
         .await?
-        .unwrap_or_else(|| panic!("console with '{label}' doesn't exist"));
+        .unwrap_or_else(|| panic!("console '{label}' doesn't exist"));
     assert_eq!(db_id, id);
 
     Ok(())

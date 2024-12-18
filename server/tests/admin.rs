@@ -1,15 +1,14 @@
-use std::sync::LazyLock;
-
-use gotcha_server::routes::admin::{AddChallenge, DeleteChallenge};
-use reqwest::{Client, StatusCode};
-
-static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+use gotcha_server::{
+    routes::admin::{AddChallenge, DeleteChallenge},
+    HTTP_CLIENT,
+};
+use reqwest::StatusCode;
 
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let auth_key = server.admin_auth_key();
-    let nonce = uuid::Uuid::new_v4();
+    let nonce = server.test_id();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
@@ -94,7 +93,7 @@ async fn add_challenge_zero_dimensions(server: TestContext) -> anyhow::Result<()
 async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let auth_key = server.admin_auth_key();
-    let nonce = uuid::Uuid::new_v4();
+    let nonce = server.test_id();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
@@ -128,7 +127,7 @@ async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()>
 async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let auth_key = server.admin_auth_key();
-    let nonce = uuid::Uuid::new_v4();
+    let nonce = server.test_id();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
@@ -158,7 +157,7 @@ async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> 
 async fn remove_challenge_not_found(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let auth_key = server.admin_auth_key();
-    let nonce = uuid::Uuid::new_v4();
+    let nonce = server.test_id();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
@@ -175,7 +174,7 @@ async fn remove_challenge_not_found(server: TestContext) -> anyhow::Result<()> {
 #[gotcha_server_macros::integration_test]
 async fn challenge_endpoint_missing_auth_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let nonce = uuid::Uuid::new_v4();
+    let nonce = server.test_id();
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
@@ -194,7 +193,7 @@ async fn challenge_endpoint_missing_auth_key(server: TestContext) -> anyhow::Res
 #[gotcha_server_macros::integration_test]
 async fn challenge_endpoint_wrong_auth_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let nonce = uuid::Uuid::new_v4();
+    let nonce = server.test_id();
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))

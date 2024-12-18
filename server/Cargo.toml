@@ -22,6 +22,10 @@ secrecy = { version = "0.8", features = ["serde"] }
 anyhow = "1"
 thiserror = "1"
 reqwest = { version = "0.12", features = ["json", "native-tls-vendored"] }
+reqwest-middleware = "0.4"
+http-cache-reqwest = { version = "0.15", default-features = false, features = [
+    "manager-moka",
+] }
 config = { version = "0.14", default-features = false, features = ["yaml"] }
 jsonwebtoken = "9"
 sqlx = { version = "0.8", features = [

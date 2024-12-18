@@ -8,7 +8,9 @@ use tracing::instrument;
 use super::errors::ConsoleError;
 use crate::{
     crypto::{self, KEY_SIZE},
-    db, AppState,
+    db,
+    extractors::User,
+    AppState,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,6 +26,7 @@ pub struct ConsoleResponse {
 #[instrument(skip(state))]
 pub async fn create_console(
     State(state): State<Arc<AppState>>,
+    User(hello): User,
     Json(request): Json<ConsoleRequest>,
 ) -> super::Result<Json<ConsoleResponse>> {
     let id = db::insert_console(&state.pool, &request.label).await?;

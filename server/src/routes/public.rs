@@ -52,7 +52,6 @@ pub async fn site_verify(
     >,
 ) -> super::Result<Json<VerificationResponse>> {
     let verification: Result<VerificationRequest, Vec<ErrorCodes>> = verification.try_into();
-
     let verification = verification.map_err(VerificationResponse::failure)?;
 
     let enc_key = db::fetch_encoding_key(&state.pool, verification.secret.expose_secret())
