@@ -1,13 +1,13 @@
 use gotcha_server::{
     routes::admin::{AddChallenge, DeleteChallenge},
-    HTTP_CLIENT,
+    test_helpers, HTTP_CLIENT,
 };
 use reqwest::StatusCode;
 
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let auth_key = server.admin_auth_key();
+    let auth_key = test_helpers::auth_jwt().await;
     let nonce = server.test_id();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
@@ -32,7 +32,7 @@ async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_bad_url(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let auth_key = server.admin_auth_key();
+    let auth_key = test_helpers::auth_jwt().await;
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
@@ -52,7 +52,7 @@ async fn add_challenge_bad_url(server: TestContext) -> anyhow::Result<()> {
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_negative_dimensions(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let auth_key = server.admin_auth_key();
+    let auth_key = test_helpers::auth_jwt().await;
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
@@ -72,7 +72,7 @@ async fn add_challenge_negative_dimensions(server: TestContext) -> anyhow::Resul
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_zero_dimensions(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let auth_key = server.admin_auth_key();
+    let auth_key = test_helpers::auth_jwt().await;
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
@@ -92,7 +92,7 @@ async fn add_challenge_zero_dimensions(server: TestContext) -> anyhow::Result<()
 #[gotcha_server_macros::integration_test]
 async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let auth_key = server.admin_auth_key();
+    let auth_key = test_helpers::auth_jwt().await;
     let nonce = server.test_id();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
@@ -126,7 +126,7 @@ async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()>
 #[gotcha_server_macros::integration_test]
 async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let auth_key = server.admin_auth_key();
+    let auth_key = test_helpers::auth_jwt().await;
     let nonce = server.test_id();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
@@ -156,7 +156,7 @@ async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> 
 #[gotcha_server_macros::integration_test]
 async fn remove_challenge_not_found(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let auth_key = server.admin_auth_key();
+    let auth_key = test_helpers::auth_jwt().await;
     let nonce = server.test_id();
     let url = format!("https://integration-test.com/index.html?nonce={nonce}");
 
@@ -185,7 +185,7 @@ async fn challenge_endpoint_missing_auth_key(server: TestContext) -> anyhow::Res
         })
         .send()
         .await?;
-    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
     Ok(())
 }

@@ -1,21 +1,8 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::{Request, State},
-    http::StatusCode,
-    middleware::Next,
-    response::{IntoResponse, Response},
-    Json,
-};
-use axum_extra::{
-    extract::WithRejection,
-    headers::{authorization::Bearer, Authorization},
-    TypedHeader,
-};
+use axum::{extract::State, Json};
 use reqwest::Url;
-use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgDatabaseError;
 use tracing::instrument;
 
 use crate::{db, AppState};
@@ -33,11 +20,11 @@ pub struct AddChallenge {
 pub async fn add_challenge(
     State(state): State<Arc<AppState>>,
     Json(challenge): Json<AddChallenge>,
-) -> super::Result<()> {
+) -> Result<(), AdminError> {
     let AddChallenge { url, width, height } = challenge;
     let _ = Url::parse(&url).map_err(|_| AdminError::InvalidUrl)?;
 
-    let res = db::insert_challenge(
+    db::insert_challenge(
         &state.pool,
         &db::DbChallenge {
             url,
@@ -45,34 +32,8 @@ pub async fn add_challenge(
             height: height as i16,
         },
     )
-    .await;
+    .await?;
 
-    if let Err(err) = res {
-        return match err {
-            sqlx::Error::Database(db_err)
-                if db_err
-                    .downcast_ref::<PgDatabaseError>()
-                    .constraint()
-                    .is_some_and(|c| c == "width_positive" || c == "height_positive") =>
-            {
-                Err(AdminError::InvalidDimensions.into())
-            }
-            sqlx::Error::Database(db_err)
-                if db_err
-                    .downcast_ref::<PgDatabaseError>()
-                    .constraint()
-                    .is_some_and(|c| c == "challenge_pkey") =>
-            {
-                Err(AdminError::NotUnique {
-                    what: "Challenge url".into(),
-                }
-                .into())
-            }
-            other => Err(anyhow::Error::new(other)
-                .context("failed to add challenge to database")
-                .into()),
-        };
-    };
     Ok(())
 }
 
@@ -85,24 +46,10 @@ pub struct DeleteChallenge {
 pub async fn remove_challenge(
     State(state): State<Arc<AppState>>,
     Json(challenge): Json<DeleteChallenge>,
-) -> super::Result<()> {
+) -> Result<(), AdminError> {
     let rows_affected = db::delete_challenge(&state.pool, &challenge.url).await?;
     match rows_affected {
-        0 => Err(AdminError::NotFound(challenge.url).into()),
+        0 => Err(AdminError::NotFound(challenge.url)),
         _ => Ok(()),
-    }
-}
-
-#[instrument(skip_all)]
-pub async fn require_auth_mw(
-    State(state): State<Arc<AppState>>,
-    WithRejection(auth_header, _): WithRejection<TypedHeader<Authorization<Bearer>>, AdminError>,
-    request: Request,
-    next: Next,
-) -> Response {
-    if state.admin_auth_key.expose_secret() == auth_header.token() {
-        next.run(request).await
-    } else {
-        StatusCode::UNAUTHORIZED.into_response()
     }
 }

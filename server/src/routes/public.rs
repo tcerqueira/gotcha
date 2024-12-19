@@ -50,7 +50,7 @@ pub async fn site_verify(
         Form<HashMap<String, String>>,
         VerificationError,
     >,
-) -> super::Result<Json<VerificationResponse>> {
+) -> Result<Json<VerificationResponse>, VerificationError> {
     let verification: Result<VerificationRequest, Vec<ErrorCodes>> = verification.try_into();
     let verification = verification.map_err(VerificationResponse::failure)?;
 

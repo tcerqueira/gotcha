@@ -5,56 +5,28 @@ use axum::{
     Json,
 };
 use axum_extra::typed_header::TypedHeaderRejection;
+use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
 
 use super::public::{ErrorCodes, VerificationResponse};
 
 #[derive(Debug, Error)]
-pub enum Error {
-    #[error(transparent)]
-    Challenge(#[from] ChallengeError),
-    #[error(transparent)]
-    Console(#[from] ConsoleError),
-    #[error(transparent)]
-    Admin(#[from] AdminError),
-    #[error(transparent)]
-    Verification(#[from] VerificationError),
+pub enum ChallengeError {
+    #[error("Invalid secret")]
+    InvalidSecret,
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
     #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
 
-impl IntoResponse for Error {
-    fn into_response(self) -> Response {
-        match self {
-            Error::Unexpected(_) | Error::Sql(_) => {
-                tracing::error!(error = ?self, "Internal Server Error ocurred.");
-                StatusCode::INTERNAL_SERVER_ERROR.into_response()
-            }
-            Error::Challenge(err) => err.into_response(),
-            Error::Console(err) => err.into_response(),
-            Error::Verification(err) => err.into_response(),
-            Error::Admin(err) => err.into_response(),
-        }
-    }
-}
-
-impl From<VerificationResponse> for Error {
-    fn from(value: VerificationResponse) -> Self {
-        Error::Verification(VerificationError::UserError(value))
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum ChallengeError {
-    #[error("Invalid secret, check your allowed-origins")]
-    InvalidSecret,
-}
-
 impl IntoResponse for ChallengeError {
     fn into_response(self) -> Response {
         match self {
+            ChallengeError::Unexpected(_) | ChallengeError::Sql(_) => {
+                tracing::error!(error = ?self, "Internal Server Error ocurred.");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
             ChallengeError::InvalidSecret => {
                 (StatusCode::FORBIDDEN, self.to_string()).into_response()
             }
@@ -68,13 +40,39 @@ pub enum ConsoleError {
     NotFound { what: String },
     #[error("Access forbidden")]
     Forbidden,
+    #[error(transparent)]
+    Sql(sqlx::Error),
+    #[error(transparent)]
+    Unexpected(#[from] anyhow::Error),
 }
 
 impl IntoResponse for ConsoleError {
     fn into_response(self) -> Response {
         match self {
-            ConsoleError::NotFound { what } => (StatusCode::NOT_FOUND, what).into_response(),
+            ConsoleError::Unexpected(_) | ConsoleError::Sql(_) => {
+                tracing::error!(error = ?self, "Internal Server Error ocurred.");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+            ConsoleError::NotFound { what: _ } => {
+                (StatusCode::NOT_FOUND, self.to_string()).into_response()
+            }
             ConsoleError::Forbidden => StatusCode::FORBIDDEN.into_response(),
+        }
+    }
+}
+
+impl From<sqlx::Error> for ConsoleError {
+    fn from(db_err: sqlx::Error) -> Self {
+        match db_err {
+            sqlx::Error::Database(err)
+                if err
+                    .downcast_ref::<PgDatabaseError>()
+                    .constraint()
+                    .is_some_and(|c| c == "api_secret_console_id_fkey") =>
+            {
+                ConsoleError::Forbidden
+            }
+            err => ConsoleError::Sql(err),
         }
     }
 }
@@ -91,11 +89,19 @@ pub enum AdminError {
     NotFound(String),
     #[error(transparent)]
     Unauthorized(#[from] TypedHeaderRejection),
+    #[error(transparent)]
+    Sql(sqlx::Error),
+    #[error(transparent)]
+    Unexpected(#[from] anyhow::Error),
 }
 
 impl IntoResponse for AdminError {
     fn into_response(self) -> Response {
         match self {
+            AdminError::Unexpected(_) | AdminError::Sql(_) => {
+                tracing::error!(error = ?self, "Internal Server Error ocurred.");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
             AdminError::NotUnique { what: _ } => {
                 (StatusCode::CONFLICT, self.to_string()).into_response()
             }
@@ -111,17 +117,51 @@ impl IntoResponse for AdminError {
     }
 }
 
+impl From<sqlx::Error> for AdminError {
+    fn from(err: sqlx::Error) -> Self {
+        match err {
+            sqlx::Error::Database(db_err)
+                if db_err
+                    .downcast_ref::<PgDatabaseError>()
+                    .constraint()
+                    .is_some_and(|c| c == "width_positive" || c == "height_positive") =>
+            {
+                AdminError::InvalidDimensions
+            }
+            sqlx::Error::Database(db_err)
+                if db_err
+                    .downcast_ref::<PgDatabaseError>()
+                    .constraint()
+                    .is_some_and(|c| c == "challenge_pkey") =>
+            {
+                AdminError::NotUnique {
+                    what: "Challenge url".into(),
+                }
+            }
+            other => AdminError::Sql(other),
+        }
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum VerificationError {
     #[error(transparent)]
     UserError(#[from] VerificationResponse),
     #[error(transparent)]
     BadRequest(#[from] FormRejection),
+    #[error(transparent)]
+    Sql(#[from] sqlx::Error),
+    #[error(transparent)]
+    Unexpected(#[from] anyhow::Error),
 }
 
 impl IntoResponse for VerificationError {
     fn into_response(self) -> Response {
         match self {
+            VerificationError::Unexpected(_) | VerificationError::Sql(_) => {
+                tracing::error!(error = ?self, "Internal Server Error ocurred.");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
             VerificationError::UserError(verification) => Json(verification).into_response(),
             VerificationError::BadRequest(_) => {
                 Json(VerificationResponse::failure(vec![ErrorCodes::BadRequest])).into_response()

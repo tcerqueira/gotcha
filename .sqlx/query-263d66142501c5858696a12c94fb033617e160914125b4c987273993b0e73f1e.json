@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select exists (select 1 from console where id = $1 and user_id = $2) as found_console_for_user",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "found_console_for_user",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "263d66142501c5858696a12c94fb033617e160914125b4c987273993b0e73f1e"
+}

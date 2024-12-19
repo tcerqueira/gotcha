@@ -70,27 +70,48 @@ pub async fn insert_api_secret(
 pub async fn with_console_insert_api_secret(
     exec: impl PgExecutor<'_> + Send,
     console_label: &str,
+    user: &str,
     secret_key: &str,
     enc_key: &str,
 ) -> sqlx::Result<()> {
     sqlx::query!(
         r#"with
-      console as (insert into public.console (label, user_id) values ($1, 'demo|user') returning id)
+      console as (insert into public.console (label, user_id) values ($1, $2) returning id)
     insert into
       public.api_secret (key, console_id, encoding_key, secret)
     values
       (
-        $2,
+        $3,
         (select id from console),
-        $3, $2
+        $4, $3
       )"#,
         console_label,
+        user,
         secret_key,
         enc_key
     )
     .execute(exec)
     .await?;
     Ok(())
+}
+
+#[derive(Debug, FromRow)]
+pub struct FetchConsole {
+    pub id: uuid::Uuid,
+    pub label: Option<String>,
+}
+
+pub async fn fetch_consoles(
+    exec: impl PgExecutor<'_> + Send,
+    user: &str,
+) -> sqlx::Result<Vec<FetchConsole>> {
+    sqlx::query_as!(
+        FetchConsole,
+        "select id, label from console where user_id = $1",
+        user
+    )
+    .fetch_all(exec)
+    .await
 }
 
 pub async fn fetch_console_by_label(
@@ -102,13 +123,30 @@ pub async fn fetch_console_by_label(
         .await
 }
 
+pub async fn exists_console_for_user(
+    exec: impl PgExecutor<'_> + Send,
+    console_id: &uuid::Uuid,
+    user_id: &str,
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar!(
+        "select exists (select 1 from console where id = $1 and user_id = $2) as found_console_for_user",
+        console_id,
+        user_id
+    )
+    .fetch_one(exec)
+    .await
+    .map(|r| r.unwrap_or(false))
+}
+
 pub async fn insert_console(
     exec: impl PgExecutor<'_> + Send,
     label: &str,
+    user: &str,
 ) -> sqlx::Result<uuid::Uuid> {
     sqlx::query_scalar!(
-        "insert into console (label, user_id) values ($1, 'demo|user') returning id",
-        label
+        "insert into console (label, user_id) values ($1, $2) returning id",
+        label,
+        user
     )
     .fetch_one(exec)
     .await

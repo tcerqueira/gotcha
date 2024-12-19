@@ -24,7 +24,7 @@ pub struct GetChallenge {
 pub async fn get_challenge(
     State(state): State<Arc<AppState>>,
     ThisOrigin(origin): ThisOrigin,
-) -> super::Result<Json<GetChallenge>> {
+) -> Result<Json<GetChallenge>, ChallengeError> {
     let challenges = db::fetch_challenges(&state.pool).await?;
     let challenge = choose_challenge(challenges).unwrap_or_else(|| DbChallenge {
         url: format!("{origin}/im-not-a-robot/index.html"),
@@ -52,7 +52,7 @@ pub async fn process_challenge(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(results): Json<ChallengeResults>,
-) -> super::Result<Json<ChallengeResponse>> {
+) -> Result<Json<ChallengeResponse>, ChallengeError> {
     Ok(Json(ChallengeResponse {
         token: response_token::encode(
             ResponseClaims {

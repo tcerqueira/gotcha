@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgDatabaseError;
 use tracing::instrument;
 
 use super::errors::ConsoleError;
@@ -26,16 +25,15 @@ pub struct ConsoleResponse {
 #[instrument(skip(state))]
 pub async fn create_console(
     State(state): State<Arc<AppState>>,
-    User(hello): User,
+    User { user_id, .. }: User,
     Json(request): Json<ConsoleRequest>,
-) -> super::Result<Json<ConsoleResponse>> {
-    let id = db::insert_console(&state.pool, &request.label).await?;
+) -> Result<Json<ConsoleResponse>, ConsoleError> {
+    let id = db::insert_console(&state.pool, &request.label, &user_id).await?;
     Ok(Json(ConsoleResponse { id }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiSecretRequest {
-    // TODO: require some sort of auth, currently anyone can change any console
     pub console_id: uuid::Uuid,
 }
 
@@ -47,29 +45,17 @@ pub struct ApiSecretResponse {
 #[instrument(skip(state))]
 pub async fn gen_api_secret(
     State(state): State<Arc<AppState>>,
+    User { user_id, .. }: User,
     Json(request): Json<ApiSecretRequest>,
-) -> super::Result<Json<ApiSecretResponse>> {
+) -> Result<Json<ApiSecretResponse>, ConsoleError> {
+    if !db::exists_console_for_user(&state.pool, &request.console_id, &user_id).await? {
+        return Err(ConsoleError::Forbidden);
+    }
+
     let secret = crypto::gen_base64_key::<KEY_SIZE>();
     let enc_key = crypto::gen_base64_key::<KEY_SIZE>();
 
-    if let Err(db_err) =
-        db::insert_api_secret(&state.pool, &secret, &request.console_id, &enc_key).await
-    {
-        return match db_err {
-            sqlx::Error::Database(err)
-                if err
-                    .downcast_ref::<PgDatabaseError>()
-                    .constraint()
-                    .is_some_and(|c| c == "api_secret_console_id_fkey") =>
-            {
-                Err(ConsoleError::Forbidden.into())
-            }
-            err => Err(anyhow::Error::new(err)
-                .context("failed to insert api secret in database while generating one")
-                .into()),
-        };
-    }
-
+    db::insert_api_secret(&state.pool, &secret, &request.console_id, &enc_key).await?;
     Ok(Json(ApiSecretResponse { secret }))
 }
 

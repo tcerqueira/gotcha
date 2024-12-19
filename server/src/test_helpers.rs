@@ -13,7 +13,8 @@ use crate::{
     get_configuration, HTTP_CLIENT,
 };
 
-static DEMO_CONSOLE_LABEL_PREFIX: &str = "console_for_integration_tests";
+const DEMO_CONSOLE_LABEL_PREFIX: &str = "console_for_integration_tests";
+const DEMO_USER: &str = "Bk9vgyK6FiQ0oMHDT3b4EfQoIVRDs3ZM@clients";
 
 #[derive(Debug, Clone)]
 pub struct TestContext {
@@ -142,8 +143,12 @@ impl TestContext {
 async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> {
     let mut txn = pool.begin().await?;
 
-    let console_id =
-        db::insert_console(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}")).await?;
+    let console_id = db::insert_console(
+        &mut *txn,
+        &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"),
+        DEMO_USER,
+    )
+    .await?;
     db::insert_api_secret(
         &mut *txn,
         &crypto::gen_base64_key::<KEY_SIZE>(),

@@ -43,6 +43,10 @@ async fn gen_api_secret(server: TestContext) -> anyhow::Result<()> {
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console/secret"))
+        .header(
+            "authorization",
+            format!("Bearer {}", test_helpers::auth_jwt().await),
+        )
         .json(&ApiSecretRequest { console_id })
         .send()
         .await?;
@@ -64,6 +68,10 @@ async fn gen_api_secret_configuration_not_found(server: TestContext) -> anyhow::
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console/secret"))
+        .header(
+            "authorization",
+            format!("Bearer {}", test_helpers::auth_jwt().await),
+        )
         .json(&ApiSecretRequest { console_id })
         .send()
         .await?;
