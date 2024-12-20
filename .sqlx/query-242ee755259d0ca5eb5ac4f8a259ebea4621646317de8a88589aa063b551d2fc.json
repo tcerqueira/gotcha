@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with\n      console as (insert into public.console (label, user_id) values ($1, $2) returning id)\n    insert into\n      public.api_key (site_key, console_id, encoding_key, secret)\n    values\n      (\n        $3,\n        (select id from console),\n        $4, $3\n      )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "242ee755259d0ca5eb5ac4f8a259ebea4621646317de8a88589aa063b551d2fc"
+}

@@ -1,7 +1,7 @@
 use gotcha_server::{
     crypto::KEY_SIZE,
     db,
-    routes::console::{ApiSecretRequest, ApiSecretResponse, ConsoleRequest, ConsoleResponse},
+    routes::console::{ApiSecret, ConsoleResponse, CreateConsoleRequest},
     test_helpers, HTTP_CLIENT,
 };
 use rand::distributions::{Alphanumeric, DistString};
@@ -15,22 +15,22 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
     let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console"))
-        .header(
-            "authorization",
-            format!("Bearer {}", test_helpers::auth_jwt().await),
-        )
-        .json(&ConsoleRequest {
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&CreateConsoleRequest {
             label: label.clone(),
         })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
 
-    let ConsoleResponse { id } = response.json().await?;
+    let ConsoleResponse { id, .. } = response.json().await?;
     let db_id = db::fetch_console_by_label(pool, &label)
         .await?
         .unwrap_or_else(|| panic!("console '{label}' doesn't exist"));
+    let r_affected = db::delete_console(pool, &id).await?;
+
     assert_eq!(db_id, id);
+    assert!(r_affected > 0);
 
     Ok(())
 }
@@ -42,21 +42,19 @@ async fn gen_api_secret(server: TestContext) -> anyhow::Result<()> {
     let console_id = server.db_console().await;
 
     let response = HTTP_CLIENT
-        .post(format!("http://localhost:{port}/api/console/secret"))
-        .header(
-            "authorization",
-            format!("Bearer {}", test_helpers::auth_jwt().await),
-        )
-        .json(&ApiSecretRequest { console_id })
+        .post(format!(
+            "http://localhost:{port}/api/console/{console_id}/api-key"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
 
-    let ApiSecretResponse { secret } = response.json().await?;
-    assert_eq!(secret.len(), KEY_SIZE * 4 / 3);
+    let ApiSecret { site_key, .. } = response.json().await?;
+    assert_eq!(site_key.len(), KEY_SIZE * 4 / 3);
 
-    let db_res = db::fetch_api_secrets(pool, &console_id).await?;
-    assert!(db_res.contains(&secret));
+    let db_res = db::fetch_api_keys(pool, &console_id).await?;
+    assert!(db_res.iter().any(|k| k.site_key == site_key));
 
     Ok(())
 }
@@ -67,12 +65,10 @@ async fn gen_api_secret_configuration_not_found(server: TestContext) -> anyhow::
     let console_id = uuid::Uuid::new_v4();
 
     let response = HTTP_CLIENT
-        .post(format!("http://localhost:{port}/api/console/secret"))
-        .header(
-            "authorization",
-            format!("Bearer {}", test_helpers::auth_jwt().await),
-        )
-        .json(&ApiSecretRequest { console_id })
+        .post(format!(
+            "http://localhost:{port}/api/console/{console_id}/api-key"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::FORBIDDEN);

@@ -6,8 +6,8 @@ use axum::{
     Router,
 };
 use challenge::{get_challenge, process_challenge};
-use console::{add_origin, create_console, gen_api_secret, remove_origin};
-use middleware::require_auth_mw;
+use console::{create_console, gen_api_secret, get_consoles, revoke_api_secret};
+use middleware::{require_admin, require_auth, validate_console_id};
 use public::site_verify;
 
 use crate::AppState;
@@ -37,13 +37,21 @@ pub fn public(state: &Arc<AppState>) -> Router {
 pub fn console(state: &Arc<AppState>) -> Router {
     let state = Arc::clone(state);
     Router::new()
+        .route("/", get(get_consoles))
         .route("/", post(create_console))
-        .route("/secret", post(gen_api_secret))
-        .route("/origin", post(add_origin))
-        .route("/origin", delete(remove_origin))
+        .nest(
+            "/:console_id",
+            Router::new()
+                .route("/api-key", post(gen_api_secret))
+                .route("/api-key/:site_key", delete(revoke_api_secret))
+                .layer(axum::middleware::from_fn_with_state(
+                    Arc::clone(&state),
+                    validate_console_id,
+                )),
+        )
         .layer(axum::middleware::from_fn_with_state(
             Arc::clone(&state),
-            require_auth_mw,
+            require_auth,
         ))
         .with_state(state)
 }
@@ -55,7 +63,11 @@ pub fn admin(state: &Arc<AppState>) -> Router {
         .route("/challenge", delete(remove_challenge))
         .layer(axum::middleware::from_fn_with_state(
             Arc::clone(&state),
-            require_auth_mw,
+            require_admin,
+        ))
+        .layer(axum::middleware::from_fn_with_state(
+            Arc::clone(&state),
+            require_auth,
         ))
         .with_state(state)
 }

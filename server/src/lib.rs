@@ -1,12 +1,11 @@
 use std::sync::{Arc, LazyLock};
 
 use axum::{Extension, Router};
-use configuration::{server_dir, ApplicationConfig, ChallengeConfig};
+use configuration::{server_dir, ApplicationConfig};
 use extractors::ThisOrigin;
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use secrecy::Secret;
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -43,9 +42,7 @@ pub static HTTP_CACHE_CLIENT: LazyLock<ClientWithMiddleware> = LazyLock::new(|| 
 
 #[derive(Debug)]
 pub struct AppState {
-    pub challenges: Vec<ChallengeConfig>,
     pub pool: PgPool,
-    pub admin_auth_key: Secret<String>,
     pub auth_origin: String,
 }
 
@@ -54,9 +51,7 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
     tracing::info!("Serving files from: {:?}", serve_dir);
 
     let state = AppState {
-        challenges: config.challenges,
         pool,
-        admin_auth_key: config.admin_auth_key,
         auth_origin: config.auth_origin,
     };
     let origin = format!("http://localhost:{}", config.port);
@@ -97,7 +92,7 @@ pub fn init_tracing() {
 pub async fn db_dev_populate(pool: &PgPool) -> sqlx::Result<()> {
     let mut txn = pool.begin().await?;
 
-    let _ = db::with_console_insert_api_secret(
+    let _ = db::with_console_insert_api_key(
         &mut *txn,
         "demo",
         "demo|user",

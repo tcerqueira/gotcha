@@ -16,9 +16,7 @@ pub struct ApplicationConfig {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub serve_dir: PathBuf,
-    pub admin_auth_key: Secret<String>,
     pub auth_origin: String,
-    pub challenges: Vec<ChallengeConfig>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,15 +28,6 @@ pub struct DatabaseConfig {
     pub host: String,
     pub database_name: String,
     pub require_ssl: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ChallengeConfig {
-    pub url: String,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub width: u16,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub height: u16,
 }
 
 pub fn server_dir() -> PathBuf {

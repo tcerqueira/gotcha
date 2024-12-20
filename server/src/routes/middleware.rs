@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::{
-    extract::{Request, State},
+    extract::{Path, Request, State},
     http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
@@ -16,10 +16,12 @@ use serde::Deserialize;
 use thiserror::Error;
 use tracing::instrument;
 
-use crate::{extractors::User, AppState, HTTP_CACHE_CLIENT};
+use crate::{db, extractors::User, AppState, HTTP_CACHE_CLIENT};
 
-#[instrument(skip_all)]
-pub async fn require_auth_mw(
+use super::errors::ConsoleError;
+
+#[instrument(skip(state, request, next))]
+pub async fn require_auth(
     State(state): State<Arc<AppState>>,
     auth_header: TypedHeader<Authorization<Bearer>>,
     mut request: Request,
@@ -52,8 +54,6 @@ pub async fn require_auth_mw(
 
     request.extensions_mut().insert(User {
         user_id: Arc::from(claims.claims.sub),
-        // TODO: extract authorization info from token
-        is_admin: false,
     });
     Ok(next.run(request).await)
 }
@@ -91,5 +91,34 @@ impl IntoResponse for AuthError {
 impl From<reqwest::Error> for AuthError {
     fn from(value: reqwest::Error) -> Self {
         AuthError::Jwk(reqwest_middleware::Error::from(value))
+    }
+}
+
+#[instrument(skip(state, request, next))]
+pub async fn validate_console_id(
+    State(state): State<Arc<AppState>>,
+    Path(console_id): Path<uuid::Uuid>,
+    User { user_id }: User,
+    request: Request,
+    next: Next,
+) -> Result<Response, ConsoleError> {
+    match db::exists_console_for_user(&state.pool, &console_id, &user_id).await? {
+        true => Ok(next.run(request).await),
+        false => Err(ConsoleError::Forbidden),
+    }
+}
+
+#[instrument(skip(_state, request, next))]
+pub async fn require_admin(
+    State(_state): State<Arc<AppState>>,
+    User { user_id }: User,
+    request: Request,
+    next: Next,
+) -> Response {
+    match user_id.as_ref() {
+        "Bk9vgyK6FiQ0oMHDT3b4EfQoIVRDs3ZM@clients" |    // dev
+        "google-oauth2|106674402838515911816"           // tiago@bitfashioned.com
+            => next.run(request).await,
+        _ => StatusCode::FORBIDDEN.into_response(),
     }
 }

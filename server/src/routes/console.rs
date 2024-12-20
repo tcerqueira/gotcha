@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::{Path, State},
+    Json,
+};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -13,56 +16,72 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ConsoleRequest {
+pub struct CreateConsoleRequest {
     pub label: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConsoleResponse {
     pub id: uuid::Uuid,
+    pub label: Option<String>,
 }
 
 #[instrument(skip(state))]
 pub async fn create_console(
     State(state): State<Arc<AppState>>,
-    User { user_id, .. }: User,
-    Json(request): Json<ConsoleRequest>,
+    User { user_id }: User,
+    Json(request): Json<CreateConsoleRequest>,
 ) -> Result<Json<ConsoleResponse>, ConsoleError> {
     let id = db::insert_console(&state.pool, &request.label, &user_id).await?;
-    Ok(Json(ConsoleResponse { id }))
+    Ok(Json(ConsoleResponse {
+        id,
+        label: Some(request.label),
+    }))
+}
+
+#[instrument(skip(state))]
+pub async fn get_consoles(
+    State(state): State<Arc<AppState>>,
+    User { user_id }: User,
+) -> Result<Json<Vec<ConsoleResponse>>, ConsoleError> {
+    let db_consoles = db::fetch_consoles(&state.pool, &user_id).await?;
+    Ok(Json(
+        db_consoles
+            .into_iter()
+            .map(|c| ConsoleResponse {
+                id: c.id,
+                label: c.label,
+            })
+            .collect(),
+    ))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ApiSecretRequest {
-    pub console_id: uuid::Uuid,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ApiSecretResponse {
+pub struct ApiSecret {
+    pub site_key: String,
     pub secret: String,
 }
 
 #[instrument(skip(state))]
 pub async fn gen_api_secret(
     State(state): State<Arc<AppState>>,
-    User { user_id, .. }: User,
-    Json(request): Json<ApiSecretRequest>,
-) -> Result<Json<ApiSecretResponse>, ConsoleError> {
-    if !db::exists_console_for_user(&state.pool, &request.console_id, &user_id).await? {
-        return Err(ConsoleError::Forbidden);
-    }
-
-    let secret = crypto::gen_base64_key::<KEY_SIZE>();
+    User { user_id }: User,
+    Path(console_id): Path<uuid::Uuid>,
+) -> Result<Json<ApiSecret>, ConsoleError> {
+    let site_key = crypto::gen_base64_key::<KEY_SIZE>();
     let enc_key = crypto::gen_base64_key::<KEY_SIZE>();
+    let secret = crypto::gen_base64_key::<KEY_SIZE>();
 
-    db::insert_api_secret(&state.pool, &secret, &request.console_id, &enc_key).await?;
-    Ok(Json(ApiSecretResponse { secret }))
+    db::insert_api_key(&state.pool, &site_key, &console_id, &enc_key, &secret).await?;
+    Ok(Json(ApiSecret { site_key, secret }))
 }
 
-pub async fn add_origin() -> StatusCode {
-    todo!()
-}
-
-pub async fn remove_origin() -> StatusCode {
-    todo!()
+#[instrument(skip(state))]
+pub async fn revoke_api_secret(
+    State(state): State<Arc<AppState>>,
+    User { user_id, .. }: User,
+    Path((console_id, site_key)): Path<(uuid::Uuid, String)>,
+) -> Result<(), ConsoleError> {
+    db::delete_api_key(&state.pool, &site_key, &console_id).await?;
+    Ok(())
 }

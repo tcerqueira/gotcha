@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from api_key where site_key = $1 and console_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f51187363eb6a70e49059ef6d2181b7d97d126fdd6572e97ca8fd1915a751f08"
+}

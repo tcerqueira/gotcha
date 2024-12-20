@@ -82,7 +82,6 @@ where
 #[derive(Debug, Clone)]
 pub struct User {
     pub user_id: Arc<str>,
-    pub is_admin: bool,
 }
 
 #[async_trait]

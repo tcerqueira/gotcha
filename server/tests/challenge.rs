@@ -20,7 +20,7 @@ async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
 #[gotcha_server_macros::integration_test]
 async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let api_secret = server.db_api_secret().await;
+    let api_secret = server.db_api_site_key().await;
     let enc_key = server.db_enconding_key().await;
 
     let response = HTTP_CLIENT
@@ -48,7 +48,7 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
 #[gotcha_server_macros::integration_test]
 async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let api_secret = server.db_api_secret().await;
+    let api_secret = server.db_api_site_key().await;
     let enc_key = server.db_enconding_key().await;
 
     let response = HTTP_CLIENT

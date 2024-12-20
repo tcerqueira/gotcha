@@ -27,39 +27,49 @@ pub fn connect_database(config: DatabaseConfig) -> PgPool {
 
 pub async fn fetch_encoding_key(
     exec: impl PgExecutor<'_> + Send,
-    api_secret: &str,
+    site_key: &str,
 ) -> sqlx::Result<Option<String>> {
     sqlx::query_scalar!(
-        "select encoding_key from api_secret where key = $1",
-        api_secret
+        "select encoding_key from api_key where site_key = $1",
+        site_key
     )
     .fetch_optional(exec)
     .await
 }
 
-pub async fn fetch_api_secrets(
+#[derive(Debug, FromRow)]
+pub struct DbApiKey {
+    pub site_key: String,
+    pub enc_key: String,
+    pub secret: String,
+}
+
+pub async fn fetch_api_keys(
     exec: impl PgExecutor<'_> + Send,
     console_id: &uuid::Uuid,
-) -> sqlx::Result<Vec<String>> {
-    sqlx::query_scalar!(
-        "select key from api_secret where console_id = $1",
+) -> sqlx::Result<Vec<DbApiKey>> {
+    sqlx::query_as!(
+        DbApiKey,
+        "select site_key, encoding_key as enc_key, secret from api_key where console_id = $1",
         console_id
     )
     .fetch_all(exec)
     .await
 }
 
-pub async fn insert_api_secret(
+pub async fn insert_api_key(
     exec: impl PgExecutor<'_> + Send,
-    secret_key: &str,
+    site_key: &str,
     console_id: &uuid::Uuid,
     enc_key: &str,
+    secret: &str,
 ) -> sqlx::Result<()> {
     let _ = sqlx::query!(
-        "insert into api_secret (key, console_id, encoding_key, secret) values ($1, $2, $3, $1)",
-        secret_key,
+        "insert into api_key (site_key, console_id, encoding_key, secret) values ($1, $2, $3, $4)",
+        site_key,
         console_id,
         enc_key,
+        secret
     )
     .execute(exec)
     .await?;
@@ -67,18 +77,18 @@ pub async fn insert_api_secret(
     Ok(())
 }
 
-pub async fn with_console_insert_api_secret(
+pub async fn with_console_insert_api_key(
     exec: impl PgExecutor<'_> + Send,
     console_label: &str,
     user: &str,
-    secret_key: &str,
+    site_key: &str,
     enc_key: &str,
 ) -> sqlx::Result<()> {
     sqlx::query!(
         r#"with
       console as (insert into public.console (label, user_id) values ($1, $2) returning id)
     insert into
-      public.api_secret (key, console_id, encoding_key, secret)
+      public.api_key (site_key, console_id, encoding_key, secret)
     values
       (
         $3,
@@ -87,7 +97,7 @@ pub async fn with_console_insert_api_secret(
       )"#,
         console_label,
         user,
-        secret_key,
+        site_key,
         enc_key
     )
     .execute(exec)
@@ -95,8 +105,23 @@ pub async fn with_console_insert_api_secret(
     Ok(())
 }
 
+pub async fn delete_api_key(
+    exec: impl PgExecutor<'_> + Send,
+    site_key: &str,
+    console_id: &uuid::Uuid,
+) -> sqlx::Result<u64> {
+    let res = sqlx::query!(
+        "delete from api_key where site_key = $1 and console_id = $2",
+        site_key,
+        console_id
+    )
+    .execute(exec)
+    .await?;
+    Ok(res.rows_affected())
+}
+
 #[derive(Debug, FromRow)]
-pub struct FetchConsole {
+pub struct DbConsole {
     pub id: uuid::Uuid,
     pub label: Option<String>,
 }
@@ -104,9 +129,9 @@ pub struct FetchConsole {
 pub async fn fetch_consoles(
     exec: impl PgExecutor<'_> + Send,
     user: &str,
-) -> sqlx::Result<Vec<FetchConsole>> {
+) -> sqlx::Result<Vec<DbConsole>> {
     sqlx::query_as!(
-        FetchConsole,
+        DbConsole,
         "select id, label from console where user_id = $1",
         user
     )

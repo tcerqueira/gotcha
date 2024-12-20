@@ -1,7 +1,6 @@
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
-use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tokio::sync::{oneshot::Sender, OnceCell};
@@ -27,7 +26,6 @@ struct InnerContext {
     addr: SocketAddr,
     shutdown_signal: Sender<()>,
     pool: PgPool,
-    admin_auth_key: String,
 }
 
 pub async fn with_test_context<F, Fut, R>(test: F) -> R
@@ -64,7 +62,6 @@ impl TestContext {
         populate_demo(&pool, &test_id).await?;
 
         let app_pool = pool.clone();
-        let admin_auth_key = app_conf.admin_auth_key.expose_secret().into();
         let _join_handle = tokio::spawn(async move {
             axum::serve(
                 listener,
@@ -81,7 +78,6 @@ impl TestContext {
                 addr,
                 shutdown_signal,
                 pool,
-                admin_auth_key,
             }),
         })
     }
@@ -107,10 +103,6 @@ impl TestContext {
         &self.inner.pool
     }
 
-    pub fn admin_auth_key(&self) -> &str {
-        &self.inner.admin_auth_key
-    }
-
     pub async fn db_console(&self) -> uuid::Uuid {
         db::fetch_console_by_label(
             &self.inner.pool,
@@ -121,15 +113,16 @@ impl TestContext {
         .expect("expected a console to be created on setup")
     }
 
-    pub async fn db_api_secret(&self) -> String {
-        db::fetch_api_secrets(&self.inner.pool, &self.db_console().await)
+    pub async fn db_api_site_key(&self) -> String {
+        db::fetch_api_keys(&self.inner.pool, &self.db_console().await)
             .await
             .unwrap()
             .swap_remove(0)
+            .site_key
     }
 
     pub async fn db_enconding_key(&self) -> String {
-        db::fetch_encoding_key(&self.inner.pool, &self.db_api_secret().await)
+        db::fetch_encoding_key(&self.inner.pool, &self.db_api_site_key().await)
             .await
             .unwrap()
             .expect("expected a encoding key to be created on setup")
@@ -149,10 +142,11 @@ async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> 
         DEMO_USER,
     )
     .await?;
-    db::insert_api_secret(
+    db::insert_api_key(
         &mut *txn,
         &crypto::gen_base64_key::<KEY_SIZE>(),
         &console_id,
+        &crypto::gen_base64_key::<KEY_SIZE>(),
         &crypto::gen_base64_key::<KEY_SIZE>(),
     )
     .await?;
