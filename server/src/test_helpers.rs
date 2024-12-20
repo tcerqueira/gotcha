@@ -190,10 +190,10 @@ pub async fn auth_jwt() -> &'static str {
                 .post("https://dev-650a4wh1mgk55eiy.us.auth0.com/oauth/token")
                 .json(&TokenRequest {
                     client_id: std::env::var("TEST_AUTH_CLIENT_ID")
-                        .expect("env var TEST_AUTH_CLIENT_ID not set")
+                        .expect("env var TEST_AUTH_CLIENT_ID")
                         .leak(),
                     client_secret: std::env::var("TEST_AUTH_CLIENT_SECRET")
-                        .expect("env var TEST_AUTH_CLIENT_SECRET not set")
+                        .expect("env var TEST_AUTH_CLIENT_SECRET")
                         .leak(),
                     audience: "https://console-rust-backend",
                     grant_type: "client_credentials",
