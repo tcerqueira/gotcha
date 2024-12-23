@@ -40,6 +40,8 @@ pub enum ConsoleError {
     NotFound { what: String },
     #[error("Access forbidden")]
     Forbidden,
+    #[error("Duplicate")]
+    Duplicate,
     #[error(transparent)]
     Sql(sqlx::Error),
     #[error(transparent)]
@@ -49,7 +51,7 @@ pub enum ConsoleError {
 impl IntoResponse for ConsoleError {
     fn into_response(self) -> Response {
         match self {
-            ConsoleError::Unexpected(_) | ConsoleError::Sql(_) => {
+            ConsoleError::Unexpected(_) | ConsoleError::Sql(_) | ConsoleError::Duplicate => {
                 tracing::error!(error = ?self, "Internal Server Error ocurred.");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
@@ -68,9 +70,17 @@ impl From<sqlx::Error> for ConsoleError {
                 if err
                     .downcast_ref::<PgDatabaseError>()
                     .constraint()
-                    .is_some_and(|c| c == "api_secret_console_id_fkey") =>
+                    .is_some_and(|c| c == "api_key_console_id_fkey") =>
             {
                 ConsoleError::Forbidden
+            }
+            sqlx::Error::Database(err)
+                if err
+                    .downcast_ref::<PgDatabaseError>()
+                    .constraint()
+                    .is_some_and(|c| c == "api_key_secret_unique" || c == "api_key_pkey") =>
+            {
+                ConsoleError::Duplicate
             }
             err => ConsoleError::Sql(err),
         }

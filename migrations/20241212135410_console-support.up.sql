@@ -42,3 +42,6 @@ rename column key TO site_key;
 alter table public.api_key add constraint api_key_pkey primary key (site_key);
 
 alter table public.api_key add constraint api_key_console_id_fkey foreign key (console_id) references public.console (id) on delete cascade;
+
+-- Unique secret
+alter table public.api_key add constraint api_key_secret_unique unique (secret);

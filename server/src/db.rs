@@ -25,7 +25,7 @@ pub fn connect_database(config: DatabaseConfig) -> PgPool {
     pool_options.connect_lazy_with(conn_options)
 }
 
-pub async fn fetch_encoding_key(
+pub async fn fetch_encoding_key_by_site_key(
     exec: impl PgExecutor<'_> + Send,
     site_key: &str,
 ) -> sqlx::Result<Option<String>> {
@@ -35,6 +35,15 @@ pub async fn fetch_encoding_key(
     )
     .fetch_optional(exec)
     .await
+}
+
+pub async fn fetch_encoding_key_by_secret(
+    exec: impl PgExecutor<'_> + Send,
+    secret: &str,
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar!("select encoding_key from api_key where secret = $1", secret)
+        .fetch_optional(exec)
+        .await
 }
 
 #[derive(Debug, FromRow)]

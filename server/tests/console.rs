@@ -77,6 +77,11 @@ async fn gen_api_secret_configuration_not_found(server: TestContext) -> anyhow::
 }
 
 #[gotcha_server_macros::integration_test]
+async fn gen_api_secret_forbidden_console(_server: TestContext) -> anyhow::Result<()> {
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
 async fn add_origin(_server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }

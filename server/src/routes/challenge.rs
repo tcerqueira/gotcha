@@ -59,7 +59,7 @@ pub async fn process_challenge(
                 success: results.success,
                 authority: addr,
             },
-            &db::fetch_encoding_key(&state.pool, &results.secret)
+            &db::fetch_encoding_key_by_site_key(&state.pool, &results.secret)
                 .await
                 .context("failed to fecth encoding key by api secret while processing challenge")?
                 .ok_or(ChallengeError::InvalidSecret)?,

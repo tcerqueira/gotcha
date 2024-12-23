@@ -1,3 +1,7 @@
+-- Unique secret
+alter table public.api_key
+drop constraint api_key_secret_unique;
+
 -- Change names
 alter table public.api_key
 drop constraint api_key_console_id_fkey;

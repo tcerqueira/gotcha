@@ -11,7 +11,7 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn sucessful_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
-        let api_secret = server.db_api_site_key().await;
+        let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
         let token = response_token::encode(
@@ -24,7 +24,7 @@ mod verify_site {
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", &api_secret), ("response", &token)])
+            .form(&[("secret", &secret), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -39,7 +39,7 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn failed_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
-        let api_secret = server.db_api_site_key().await;
+        let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
         let token = response_token::encode(
@@ -52,7 +52,7 @@ mod verify_site {
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", &api_secret), ("response", &token)])
+            .form(&[("secret", &secret), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -97,11 +97,11 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn missing_response(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
-        let api_secret = server.db_api_site_key().await;
+        let secret = server.db_api_secret().await;
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", api_secret)])
+            .form(&[("secret", secret)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -175,6 +175,12 @@ mod verify_site {
     }
 
     #[gotcha_server_macros::integration_test]
+    async fn invalid_secret_but_exists(_server: TestContext) -> anyhow::Result<()> {
+        // TODO
+        Ok(())
+    }
+
+    #[gotcha_server_macros::integration_test]
     async fn bad_request(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
 
@@ -213,7 +219,7 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn expired_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
-            let api_secret = server.db_api_site_key().await;
+            let secret = server.db_api_secret().await;
             let enc_key = server.db_enconding_key().await;
 
             let token = response_token::encode_with_timeout(
@@ -229,7 +235,7 @@ mod verify_site {
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", api_secret), ("response", token)])
+                .form(&[("secret", secret), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -253,13 +259,13 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn invalid_token(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
-            let api_secret = server.db_api_site_key().await;
+            let secret = server.db_api_secret().await;
 
             let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..eyJleHAiOjE3MzAzMDIyNDYsInN1Y2Nlc3MiOnRydWV9.9VBstXEca0JEPksQbMOEXdL_MxBvjiDgLbp0JnfsXMw";
             //                                                ^ extra dot
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", api_secret.as_str()), ("response", token)])
+                .form(&[("secret", secret.as_str()), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -277,7 +283,7 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn invalid_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
-            let api_secret = server.db_api_site_key().await;
+            let secret = server.db_api_secret().await;
 
             let token = jsonwebtoken::encode(
                 &Header::new(JWT_ALGORITHM),
@@ -292,7 +298,7 @@ mod verify_site {
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", api_secret), ("response", token)])
+                .form(&[("secret", secret), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -310,7 +316,7 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn invalid_algorithm(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
-            let api_secret = server.db_api_site_key().await;
+            let secret = server.db_api_secret().await;
             let enc_key = server.db_enconding_key().await;
 
             let token = jsonwebtoken::encode(
@@ -324,7 +330,7 @@ mod verify_site {
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", api_secret), ("response", token)])
+                .form(&[("secret", secret), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -342,13 +348,13 @@ mod verify_site {
         #[gotcha_server_macros::integration_test]
         async fn invalid_base64(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
-            let api_secret = server.db_api_site_key().await;
+            let secret = server.db_api_secret().await;
 
             let token = "header-garbage_ç~,-º´.eyJleHAiOjE3MzAzMDIyNDYsInN1Y2Nlc3MiOnRydWV9.9VBstXEca0JEPksQbMOEXdL_MxBvjiDgLbp0JnfsXMw";
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", api_secret.as_str()), ("response", token)])
+                .form(&[("secret", secret.as_str()), ("response", token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);

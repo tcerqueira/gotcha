@@ -68,11 +68,20 @@ pub async fn gen_api_secret(
     User { user_id }: User,
     Path(console_id): Path<uuid::Uuid>,
 ) -> Result<Json<ApiSecret>, ConsoleError> {
-    let site_key = crypto::gen_base64_key::<KEY_SIZE>();
-    let enc_key = crypto::gen_base64_key::<KEY_SIZE>();
-    let secret = crypto::gen_base64_key::<KEY_SIZE>();
+    let (site_key, secret) = loop {
+        let site_key = crypto::gen_base64_key::<KEY_SIZE>();
+        let enc_key = crypto::gen_base64_key::<KEY_SIZE>();
+        let secret = crypto::gen_base64_key::<KEY_SIZE>();
 
-    db::insert_api_key(&state.pool, &site_key, &console_id, &enc_key, &secret).await?;
+        match db::insert_api_key(&state.pool, &site_key, &console_id, &enc_key, &secret)
+            .await
+            .map_err(ConsoleError::from)
+        {
+            Ok(()) => break (site_key, secret),
+            Err(ConsoleError::Duplicate) => continue,
+            Err(err) => return Err(err),
+        };
+    };
     Ok(Json(ApiSecret { site_key, secret }))
 }
 

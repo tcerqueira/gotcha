@@ -121,8 +121,16 @@ impl TestContext {
             .site_key
     }
 
+    pub async fn db_api_secret(&self) -> String {
+        db::fetch_api_keys(&self.inner.pool, &self.db_console().await)
+            .await
+            .unwrap()
+            .swap_remove(0)
+            .secret
+    }
+
     pub async fn db_enconding_key(&self) -> String {
-        db::fetch_encoding_key(&self.inner.pool, &self.db_api_site_key().await)
+        db::fetch_encoding_key_by_site_key(&self.inner.pool, &self.db_api_site_key().await)
             .await
             .unwrap()
             .expect("expected a encoding key to be created on setup")
