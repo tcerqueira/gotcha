@@ -72,7 +72,7 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
 fn api(state: AppState) -> Router {
     let state = Arc::new(state);
     Router::new()
-        .nest("/", routes::public(&state))
+        .nest("/", routes::verification(&state))
         .nest("/challenge", routes::challenge(&state))
         .nest("/console", routes::console(&state))
         .nest("/admin", routes::admin(&state))

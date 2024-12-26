@@ -25,32 +25,37 @@ pub fn connect_database(config: DatabaseConfig) -> PgPool {
     pool_options.connect_lazy_with(conn_options)
 }
 
-pub async fn fetch_encoding_key_by_site_key(
+#[derive(Debug, FromRow)]
+pub struct DbApiKey {
+    pub site_key: String,
+    pub encoding_key: String,
+    pub secret: String,
+}
+
+pub async fn fetch_api_key_by_site_key(
     exec: impl PgExecutor<'_> + Send,
     site_key: &str,
-) -> sqlx::Result<Option<String>> {
-    sqlx::query_scalar!(
-        "select encoding_key from api_key where site_key = $1",
+) -> sqlx::Result<Option<DbApiKey>> {
+    sqlx::query_as!(
+        DbApiKey,
+        "select site_key, encoding_key, secret from api_key where site_key = $1",
         site_key
     )
     .fetch_optional(exec)
     .await
 }
 
-pub async fn fetch_encoding_key_by_secret(
+pub async fn fetch_api_key_by_secret(
     exec: impl PgExecutor<'_> + Send,
     secret: &str,
-) -> sqlx::Result<Option<String>> {
-    sqlx::query_scalar!("select encoding_key from api_key where secret = $1", secret)
-        .fetch_optional(exec)
-        .await
-}
-
-#[derive(Debug, FromRow)]
-pub struct DbApiKey {
-    pub site_key: String,
-    pub enc_key: String,
-    pub secret: String,
+) -> sqlx::Result<Option<DbApiKey>> {
+    sqlx::query_as!(
+        DbApiKey,
+        "select site_key, encoding_key, secret from api_key where secret = $1",
+        secret
+    )
+    .fetch_optional(exec)
+    .await
 }
 
 pub async fn fetch_api_keys(
@@ -59,7 +64,7 @@ pub async fn fetch_api_keys(
 ) -> sqlx::Result<Vec<DbApiKey>> {
     sqlx::query_as!(
         DbApiKey,
-        "select site_key, encoding_key as enc_key, secret from api_key where console_id = $1",
+        "select site_key, encoding_key, secret from api_key where console_id = $1",
         console_id
     )
     .fetch_all(exec)

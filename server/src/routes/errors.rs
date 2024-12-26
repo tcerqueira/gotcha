@@ -8,7 +8,7 @@ use axum_extra::typed_header::TypedHeaderRejection;
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
 
-use super::public::{ErrorCodes, VerificationResponse};
+use super::verification::{ErrorCodes, VerificationResponse};
 
 #[derive(Debug, Error)]
 pub enum ChallengeError {

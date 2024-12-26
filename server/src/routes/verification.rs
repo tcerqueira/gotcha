@@ -54,13 +54,13 @@ pub async fn site_verify(
     let verification: Result<VerificationRequest, Vec<ErrorCodes>> = verification.try_into();
     let verification = verification.map_err(VerificationResponse::failure)?;
 
-    let enc_key =
-        db::fetch_encoding_key_by_secret(&state.pool, verification.secret.expose_secret())
-            .await
-            .context("failed to fetch encoding key bey api secret while verifying challenge")?
-            .ok_or(VerificationResponse::failure(vec![
-                ErrorCodes::InvalidInputSecret,
-            ]))?;
+    let enc_key = db::fetch_api_key_by_secret(&state.pool, verification.secret.expose_secret())
+        .await
+        .context("failed to fetch encoding key bey api secret while verifying challenge")?
+        .ok_or(VerificationResponse::failure(vec![
+            ErrorCodes::InvalidInputSecret,
+        ]))?
+        .encoding_key;
 
     let claims = response_token::decode(&verification.response, &enc_key)
         .map_err(|err| match err.into_kind() {

@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select site_key, encoding_key, secret from api_key where console_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "site_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "encoding_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "secret",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3f1254028d4311c199e53c34a43d40d675712d41585fa859a4e36b36a07fbdff"
+}

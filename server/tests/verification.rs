@@ -3,7 +3,7 @@ mod verify_site {
 
     use gotcha_server::{
         response_token::{self, ResponseClaims},
-        routes::public::{ErrorCodes, VerificationResponse},
+        routes::verification::{ErrorCodes, VerificationResponse},
         HTTP_CLIENT,
     };
     use reqwest::StatusCode;

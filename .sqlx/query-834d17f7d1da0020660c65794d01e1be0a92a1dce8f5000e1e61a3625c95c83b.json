@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select site_key, encoding_key, secret from api_key where secret = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "site_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "encoding_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "secret",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "834d17f7d1da0020660c65794d01e1be0a92a1dce8f5000e1e61a3625c95c83b"
+}

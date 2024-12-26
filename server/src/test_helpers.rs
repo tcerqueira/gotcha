@@ -130,10 +130,11 @@ impl TestContext {
     }
 
     pub async fn db_enconding_key(&self) -> String {
-        db::fetch_encoding_key_by_site_key(&self.inner.pool, &self.db_api_site_key().await)
+        db::fetch_api_key_by_site_key(&self.inner.pool, &self.db_api_site_key().await)
             .await
             .unwrap()
             .expect("expected a encoding key to be created on setup")
+            .encoding_key
     }
 
     pub async fn db_challenges(&self) -> Vec<DbChallenge> {

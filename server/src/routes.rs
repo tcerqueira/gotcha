@@ -8,7 +8,7 @@ use axum::{
 use challenge::{get_challenge, process_challenge};
 use console::{create_console, gen_api_secret, get_consoles, revoke_api_secret};
 use middleware::{require_admin, require_auth, validate_console_id};
-use public::site_verify;
+use verification::site_verify;
 
 use crate::AppState;
 
@@ -17,7 +17,7 @@ pub mod challenge;
 pub mod console;
 mod errors;
 pub mod middleware;
-pub mod public;
+pub mod verification;
 
 pub fn challenge(state: &Arc<AppState>) -> Router {
     let state = Arc::clone(state);
@@ -27,7 +27,7 @@ pub fn challenge(state: &Arc<AppState>) -> Router {
         .with_state(state)
 }
 
-pub fn public(state: &Arc<AppState>) -> Router {
+pub fn verification(state: &Arc<AppState>) -> Router {
     let state = Arc::clone(state);
     Router::new()
         .route("/siteverify", post(site_verify))

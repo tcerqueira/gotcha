@@ -1,5 +1,5 @@
 use axum::{http::StatusCode, routing::post, Form, Json, Router};
-use gotcha_server::routes::public::VerificationResponse;
+use gotcha_server::routes::verification::VerificationResponse;
 use reqwest::Client;
 use std::{collections::HashMap, net::SocketAddr, sync::LazyLock};
 use tower_http::{services::ServeDir, trace::TraceLayer};

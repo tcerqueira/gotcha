@@ -77,7 +77,22 @@ async fn gen_api_secret_configuration_not_found(server: TestContext) -> anyhow::
 }
 
 #[gotcha_server_macros::integration_test]
-async fn gen_api_secret_forbidden_console(_server: TestContext) -> anyhow::Result<()> {
+async fn gen_api_secret_forbidden_console(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+
+    let console_id = db::insert_console(pool, "another_console", "another_user").await?;
+
+    let response = HTTP_CLIENT
+        .post(format!(
+            "http://localhost:{port}/api/console/{console_id}/api-key"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    db::delete_console(pool, &console_id).await?;
     Ok(())
 }
 
