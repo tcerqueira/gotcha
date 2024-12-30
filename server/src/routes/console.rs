@@ -5,12 +5,13 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
+use tracing::{instrument, Level};
+use uuid::Uuid;
 
 use super::errors::ConsoleError;
 use crate::{
     crypto::{self, KEY_SIZE},
-    db,
+    db::{self, DbApiKey, DbConsole, RowsAffected},
     extractors::User,
     AppState,
 };
@@ -22,11 +23,25 @@ pub struct CreateConsoleRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConsoleResponse {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub label: Option<String>,
 }
 
-#[instrument(skip(state))]
+#[instrument(skip_all, ret(level = Level::DEBUG))]
+pub async fn get_consoles(
+    State(state): State<Arc<AppState>>,
+    User { user_id }: User,
+) -> Result<Json<Vec<ConsoleResponse>>, ConsoleError> {
+    let consoles = db::fetch_consoles(&state.pool, &user_id)
+        .await?
+        .into_iter()
+        .map(ConsoleResponse::from)
+        .collect();
+
+    Ok(Json(consoles))
+}
+
+#[instrument(skip(state, user_id), ret(level = Level::DEBUG))]
 pub async fn create_console(
     State(state): State<Arc<AppState>>,
     User { user_id }: User,
@@ -40,36 +55,45 @@ pub async fn create_console(
 }
 
 #[instrument(skip(state))]
-pub async fn get_consoles(
+pub async fn delete_console(
     State(state): State<Arc<AppState>>,
-    User { user_id }: User,
-) -> Result<Json<Vec<ConsoleResponse>>, ConsoleError> {
-    let db_consoles = db::fetch_consoles(&state.pool, &user_id).await?;
-    Ok(Json(
-        db_consoles
-            .into_iter()
-            .map(|c| ConsoleResponse {
-                id: c.id,
-                label: c.label,
-            })
-            .collect(),
-    ))
+    Path(console_id): Path<Uuid>,
+) -> Result<(), ConsoleError> {
+    match db::delete_console(&state.pool, &console_id).await? {
+        RowsAffected(0) => Err(ConsoleError::NotFound {
+            what: format!("console with id {console_id}"),
+        }),
+        RowsAffected(_) => Ok(()),
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ApiSecret {
+pub struct ApiKeyResponse {
     pub site_key: String,
     pub secret: String,
 }
 
-#[instrument(skip(state))]
-pub async fn gen_api_secret(
+#[instrument(skip(state), ret(level = Level::DEBUG))]
+pub async fn get_api_keys(
     State(state): State<Arc<AppState>>,
-    User { user_id }: User,
-    Path(console_id): Path<uuid::Uuid>,
-) -> Result<Json<ApiSecret>, ConsoleError> {
+    Path(console_id): Path<Uuid>,
+) -> Result<Json<Vec<ApiKeyResponse>>, ConsoleError> {
+    let keys = db::fetch_api_keys(&state.pool, &console_id)
+        .await?
+        .into_iter()
+        .map(ApiKeyResponse::from)
+        .collect();
+
+    Ok(Json(keys))
+}
+
+#[instrument(skip(state), ret(level = Level::DEBUG))]
+pub async fn gen_api_key(
+    State(state): State<Arc<AppState>>,
+    Path(console_id): Path<Uuid>,
+) -> Result<Json<ApiKeyResponse>, ConsoleError> {
     let (site_key, secret) = loop {
-        let site_key = crypto::gen_base64_key::<KEY_SIZE>();
+        let site_key = crypto::gen_base64_url_safe_key::<KEY_SIZE>();
         let enc_key = crypto::gen_base64_key::<KEY_SIZE>();
         let secret = crypto::gen_base64_key::<KEY_SIZE>();
 
@@ -82,15 +106,41 @@ pub async fn gen_api_secret(
             Err(err) => return Err(err),
         };
     };
-    Ok(Json(ApiSecret { site_key, secret }))
+    Ok(Json(ApiKeyResponse { site_key, secret }))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RevokeKeyRequest {
+    pub site_key: String,
 }
 
 #[instrument(skip(state))]
-pub async fn revoke_api_secret(
+pub async fn revoke_api_key(
     State(state): State<Arc<AppState>>,
-    User { user_id, .. }: User,
-    Path((console_id, site_key)): Path<(uuid::Uuid, String)>,
+    Path((console_id, site_key)): Path<(Uuid, String)>,
 ) -> Result<(), ConsoleError> {
-    db::delete_api_key(&state.pool, &site_key, &console_id).await?;
-    Ok(())
+    match db::delete_api_key(&state.pool, &site_key, &console_id).await? {
+        RowsAffected(0) => Err(ConsoleError::NotFound {
+            what: format!("sitekey {site_key} for console with id {console_id}"),
+        }),
+        RowsAffected(_) => Ok(()),
+    }
+}
+
+impl From<DbConsole> for ConsoleResponse {
+    fn from(c: DbConsole) -> Self {
+        ConsoleResponse {
+            id: c.id,
+            label: c.label,
+        }
+    }
+}
+
+impl From<DbApiKey> for ApiKeyResponse {
+    fn from(k: DbApiKey) -> Self {
+        ApiKeyResponse {
+            site_key: k.site_key,
+            secret: k.secret,
+        }
+    }
 }

@@ -6,7 +6,9 @@ use axum::{
     Router,
 };
 use challenge::{get_challenge, process_challenge};
-use console::{create_console, gen_api_secret, get_consoles, revoke_api_secret};
+use console::{
+    create_console, delete_console, gen_api_key, get_api_keys, get_consoles, revoke_api_key,
+};
 use middleware::{require_admin, require_auth, validate_console_id};
 use verification::site_verify;
 
@@ -42,8 +44,10 @@ pub fn console(state: &Arc<AppState>) -> Router {
         .nest(
             "/:console_id",
             Router::new()
-                .route("/api-key", post(gen_api_secret))
-                .route("/api-key/:site_key", delete(revoke_api_secret))
+                .route("/", delete(delete_console))
+                .route("/api-key", get(get_api_keys))
+                .route("/api-key", post(gen_api_key))
+                .route("/api-key/:site_key", delete(revoke_api_key))
                 .layer(axum::middleware::from_fn_with_state(
                     Arc::clone(&state),
                     validate_console_id,

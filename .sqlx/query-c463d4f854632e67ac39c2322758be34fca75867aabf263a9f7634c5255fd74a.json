@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select id, label from console where user_id = $1",
+  "query": "select id, label from console where user_id = $1 order by created_at",
   "describe": {
     "columns": [
       {
@@ -24,5 +24,5 @@
       true
     ]
   },
-  "hash": "77b61cbd0b76888cc59f2a9c141f53fd743d7c4f8e3b4ea7c0a1058590878e93"
+  "hash": "c463d4f854632e67ac39c2322758be34fca75867aabf263a9f7634c5255fd74a"
 }

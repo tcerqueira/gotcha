@@ -5,7 +5,10 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use crate::{db, AppState};
+use crate::{
+    db::{self, RowsAffected},
+    AppState,
+};
 
 use super::errors::AdminError;
 
@@ -47,7 +50,7 @@ pub async fn remove_challenge(
     State(state): State<Arc<AppState>>,
     Json(challenge): Json<DeleteChallenge>,
 ) -> Result<(), AdminError> {
-    let rows_affected = db::delete_challenge(&state.pool, &challenge.url).await?;
+    let RowsAffected(rows_affected) = db::delete_challenge(&state.pool, &challenge.url).await?;
     match rows_affected {
         0 => Err(AdminError::NotFound(challenge.url)),
         _ => Ok(()),

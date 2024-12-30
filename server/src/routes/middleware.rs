@@ -14,19 +14,21 @@ use axum_extra::{
 use jsonwebtoken::{jwk::JwkSet, DecodingKey, Validation};
 use serde::Deserialize;
 use thiserror::Error;
-use tracing::instrument;
+use tracing::{instrument, Level};
+use uuid::Uuid;
 
 use crate::{db, extractors::User, AppState, HTTP_CACHE_CLIENT};
 
 use super::errors::ConsoleError;
 
-#[instrument(skip(state, request, next))]
+#[instrument(fields(user_id), skip(state, auth_header, request, next), err(Debug, level = Level::DEBUG))]
 pub async fn require_auth(
     State(state): State<Arc<AppState>>,
     auth_header: TypedHeader<Authorization<Bearer>>,
     mut request: Request,
     next: Next,
 ) -> Result<Response, AuthError> {
+    tracing::trace!(auth_header = ?auth_header);
     let token = auth_header.token();
     let header = jsonwebtoken::decode_header(token)?;
     let kid = header.kid.context("kid not present in header")?;
@@ -51,6 +53,7 @@ pub async fn require_auth(
         .context("could not create decoding key from JWK")?,
         &validation,
     )?;
+    tracing::Span::current().record("user_id", &claims.claims.sub);
 
     request.extensions_mut().insert(User {
         user_id: Arc::from(claims.claims.sub),
@@ -94,10 +97,15 @@ impl From<reqwest::Error> for AuthError {
     }
 }
 
-#[instrument(skip(state, request, next))]
+#[derive(Debug, Deserialize)]
+pub struct PathFields {
+    pub console_id: Uuid,
+}
+
+#[instrument(skip_all, err(Debug, level = Level::DEBUG))]
 pub async fn validate_console_id(
     State(state): State<Arc<AppState>>,
-    Path(console_id): Path<uuid::Uuid>,
+    Path(PathFields { console_id }): Path<PathFields>,
     User { user_id }: User,
     request: Request,
     next: Next,
@@ -108,7 +116,7 @@ pub async fn validate_console_id(
     }
 }
 
-#[instrument(skip(_state, request, next))]
+#[instrument(skip_all)]
 pub async fn require_admin(
     State(_state): State<Arc<AppState>>,
     User { user_id }: User,

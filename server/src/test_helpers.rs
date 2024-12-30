@@ -4,6 +4,7 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tokio::sync::{oneshot::Sender, OnceCell};
+use uuid::Uuid;
 
 use crate::{
     app, configuration,
@@ -22,7 +23,7 @@ pub struct TestContext {
 
 #[derive(Debug)]
 struct InnerContext {
-    test_id: uuid::Uuid,
+    test_id: Uuid,
     addr: SocketAddr,
     shutdown_signal: Sender<()>,
     pool: PgPool,
@@ -58,7 +59,7 @@ impl TestContext {
         let (shutdown_signal, shutdown_receiver) = tokio::sync::oneshot::channel();
 
         let pool = db::connect_database(db_conf);
-        let test_id = uuid::Uuid::new_v4();
+        let test_id = Uuid::new_v4();
         populate_demo(&pool, &test_id).await?;
 
         let app_pool = pool.clone();
@@ -91,7 +92,7 @@ impl TestContext {
         Ok(())
     }
 
-    pub fn test_id(&self) -> &uuid::Uuid {
+    pub fn test_id(&self) -> &Uuid {
         &self.inner.test_id
     }
 
@@ -103,7 +104,7 @@ impl TestContext {
         &self.inner.pool
     }
 
-    pub async fn db_console(&self) -> uuid::Uuid {
+    pub async fn db_console(&self) -> Uuid {
         db::fetch_console_by_label(
             &self.inner.pool,
             &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{}", self.inner.test_id),
@@ -142,7 +143,7 @@ impl TestContext {
     }
 }
 
-async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> {
+async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> sqlx::Result<()> {
     let mut txn = pool.begin().await?;
 
     let console_id = db::insert_console(
@@ -164,7 +165,7 @@ async fn populate_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> 
     Ok(())
 }
 
-async fn rollback_demo(pool: &PgPool, test_id: &uuid::Uuid) -> sqlx::Result<()> {
+async fn rollback_demo(pool: &PgPool, test_id: &Uuid) -> sqlx::Result<()> {
     let mut txn = pool.begin().await?;
     let id =
         db::fetch_console_by_label(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))
