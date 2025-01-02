@@ -9,7 +9,35 @@ use reqwest::StatusCode;
 use uuid::Uuid;
 
 #[gotcha_server_macros::integration_test]
-async fn get_consoles(_server: TestContext) -> anyhow::Result<()> {
+async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+
+    let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
+    let ConsoleResponse { id, .. } = HTTP_CLIENT
+        .post(format!("http://localhost:{port}/api/console"))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&CreateConsoleRequest {
+            label: label.clone(),
+        })
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let response = HTTP_CLIENT
+        .get(format!("http://localhost:{port}/api/console"))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let consoles: Vec<ConsoleResponse> = response.json().await?;
+    assert!(consoles.iter().any(|c| c.id == id));
+    let _ = db::fetch_console_by_label(pool, &label)
+        .await?
+        .unwrap_or_else(|| panic!("console '{label}' doesn't exist"));
+
     Ok(())
 }
 
@@ -42,7 +70,44 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
 }
 
 #[gotcha_server_macros::integration_test]
-async fn delete_console(_server: TestContext) -> anyhow::Result<()> {
+async fn delete_console(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+
+    let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
+    let ConsoleResponse { id, .. } = HTTP_CLIENT
+        .post(format!("http://localhost:{port}/api/console"))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&CreateConsoleRequest {
+            label: label.clone(),
+        })
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let response = HTTP_CLIENT
+        .delete(format!("http://localhost:{port}/api/console/{id}"))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn delete_console_not_found(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let id = Uuid::new_v4();
+
+    let response = HTTP_CLIENT
+        .delete(format!("http://localhost:{port}/api/console/{id}"))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .send()
+        .await?;
+    // because the console id doesn't exist for the user, it short circuits in the MW
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
     Ok(())
 }
 
