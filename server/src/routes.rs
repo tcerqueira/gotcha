@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use admin::{add_challenge, remove_challenge};
 use axum::{
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
     Router,
 };
 use challenge::{get_challenge, process_challenge};
 use console::{
     create_console, delete_console, gen_api_key, get_api_keys, get_consoles, revoke_api_key,
+    update_console,
 };
 use middleware::{require_admin, require_auth, validate_console_id};
 use verification::site_verify;
@@ -44,6 +45,7 @@ pub fn console(state: &Arc<AppState>) -> Router {
         .nest(
             "/:console_id",
             Router::new()
+                .route("/", patch(update_console))
                 .route("/", delete(delete_console))
                 .route("/api-key", get(get_api_keys))
                 .route("/api-key", post(gen_api_key))

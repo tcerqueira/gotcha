@@ -1,20 +1,18 @@
 use gotcha_server::{
     crypto::KEY_SIZE,
     db::{self, RowsAffected},
-    routes::console::{ApiKeyResponse, ConsoleResponse, CreateConsoleRequest},
+    routes::console::{
+        ApiKeyResponse, ConsoleResponse, CreateConsoleRequest, UpdateConsoleRequest,
+    },
     test_helpers, HTTP_CLIENT,
 };
 use rand::distributions::{Alphanumeric, DistString};
 use reqwest::StatusCode;
 use uuid::Uuid;
 
-#[gotcha_server_macros::integration_test]
-async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
-    let port = server.port();
-    let pool = server.pool();
-
+async fn post_console(port: u16) -> anyhow::Result<ConsoleResponse> {
     let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
-    let ConsoleResponse { id, .. } = HTTP_CLIENT
+    let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console"))
         .bearer_auth(test_helpers::auth_jwt().await)
         .json(&CreateConsoleRequest {
@@ -24,6 +22,14 @@ async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
         .await?
         .json()
         .await?;
+    Ok(response)
+}
+
+#[gotcha_server_macros::integration_test]
+async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+
+    let ConsoleResponse { id, .. } = post_console(port).await?;
 
     let response = HTTP_CLIENT
         .get(format!("http://localhost:{port}/api/console"))
@@ -34,9 +40,6 @@ async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
 
     let consoles: Vec<ConsoleResponse> = response.json().await?;
     assert!(consoles.iter().any(|c| c.id == id));
-    let _ = db::fetch_console_by_label(pool, &label)
-        .await?
-        .unwrap_or_else(|| panic!("console '{label}' doesn't exist"));
 
     Ok(())
 }
@@ -70,20 +73,61 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
 }
 
 #[gotcha_server_macros::integration_test]
+async fn update_console(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+
+    let ConsoleResponse { id, label } = post_console(port).await?;
+
+    let response = HTTP_CLIENT
+        .patch(format!("http://localhost:{port}/api/console/{id}"))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&UpdateConsoleRequest {
+            label: label.as_ref().map(|l| l[..6].to_owned()),
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let RowsAffected(r_affected) = db::delete_console(pool, &id).await?;
+
+    assert!(r_affected > 0);
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn update_nothing_console(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+
+    let ConsoleResponse { id, label } = post_console(port).await?;
+    let label = label.as_ref().unwrap();
+
+    let response = HTTP_CLIENT
+        .patch(format!("http://localhost:{port}/api/console/{id}"))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&UpdateConsoleRequest { label: None })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let db_id = db::fetch_console_by_label(pool, label)
+        .await?
+        .unwrap_or_else(|| panic!("console '{label}' doesn't exist"));
+    let RowsAffected(r_affected) = db::delete_console(pool, &id).await?;
+
+    assert_eq!(db_id, id);
+    assert!(r_affected > 0);
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
 async fn delete_console(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
-    let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
-    let ConsoleResponse { id, .. } = HTTP_CLIENT
-        .post(format!("http://localhost:{port}/api/console"))
-        .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&CreateConsoleRequest {
-            label: label.clone(),
-        })
-        .send()
-        .await?
-        .json()
-        .await?;
+    let ConsoleResponse { id, .. } = post_console(port).await?;
 
     let response = HTTP_CLIENT
         .delete(format!("http://localhost:{port}/api/console/{id}"))

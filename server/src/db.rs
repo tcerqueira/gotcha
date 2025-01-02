@@ -195,6 +195,26 @@ pub async fn insert_console(
     .await
 }
 
+#[derive(Debug)]
+pub struct DbUpdateConsole<'a> {
+    pub label: Option<&'a str>,
+}
+
+pub async fn update_console(
+    exec: impl PgExecutor<'_> + Send,
+    id: &Uuid,
+    update: DbUpdateConsole<'_>,
+) -> sqlx::Result<RowsAffected> {
+    let res = sqlx::query!(
+        "update console set label = coalesce($1, label) where id = $2",
+        update.label,
+        id
+    )
+    .execute(exec)
+    .await?;
+    Ok(RowsAffected(res.rows_affected()))
+}
+
 pub async fn delete_console(
     exec: impl PgExecutor<'_> + Send,
     console_id: &Uuid,

@@ -11,7 +11,7 @@ use uuid::Uuid;
 use super::errors::ConsoleError;
 use crate::{
     crypto::{self, KEY_SIZE},
-    db::{self, DbApiKey, DbConsole, RowsAffected},
+    db::{self, DbApiKey, DbConsole, DbUpdateConsole, RowsAffected},
     extractors::User,
     AppState,
 };
@@ -52,6 +52,28 @@ pub async fn create_console(
         id,
         label: Some(request.label),
     }))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateConsoleRequest {
+    pub label: Option<String>,
+}
+
+#[instrument(skip(state), ret(level = Level::DEBUG))]
+pub async fn update_console(
+    State(state): State<Arc<AppState>>,
+    Path(console_id): Path<Uuid>,
+    Json(request): Json<UpdateConsoleRequest>,
+) -> Result<(), ConsoleError> {
+    let update = DbUpdateConsole {
+        label: request.label.as_deref(),
+    };
+    match db::update_console(&state.pool, &console_id, update).await? {
+        RowsAffected(0) => Err(ConsoleError::NotFound {
+            what: format!("console with id {console_id}"),
+        }),
+        RowsAffected(_) => Ok(()),
+    }
 }
 
 #[instrument(skip(state))]
