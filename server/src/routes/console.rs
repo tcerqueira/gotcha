@@ -93,6 +93,7 @@ pub async fn delete_console(
 pub struct ApiKeyResponse {
     pub site_key: String,
     pub secret: String,
+    pub label: Option<String>,
 }
 
 #[instrument(skip(state), ret(level = Level::DEBUG))]
@@ -128,7 +129,11 @@ pub async fn gen_api_key(
             Err(err) => return Err(err),
         };
     };
-    Ok(Json(ApiKeyResponse { site_key, secret }))
+    Ok(Json(ApiKeyResponse {
+        site_key,
+        secret,
+        label: None,
+    }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -185,6 +190,7 @@ impl From<DbApiKey> for ApiKeyResponse {
         ApiKeyResponse {
             site_key: k.site_key,
             secret: k.secret,
+            label: k.label,
         }
     }
 }

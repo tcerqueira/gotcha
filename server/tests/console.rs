@@ -29,8 +29,7 @@ async fn post_console(port: u16) -> anyhow::Result<ConsoleResponse> {
 #[gotcha_server_macros::integration_test]
 async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-
-    let ConsoleResponse { id, .. } = post_console(port).await?;
+    let console_id = server.db_console().await;
 
     let response = HTTP_CLIENT
         .get(format!("http://localhost:{port}/api/console"))
@@ -40,7 +39,7 @@ async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     let consoles: Vec<ConsoleResponse> = response.json().await?;
-    assert!(consoles.iter().any(|c| c.id == id));
+    assert!(consoles.iter().any(|c| c.id == console_id));
 
     Ok(())
 }
@@ -152,6 +151,25 @@ async fn delete_console_not_found(server: TestContext) -> anyhow::Result<()> {
         .await?;
     // because the console id doesn't exist for the user, it short circuits in the MW
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn get_api_keys(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let console_id = server.db_console().await;
+
+    let response = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/console/{console_id}/api-key"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let _consoles: Vec<ApiKeyResponse> = response.json().await?;
 
     Ok(())
 }

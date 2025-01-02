@@ -34,6 +34,7 @@ pub struct DbApiKey {
     pub site_key: String,
     pub encoding_key: String,
     pub secret: String,
+    pub label: Option<String>,
 }
 
 pub async fn fetch_api_key_by_site_key(
@@ -42,7 +43,7 @@ pub async fn fetch_api_key_by_site_key(
 ) -> sqlx::Result<Option<DbApiKey>> {
     sqlx::query_as!(
         DbApiKey,
-        "select site_key, encoding_key, secret from api_key where site_key = $1",
+        "select site_key, encoding_key, secret, label from api_key where site_key = $1",
         site_key
     )
     .fetch_optional(exec)
@@ -55,7 +56,7 @@ pub async fn fetch_api_key_by_secret(
 ) -> sqlx::Result<Option<DbApiKey>> {
     sqlx::query_as!(
         DbApiKey,
-        "select site_key, encoding_key, secret from api_key where secret = $1",
+        "select site_key, encoding_key, secret, label from api_key where secret = $1",
         secret
     )
     .fetch_optional(exec)
@@ -68,7 +69,7 @@ pub async fn fetch_api_keys(
 ) -> sqlx::Result<Vec<DbApiKey>> {
     sqlx::query_as!(
         DbApiKey,
-        "select site_key, encoding_key, secret from api_key where console_id = $1 order by created_at",
+        "select site_key, encoding_key, secret, label from api_key where console_id = $1 order by created_at",
         console_id
     )
     .fetch_all(exec)
