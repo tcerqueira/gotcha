@@ -2,7 +2,8 @@ use gotcha_server::{
     crypto::KEY_SIZE,
     db::{self, RowsAffected},
     routes::console::{
-        ApiKeyResponse, ConsoleResponse, CreateConsoleRequest, UpdateConsoleRequest,
+        ApiKeyResponse, ConsoleResponse, CreateConsoleRequest, UpdateApiKeyRequest,
+        UpdateConsoleRequest,
     },
     test_helpers, HTTP_CLIENT,
 };
@@ -83,7 +84,7 @@ async fn update_console(server: TestContext) -> anyhow::Result<()> {
         .patch(format!("http://localhost:{port}/api/console/{id}"))
         .bearer_auth(test_helpers::auth_jwt().await)
         .json(&UpdateConsoleRequest {
-            label: label.as_ref().map(|l| l[..6].to_owned()),
+            label: label.as_ref().map(|l| l[..6].into()),
         })
         .send()
         .await?;
@@ -213,6 +214,27 @@ async fn gen_api_key_forbidden_console(server: TestContext) -> anyhow::Result<()
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
     db::delete_console(pool, &console_id).await?;
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn update_api_key(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let console_id = server.db_console().await;
+    let site_key = server.db_api_site_key().await;
+
+    let response = HTTP_CLIENT
+        .patch(format!(
+            "http://localhost:{port}/api/console/{console_id}/api-key/{site_key}"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&UpdateApiKeyRequest {
+            label: Some("updated".into()),
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
     Ok(())
 }
 

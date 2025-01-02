@@ -123,6 +123,28 @@ pub async fn with_console_insert_api_key(
     Ok(())
 }
 
+#[derive(Debug)]
+pub struct DbUpdateApiKey<'a> {
+    pub label: Option<&'a str>,
+}
+
+pub async fn update_api_key(
+    exec: impl PgExecutor<'_> + Send,
+    site_key: &str,
+    console_id: &Uuid,
+    update: DbUpdateApiKey<'_>,
+) -> sqlx::Result<RowsAffected> {
+    let res = sqlx::query!(
+        "update api_key set label = coalesce($1, label) where site_key = $2 and console_id = $3",
+        update.label,
+        site_key,
+        console_id
+    )
+    .execute(exec)
+    .await?;
+    Ok(RowsAffected(res.rows_affected()))
+}
+
 pub async fn delete_api_key(
     exec: impl PgExecutor<'_> + Send,
     site_key: &str,

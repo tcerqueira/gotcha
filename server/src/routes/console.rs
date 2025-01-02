@@ -11,7 +11,7 @@ use uuid::Uuid;
 use super::errors::ConsoleError;
 use crate::{
     crypto::{self, KEY_SIZE},
-    db::{self, DbApiKey, DbConsole, DbUpdateConsole, RowsAffected},
+    db::{self, DbApiKey, DbConsole, DbUpdateApiKey, DbUpdateConsole, RowsAffected},
     extractors::User,
     AppState,
 };
@@ -129,6 +129,28 @@ pub async fn gen_api_key(
         };
     };
     Ok(Json(ApiKeyResponse { site_key, secret }))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateApiKeyRequest {
+    pub label: Option<String>,
+}
+
+#[instrument(skip(state), ret(level = Level::DEBUG))]
+pub async fn update_api_key(
+    State(state): State<Arc<AppState>>,
+    Path((console_id, site_key)): Path<(Uuid, String)>,
+    Json(request): Json<UpdateApiKeyRequest>,
+) -> Result<(), ConsoleError> {
+    let update = DbUpdateApiKey {
+        label: request.label.as_deref(),
+    };
+    match db::update_api_key(&state.pool, &site_key, &console_id, update).await? {
+        RowsAffected(0) => Err(ConsoleError::NotFound {
+            what: format!("sitekey {site_key} for console with id {console_id}"),
+        }),
+        RowsAffected(_) => Ok(()),
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

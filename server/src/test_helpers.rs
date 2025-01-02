@@ -154,7 +154,7 @@ async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> sqlx::Result<()> {
     .await?;
     db::insert_api_key(
         &mut *txn,
-        &crypto::gen_base64_key::<KEY_SIZE>(),
+        &crypto::gen_base64_url_safe_key::<KEY_SIZE>(),
         &console_id,
         &crypto::gen_base64_key::<KEY_SIZE>(),
         &crypto::gen_base64_key::<KEY_SIZE>(),
