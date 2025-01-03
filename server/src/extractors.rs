@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum::http::StatusCode;
-use axum::{async_trait, extract::FromRequestParts};
 
 #[cfg(feature = "aws-lambda")]
 mod aws_lambda {
@@ -60,7 +60,6 @@ pub fn extract_lambda_origin<B>(mut request: Request<B>) -> Request<B> {
 #[derive(Debug, Clone)]
 pub struct ThisOrigin(pub String);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ThisOrigin
 where
     S: Send + Sync,
@@ -84,7 +83,6 @@ pub struct User {
     pub user_id: Arc<str>,
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for User
 where
     S: Send + Sync,

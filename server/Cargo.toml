@@ -9,8 +9,8 @@ aws-lambda = ["dep:lambda_http"]
 
 [dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-axum = { version = "0.7", features = ["macros"] }
-axum-extra = { version = "0.9", features = ["typed-header"] }
+axum = { version = "0.8", features = ["macros"] }
+axum-extra = { version = "0.10", features = ["typed-header"] }
 tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
 tracing = "0.1"
@@ -20,7 +20,7 @@ serde = { version = "1", features = ["derive"] }
 serde-aux = "4"
 secrecy = { version = "0.8", features = ["serde"] }
 anyhow = "1"
-thiserror = "1"
+thiserror = "2"
 reqwest = { version = "0.12", features = ["json", "native-tls-vendored"] }
 reqwest-middleware = "0.4"
 http-cache-reqwest = { version = "0.15", default-features = false, features = [
