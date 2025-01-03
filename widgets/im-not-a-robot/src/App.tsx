@@ -8,7 +8,7 @@ import {
   type Component,
 } from "solid-js";
 
-type State = "blank" | "verifying" | "verified" | "expired";
+type State = "blank" | "verifying" | "verified";
 
 const App: Component = () => {
   const [state, setState] = createSignal<State>("blank");
@@ -22,11 +22,6 @@ const App: Component = () => {
     setState("verifying");
     await onChallengeResponse(true);
     setState("verified");
-
-    setTimeout(async () => {
-      setState("expired");
-      await onChallengeExpired();
-    }, 30000);
   };
 
   return (
@@ -63,9 +58,6 @@ const App: Component = () => {
           <div class="mt-2 text-sm text-green-500">
             Verification successful!
           </div>
-        </Match>
-        <Match when={state() === "expired"}>
-          <div class="mt-2 text-sm text-red-500">Verification has expired.</div>
         </Match>
       </Switch>
     </div>

@@ -1,6 +1,15 @@
 import { render } from "solid-js/web";
 import { WidgetMessage } from "@gotcha-widget/lib";
-import { createResource, Match, onCleanup, onMount, Switch } from "solid-js";
+import {
+  Accessor,
+  createResource,
+  createSignal,
+  Match,
+  onCleanup,
+  onMount,
+  Signal,
+  Switch,
+} from "solid-js";
 import { RenderParams } from "../grecaptcha";
 
 export interface Widget {
@@ -8,15 +17,35 @@ export interface Widget {
   reset: () => void;
 }
 
+type State = "live" | "expired";
+
 export function createWidget(): Widget {
   let containerElem: Element | undefined;
-  let params: RenderParams | undefined;
+  let params: GotchaWidgetProps | undefined;
+  const [state, setState] = createSignal<State>("live");
+  let timeout: NodeJS.Timeout | undefined;
 
   const renderWidget = (container: Element, parameters: RenderParams) => {
     containerElem = container;
-    params = parameters;
+    params = {
+      ...parameters,
+      "expired-callback": () => {
+        setState("expired");
+        parameters["expired-callback"]?.();
+      },
+      callback: (token) => {
+        setState("live");
+        parameters.callback?.(token);
+        clearTimeout(timeout);
+        timeout = setTimeout(() => params?.["expired-callback"]?.(), 30000);
+      },
+      state,
+    };
 
-    render(() => <GotchaWidget {...(params as RenderParams)} />, containerElem);
+    render(
+      () => <GotchaWidget {...(params as GotchaWidgetProps)} />,
+      containerElem,
+    );
   };
 
   return {
@@ -30,7 +59,10 @@ export function createWidget(): Widget {
   };
 }
 
-export type GotchaWidgetProps = RenderParams;
+type AdditionalParams = {
+  state: Accessor<State>;
+};
+export type GotchaWidgetProps = RenderParams & AdditionalParams;
 
 export function GotchaWidget(props: GotchaWidgetProps) {
   let iframeElement: HTMLIFrameElement | null = null;
@@ -66,6 +98,9 @@ export function GotchaWidget(props: GotchaWidgetProps) {
         break;
     }
   };
+  const handleMouseMovement = async (event: any) => {
+    console.debug(event);
+  };
   onMount(() => {
     window.addEventListener("message", handleMessage);
   });
@@ -74,7 +109,7 @@ export function GotchaWidget(props: GotchaWidgetProps) {
   });
 
   return (
-    <div class="gotcha-widget">
+    <div class="gotcha-widget inline-block">
       <Switch>
         <Match when={challenge.loading}>
           <p>Loading...</p>
@@ -96,8 +131,11 @@ export function GotchaWidget(props: GotchaWidgetProps) {
               role="presentation"
               sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
             ></iframe>
-            <div class="bg-gray-200">
-              <p class="text-right m-0">Gotcha</p>
+            <div class="flex justify-between bg-gray-200">
+              <p class="text-left text-red-400">
+                {props.state() === "expired" ? "Verification expired" : ""}
+              </p>
+              <p class="text-right">Gotcha</p>
             </div>
           </div>
         </Match>
