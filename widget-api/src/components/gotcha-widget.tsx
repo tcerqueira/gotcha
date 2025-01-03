@@ -90,9 +90,6 @@ export function GotchaWidget(props: GotchaWidgetProps) {
           props["error-callback"]?.();
         }
         break;
-      case "expired-callback":
-        props["expired-callback"]?.();
-        break;
       case "error-callback":
         props["error-callback"]?.();
         break;

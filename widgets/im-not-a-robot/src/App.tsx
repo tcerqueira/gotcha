@@ -1,4 +1,4 @@
-import { onChallengeExpired, onChallengeResponse } from "@gotcha-widget/lib";
+import { onChallengeResponse } from "@gotcha-widget/lib";
 import {
   createMemo,
   createSignal,
