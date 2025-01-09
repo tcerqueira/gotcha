@@ -45,11 +45,8 @@ where
 
 impl TestContext {
     pub async fn setup() -> anyhow::Result<Self> {
-        let configuration::Config {
-            application: mut app_conf,
-            database: db_conf,
-            ..
-        } = get_configuration().context("failed to load configuration")?;
+        let configuration::Config { application: mut app_conf, database: db_conf, .. } =
+            get_configuration().context("failed to load configuration")?;
         crate::init_tracing();
 
         let addr = format!("{}:0", app_conf.host);
@@ -73,14 +70,7 @@ impl TestContext {
             .unwrap();
         });
 
-        Ok(Self {
-            inner: Arc::new(InnerContext {
-                test_id,
-                addr,
-                shutdown_signal,
-                pool,
-            }),
-        })
+        Ok(Self { inner: Arc::new(InnerContext { test_id, addr, shutdown_signal, pool }) })
     }
 
     pub async fn teardown(self) -> anyhow::Result<()> {

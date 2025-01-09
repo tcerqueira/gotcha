@@ -16,9 +16,7 @@ async fn post_console(port: u16) -> anyhow::Result<ConsoleResponse> {
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console"))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&CreateConsoleRequest {
-            label: label.clone(),
-        })
+        .json(&CreateConsoleRequest { label: label.clone() })
         .send()
         .await?
         .json()
@@ -53,9 +51,7 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console"))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&CreateConsoleRequest {
-            label: label.clone(),
-        })
+        .json(&CreateConsoleRequest { label: label.clone() })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -82,9 +78,7 @@ async fn update_console(server: TestContext) -> anyhow::Result<()> {
     let response = HTTP_CLIENT
         .patch(format!("http://localhost:{port}/api/console/{id}"))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&UpdateConsoleRequest {
-            label: label.as_ref().map(|l| l[..6].into()),
-        })
+        .json(&UpdateConsoleRequest { label: label.as_ref().map(|l| l[..6].into()) })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -246,9 +240,7 @@ async fn update_api_key(server: TestContext) -> anyhow::Result<()> {
             "http://localhost:{port}/api/console/{console_id}/api-key/{site_key}"
         ))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&UpdateApiKeyRequest {
-            label: Some("updated".into()),
-        })
+        .json(&UpdateApiKeyRequest { label: Some("updated".into()) })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);

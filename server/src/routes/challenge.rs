@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::errors::ChallengeError;
+use crate::analysis::interaction::Event;
 use crate::extractors::ThisOrigin;
 use crate::{db, response_token, AppState};
 use crate::{db::DbChallenge, response_token::ResponseClaims};
@@ -25,7 +26,9 @@ pub async fn get_challenge(
     State(state): State<Arc<AppState>>,
     ThisOrigin(origin): ThisOrigin,
 ) -> Result<Json<GetChallenge>, ChallengeError> {
-    let challenges = db::fetch_challenges(&state.pool).await?;
+    let challenges = db::fetch_challenges(&state.pool)
+        .await
+        .context("failed to fetch challenges")?;
     let challenge = choose_challenge(challenges).unwrap_or_else(|| DbChallenge {
         url: format!("{origin}/im-not-a-robot/index.html"),
         width: 304,
@@ -37,9 +40,10 @@ pub async fn get_challenge(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeResults {
-    // this should be more complex and computed server side
     pub success: bool,
     pub secret: String,
+    pub challenge: Option<String>,
+    pub interactions: Option<Vec<Event>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,10 +59,7 @@ pub async fn process_challenge(
 ) -> Result<Json<ChallengeResponse>, ChallengeError> {
     Ok(Json(ChallengeResponse {
         token: response_token::encode(
-            ResponseClaims {
-                success: results.success,
-                authority: addr,
-            },
+            ResponseClaims { success: results.success, authority: addr },
             &db::fetch_api_key_by_site_key(&state.pool, &results.secret)
                 .await
                 .context("failed to fecth encoding key by api secret while processing challenge")?

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Context;
 use axum::{
     extract::{Path, State},
     Json,
@@ -48,10 +49,7 @@ pub async fn create_console(
     Json(request): Json<CreateConsoleRequest>,
 ) -> Result<Json<ConsoleResponse>, ConsoleError> {
     let id = db::insert_console(&state.pool, &request.label, &user_id).await?;
-    Ok(Json(ConsoleResponse {
-        id,
-        label: Some(request.label),
-    }))
+    Ok(Json(ConsoleResponse { id, label: Some(request.label) }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -65,13 +63,11 @@ pub async fn update_console(
     Path(console_id): Path<Uuid>,
     Json(request): Json<UpdateConsoleRequest>,
 ) -> Result<(), ConsoleError> {
-    let update = DbUpdateConsole {
-        label: request.label.as_deref(),
-    };
+    let update = DbUpdateConsole { label: request.label.as_deref() };
     match db::update_console(&state.pool, &console_id, update).await? {
-        RowsAffected(0) => Err(ConsoleError::NotFound {
-            what: format!("console with id {console_id}"),
-        }),
+        RowsAffected(0) => {
+            Err(ConsoleError::NotFound { what: format!("console with id {console_id}") })
+        }
         RowsAffected(_) => Ok(()),
     }
 }
@@ -82,9 +78,9 @@ pub async fn delete_console(
     Path(console_id): Path<Uuid>,
 ) -> Result<(), ConsoleError> {
     match db::delete_console(&state.pool, &console_id).await? {
-        RowsAffected(0) => Err(ConsoleError::NotFound {
-            what: format!("console with id {console_id}"),
-        }),
+        RowsAffected(0) => {
+            Err(ConsoleError::NotFound { what: format!("console with id {console_id}") })
+        }
         RowsAffected(_) => Ok(()),
     }
 }
@@ -102,7 +98,8 @@ pub async fn get_api_keys(
     Path(console_id): Path<Uuid>,
 ) -> Result<Json<Vec<ApiKeyResponse>>, ConsoleError> {
     let keys = db::fetch_api_keys(&state.pool, &console_id)
-        .await?
+        .await
+        .with_context(|| format!("failed to fetch api keys for console id '{console_id}'"))?
         .into_iter()
         .map(ApiKeyResponse::from)
         .collect();
@@ -129,11 +126,7 @@ pub async fn gen_api_key(
             Err(err) => return Err(err),
         };
     };
-    Ok(Json(ApiKeyResponse {
-        site_key,
-        secret,
-        label: None,
-    }))
+    Ok(Json(ApiKeyResponse { site_key, secret, label: None }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -147,10 +140,12 @@ pub async fn update_api_key(
     Path((console_id, site_key)): Path<(Uuid, String)>,
     Json(request): Json<UpdateApiKeyRequest>,
 ) -> Result<(), ConsoleError> {
-    let update = DbUpdateApiKey {
-        label: request.label.as_deref(),
-    };
-    match db::update_api_key(&state.pool, &site_key, &console_id, update).await? {
+    let update = DbUpdateApiKey { label: request.label.as_deref() };
+    match db::update_api_key(&state.pool, &site_key, &console_id, update)
+        .await
+        .with_context(|| {
+            format!("failed to update api key '{site_key}' for console id '{console_id}'")
+        })? {
         RowsAffected(0) => Err(ConsoleError::NotFound {
             what: format!("sitekey {site_key} for console with id {console_id}"),
         }),
@@ -168,7 +163,11 @@ pub async fn revoke_api_key(
     State(state): State<Arc<AppState>>,
     Path((console_id, site_key)): Path<(Uuid, String)>,
 ) -> Result<(), ConsoleError> {
-    match db::delete_api_key(&state.pool, &site_key, &console_id).await? {
+    match db::delete_api_key(&state.pool, &site_key, &console_id)
+        .await
+        .with_context(|| {
+            format!("failed to delete api key '{site_key}' for console id '{console_id}'")
+        })? {
         RowsAffected(0) => Err(ConsoleError::NotFound {
             what: format!("sitekey {site_key} for console with id {console_id}"),
         }),
@@ -178,19 +177,12 @@ pub async fn revoke_api_key(
 
 impl From<DbConsole> for ConsoleResponse {
     fn from(c: DbConsole) -> Self {
-        ConsoleResponse {
-            id: c.id,
-            label: c.label,
-        }
+        ConsoleResponse { id: c.id, label: c.label }
     }
 }
 
 impl From<DbApiKey> for ApiKeyResponse {
     fn from(k: DbApiKey) -> Self {
-        ApiKeyResponse {
-            site_key: k.site_key,
-            secret: k.secret,
-            label: k.label,
-        }
+        ApiKeyResponse { site_key: k.site_key, secret: k.secret, label: k.label }
     }
 }

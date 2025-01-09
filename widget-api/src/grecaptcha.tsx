@@ -159,7 +159,7 @@ export type RenderParams = {
 /**
  * Default configuration parameters for the widget
  */
-const defaultRenderParams: RenderParams = {
+export const defaultRenderParams: RenderParams = {
   sitekey: "",
   theme: "light",
   size: "normal",

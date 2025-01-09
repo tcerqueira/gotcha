@@ -66,11 +66,7 @@ impl Claims {
 
     pub fn with_timeout(timeout: Duration, response: ResponseClaims) -> Self {
         let now = OffsetDateTime::now_utc();
-        Self {
-            exp: now + timeout,
-            iat: now,
-            custom: response,
-        }
+        Self { exp: now + timeout, iat: now, custom: response }
     }
 
     pub fn exp(&self) -> OffsetDateTime {

@@ -55,9 +55,9 @@ pub async fn require_auth(
     )?;
     tracing::Span::current().record("user_id", &claims.claims.sub);
 
-    request.extensions_mut().insert(User {
-        user_id: Arc::from(claims.claims.sub),
-    });
+    request
+        .extensions_mut()
+        .insert(User { user_id: Arc::from(claims.claims.sub) });
     Ok(next.run(request).await)
 }
 

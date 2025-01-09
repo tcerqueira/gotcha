@@ -13,11 +13,7 @@ async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&AddChallenge {
-            url: url.clone(),
-            width: 50,
-            height: 50,
-        })
+        .json(&AddChallenge { url: url.clone(), width: 50, height: 50 })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -95,11 +91,7 @@ async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()>
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&AddChallenge {
-            url: url.clone(),
-            width: 50,
-            height: 50,
-        })
+        .json(&AddChallenge { url: url.clone(), width: 50, height: 50 })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -107,11 +99,7 @@ async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()>
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .header("Authorization", format!("Bearer {auth_key}"))
-        .json(&AddChallenge {
-            url: url.clone(),
-            width: 50,
-            height: 50,
-        })
+        .json(&AddChallenge { url: url.clone(), width: 50, height: 50 })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::CONFLICT);
@@ -129,11 +117,7 @@ async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&AddChallenge {
-            url: url.clone(),
-            width: 50,
-            height: 50,
-        })
+        .json(&AddChallenge { url: url.clone(), width: 50, height: 50 })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);

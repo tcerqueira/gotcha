@@ -144,9 +144,7 @@ impl From<sqlx::Error> for AdminError {
                     .constraint()
                     .is_some_and(|c| c == "challenge_pkey") =>
             {
-                AdminError::NotUnique {
-                    what: "Challenge url".into(),
-                }
+                AdminError::NotUnique { what: "Challenge url".into() }
             }
             other => AdminError::Sql(other),
         }

@@ -1,5 +1,5 @@
 import { render } from "solid-js/web";
-import { WidgetMessage } from "@gotcha-widget/lib";
+import { SearchParams, WidgetMessage } from "@gotcha-widget/lib";
 import {
   Accessor,
   createResource,
@@ -7,10 +7,9 @@ import {
   Match,
   onCleanup,
   onMount,
-  Signal,
   Switch,
 } from "solid-js";
-import { RenderParams } from "../grecaptcha";
+import { defaultRenderParams, RenderParams } from "../grecaptcha";
 
 export interface Widget {
   render: (container: Element, parameters: RenderParams) => void;
@@ -95,15 +94,20 @@ export function GotchaWidget(props: GotchaWidgetProps) {
         break;
     }
   };
-  const handleMouseMovement = async (event: any) => {
-    console.debug(event);
-  };
   onMount(() => {
     window.addEventListener("message", handleMessage);
   });
   onCleanup(() => {
     window.removeEventListener("message", handleMessage);
   });
+
+  const params: SearchParams = {
+    k: props.sitekey,
+    theme: props.theme,
+    size: props.size,
+    badge: props.badge,
+    sv: window.location.origin,
+  };
 
   return (
     <div class="gotcha-widget inline-block">
@@ -122,13 +126,13 @@ export function GotchaWidget(props: GotchaWidgetProps) {
             <iframe
               class="border-none overflow-hidden m-0 p-0 focus-visible:outline-none"
               ref={(el) => (iframeElement = el)}
-              src={challenge()?.url}
-              width={challenge()?.width}
-              height={challenge()?.height}
+              src={buildChallengeUrl(challenge()!.url, params)}
+              width={challenge()!.width}
+              height={challenge()!.height}
               role="presentation"
               sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
             ></iframe>
-            <div class="flex justify-between bg-gray-200">
+            <div class="flex justify-between p-1 bg-gray-200">
               <p class="text-left text-red-400">
                 {props.state() === "expired" ? "Verification expired" : ""}
               </p>
@@ -179,4 +183,16 @@ async function processChallenge(
   } catch (e) {
     return null;
   }
+}
+
+function buildChallengeUrl(baseUrl: string, params: SearchParams): string {
+  const url = new URL(baseUrl);
+  url.searchParams.append("k", params.k);
+  url.searchParams.append("hl", params.hl ?? navigator.language);
+  url.searchParams.append("theme", params.theme ?? defaultRenderParams.theme!);
+  url.searchParams.append("size", params.size ?? defaultRenderParams.size!);
+  url.searchParams.append("badge", params.badge ?? defaultRenderParams.badge!);
+  url.searchParams.append("sv", params.sv ?? window.location.origin);
+
+  return url.toString();
 }

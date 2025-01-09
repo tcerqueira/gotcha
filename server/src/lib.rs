@@ -19,6 +19,7 @@ use aws_lambda::*;
 
 pub use configuration::{get_configuration, Config};
 
+pub mod analysis;
 pub mod configuration;
 pub mod crypto;
 pub mod db;
@@ -32,9 +33,7 @@ pub static HTTP_CACHE_CLIENT: LazyLock<ClientWithMiddleware> = LazyLock::new(|| 
     ClientBuilder::new(Client::new())
         .with(Cache(HttpCache {
             mode: CacheMode::Default,
-            manager: CACacheManager {
-                path: "/tmp/gotcha/".into(),
-            },
+            manager: CACacheManager { path: "/tmp/gotcha/".into() },
             options: HttpCacheOptions::default(),
         }))
         .build()
@@ -50,10 +49,7 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
     let serve_dir = server_dir().join(config.serve_dir).canonicalize().unwrap();
     tracing::info!("Serving files from: {:?}", serve_dir);
 
-    let state = AppState {
-        pool,
-        auth_origin: config.auth_origin,
-    };
+    let state = AppState { pool, auth_origin: config.auth_origin };
     let origin = format!("http://localhost:{}", config.port);
 
     let router = Router::new()

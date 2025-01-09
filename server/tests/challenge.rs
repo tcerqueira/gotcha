@@ -28,6 +28,8 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
         .json(&ChallengeResults {
             success: true,
             secret: api_secret,
+            challenge: None,
+            interactions: None,
         })
         .send()
         .await?;
@@ -56,6 +58,8 @@ async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
         .json(&ChallengeResults {
             success: false,
             secret: api_secret,
+            challenge: None,
+            interactions: None,
         })
         .send()
         .await?;
@@ -82,6 +86,8 @@ async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::R
         .json(&ChallengeResults {
             success: false,
             secret: "bXktd3Jvbmctc2VjcmV0".into(), // `my-wrong-secret` in base64
+            challenge: None,
+            interactions: None,
         })
         .send()
         .await?;
