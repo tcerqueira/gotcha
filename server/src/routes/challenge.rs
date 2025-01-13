@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::errors::ChallengeError;
-use crate::analysis::interaction::Event;
+use crate::analysis::interaction::Interaction;
 use crate::extractors::ThisOrigin;
 use crate::{db, response_token, AppState};
 use crate::{db::DbChallenge, response_token::ResponseClaims};
@@ -43,7 +43,7 @@ pub struct ChallengeResults {
     pub success: bool,
     pub secret: String,
     pub challenge: Option<String>,
-    pub interactions: Option<Vec<Event>>,
+    pub interactions: Option<Vec<Interaction>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

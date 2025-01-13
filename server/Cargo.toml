@@ -15,6 +15,7 @@ tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rayon = "1"
 time = { version = "0.3", features = ["serde", "formatting"] }
 serde = { version = "1", features = ["derive"] }
 serde-aux = "4"
@@ -39,6 +40,7 @@ sqlx = { version = "0.8", features = [
 uuid = { version = "1", features = ["v4", "serde"] }
 rand = { version = "0.8", features = ["min_const_gen"] }
 base64 = "0.22"
+fitting = "0.5"
 lambda_http = { version = "0.13", optional = true }
 
 [dev-dependencies]

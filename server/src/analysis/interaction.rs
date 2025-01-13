@@ -1,5 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 
+use fitting::Gaussian;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
@@ -12,7 +14,7 @@ pub struct Interaction {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind")]
-pub enum Event {
+enum Event {
     #[serde(rename = "mousemovement")]
     MouseMovement { x: i32, y: i32 },
     #[serde(rename = "mouseclick")]
@@ -25,14 +27,14 @@ pub enum Event {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
-pub enum UpDown {
+enum UpDown {
     Up,
     Down,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
-pub enum InOut {
+enum InOut {
     In,
     Out,
 }
@@ -78,11 +80,11 @@ pub fn interaction_analysis(interactions: &[Interaction]) -> Score {
         }
     }
 
-    let mut score_sum = 0f32;
-    for &action in actions.iter() {
-        let action_score = match action {
-            [] => 0f32,
-            [_] => 1f32,
+    let score_sum: f32 = actions
+        .par_iter()
+        .map(|&action| match action {
+            [] => 0.,
+            [_] => 0.5,
             [first, .., last] => match (first, last) {
                 (
                     Interaction { ts: ts1, event: Event::MouseClick { up_down: UpDown::Down } },
@@ -91,31 +93,67 @@ pub fn interaction_analysis(interactions: &[Interaction]) -> Score {
                 | (
                     Interaction { ts: ts1, event: Event::KeyPress { up_down: UpDown::Down, .. } },
                     Interaction { ts: ts2, event: Event::KeyPress { up_down: UpDown::Up, .. } },
-                ) => timing_score_for_click(ts1.unix_timestamp(), ts2.unix_timestamp()),
-                _ => 1f32,
+                ) => timing_score_for_click(
+                    (ts1.unix_timestamp_nanos() / 1_000_000) as i64,
+                    (ts2.unix_timestamp_nanos() / 1_000_000) as i64,
+                ),
+                _ => 0.5,
             },
-        };
-        score_sum += action_score;
-    }
+        })
+        .sum();
 
     Score(score_sum / (actions.len() as f32))
 }
 
 fn timing_score_for_click(ts1: i64, ts2: i64) -> f32 {
-    // TODO: gaussian distribution. https://stackoverflow.com/questions/38846373/how-much-time-should-the-mouse-left-button-be-held
-    let res = ts2 - ts1;
-    match res {
-        2..350 => 1f32,
-        _ => 0f32,
+    match ts2 - ts1 {
+        2..15 => 1.,
+        t @ 15..220 => {
+            let f_trackpad = Gaussian::new(150., 60., 1.);
+            let f_mouse = Gaussian::new(100., 45., 1.);
+            f32::max(f_trackpad.value(t as f32), f_mouse.value(t as f32))
+        }
+        220.. => 0.5,
+        _ => 0.,
     }
+    .min(1f32)
 }
 
 #[cfg(test)]
 mod tests {
-    use anyhow::anyhow;
+    use super::*;
+
+    use time::{Duration, OffsetDateTime};
 
     #[test]
-    fn asd() -> anyhow::Result<()> {
-        Err(anyhow!("write the tests"))
+    fn positive_score() -> anyhow::Result<()> {
+        let now = OffsetDateTime::now_utc();
+        let interactions = vec![
+            Interaction {
+                ts: now + Duration::milliseconds(50),
+                event: Event::MouseEnter { in_out: InOut::In },
+            },
+            Interaction {
+                ts: now + Duration::milliseconds(100),
+                event: Event::MouseMovement { x: 0, y: 10 },
+            },
+            Interaction {
+                ts: now + Duration::milliseconds(150),
+                event: Event::MouseMovement { x: 10, y: 10 },
+            },
+            Interaction {
+                ts: now + Duration::milliseconds(200),
+                event: Event::MouseClick { up_down: UpDown::Down },
+            },
+            Interaction {
+                ts: now + Duration::milliseconds(260),
+                event: Event::MouseClick { up_down: UpDown::Up },
+            },
+        ];
+
+        let Score(score) = interaction_analysis(&interactions);
+        assert!(dbg!(score) >= 0.5f32);
+
+        Ok(())
     }
 }
