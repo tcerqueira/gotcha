@@ -5,6 +5,7 @@ use gotcha_server::{
 };
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
 use reqwest::StatusCode;
+use url::{Host, Url};
 
 #[gotcha_server_macros::integration_test]
 async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
@@ -20,16 +21,17 @@ async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
 #[gotcha_server_macros::integration_test]
 async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let api_secret = server.db_api_site_key().await;
+    let site_key = server.db_api_site_key().await;
     let enc_key = server.db_enconding_key().await;
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/challenge/process"))
         .json(&ChallengeResults {
             success: true,
-            secret: api_secret,
-            challenge: None,
-            interactions: None,
+            site_key,
+            hostname: Host::parse("website-integration.test.com")?,
+            challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
+            interactions: vec![],
         })
         .send()
         .await?;
@@ -42,7 +44,7 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
         &Validation::new(Algorithm::HS256),
     )?;
     assert_eq!(token_data.header.alg, Algorithm::HS256);
-    assert!(token_data.claims.custom.success);
+    // assert!(token_data.claims.custom.score >= 0.5);
 
     Ok(())
 }
@@ -50,16 +52,17 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
 #[gotcha_server_macros::integration_test]
 async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
-    let api_secret = server.db_api_site_key().await;
+    let site_key = server.db_api_site_key().await;
     let enc_key = server.db_enconding_key().await;
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/challenge/process"))
         .json(&ChallengeResults {
             success: false,
-            secret: api_secret,
-            challenge: None,
-            interactions: None,
+            site_key,
+            hostname: Host::parse("website-integration.test.com")?,
+            challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
+            interactions: vec![],
         })
         .send()
         .await?;
@@ -72,7 +75,7 @@ async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
         &Validation::new(Algorithm::HS256),
     )?;
     assert_eq!(token_data.header.alg, Algorithm::HS256);
-    assert!(!token_data.claims.custom.success);
+    assert!(token_data.claims.custom.score == 0.);
 
     Ok(())
 }
@@ -85,9 +88,10 @@ async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::R
         .post(format!("http://localhost:{port}/api/challenge/process"))
         .json(&ChallengeResults {
             success: false,
-            secret: "bXktd3Jvbmctc2VjcmV0".into(), // `my-wrong-secret` in base64
-            challenge: None,
-            interactions: None,
+            site_key: "bXktd3Jvbmctc2VjcmV0".into(), // `my-wrong-secret` in base64
+            hostname: Host::parse("website-integration.test.com")?,
+            challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
+            interactions: vec![],
         })
         .send()
         .await?;

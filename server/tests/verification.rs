@@ -7,6 +7,7 @@ mod verify_site {
         HTTP_CLIENT,
     };
     use reqwest::StatusCode;
+    use url::Host;
 
     #[gotcha_server_macros::integration_test]
     async fn sucessful_challenge(server: TestContext) -> anyhow::Result<()> {
@@ -16,8 +17,9 @@ mod verify_site {
 
         let token = response_token::encode(
             ResponseClaims {
-                success: true,
-                authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                score: 0.75,
+                solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                hostname: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -44,8 +46,9 @@ mod verify_site {
 
         let token = response_token::encode(
             ResponseClaims {
-                success: false,
-                authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                score: 0.3,
+                solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                hostname: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -71,8 +74,9 @@ mod verify_site {
 
         let token = response_token::encode(
             ResponseClaims {
-                success: true,
-                authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                score: 1.,
+                solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                hostname: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -150,8 +154,9 @@ mod verify_site {
 
         let token = response_token::encode(
             ResponseClaims {
-                success: true,
-                authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                score: 1.,
+                solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                hostname: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -213,6 +218,7 @@ mod verify_site {
 
         use jsonwebtoken::{EncodingKey, Header};
         use response_token::{Claims, JWT_ALGORITHM};
+        use url::Host;
 
         use super::*;
 
@@ -225,8 +231,9 @@ mod verify_site {
             let token = response_token::encode_with_timeout(
                 Duration::from_secs(0),
                 ResponseClaims {
-                    success: true,
-                    authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    score: 1.,
+                    solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    hostname: Host::parse("gotcha-integration.test.com")?,
                 },
                 &enc_key,
             )?;
@@ -288,8 +295,9 @@ mod verify_site {
             let token = jsonwebtoken::encode(
                 &Header::new(JWT_ALGORITHM),
                 &Claims::new(ResponseClaims {
-                    success: true,
-                    authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    score: 1.,
+                    solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    hostname: Host::parse("gotcha-integration.test.com")?,
                 }),
                 &EncodingKey::from_base64_secret(
                     "bXktd3Jvbmctc2VjcmV0", /* `my-wrong-secret` in base64 */
@@ -322,8 +330,9 @@ mod verify_site {
             let token = jsonwebtoken::encode(
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
                 &Claims::new(ResponseClaims {
-                    success: true,
-                    authority: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    score: 1.,
+                    solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    hostname: Host::parse("gotcha-integration.test.com")?,
                 }),
                 &EncodingKey::from_base64_secret(&enc_key)?,
             )?;

@@ -10,7 +10,7 @@ use console::{
     create_console, delete_console, gen_api_key, get_api_keys, get_consoles, revoke_api_key,
     update_api_key, update_console,
 };
-use middleware::{require_admin, require_auth, validate_console_id};
+use middleware::{require_admin, require_auth, validate_api_key, validate_console_id};
 use verification::site_verify;
 
 use crate::AppState;
@@ -39,6 +39,21 @@ pub fn verification(state: &Arc<AppState>) -> Router {
 
 pub fn console(state: &Arc<AppState>) -> Router {
     let state = Arc::clone(state);
+
+    let api_key = Router::new()
+        .route("/", get(get_api_keys))
+        .route("/", post(gen_api_key))
+        .nest(
+            "/{site_key}",
+            Router::new()
+                .route("/", patch(update_api_key))
+                .route("/", delete(revoke_api_key))
+                .layer(axum::middleware::from_fn_with_state(
+                    Arc::clone(&state),
+                    validate_api_key,
+                )),
+        );
+
     Router::new()
         .route("/", get(get_consoles))
         .route("/", post(create_console))
@@ -47,10 +62,7 @@ pub fn console(state: &Arc<AppState>) -> Router {
             Router::new()
                 .route("/", patch(update_console))
                 .route("/", delete(delete_console))
-                .route("/api-key", get(get_api_keys))
-                .route("/api-key", post(gen_api_key))
-                .route("/api-key/{site_key}", patch(update_api_key))
-                .route("/api-key/{site_key}", delete(revoke_api_key))
+                .nest("/api-key", api_key)
                 .layer(axum::middleware::from_fn_with_state(
                     Arc::clone(&state),
                     validate_console_id,

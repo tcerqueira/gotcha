@@ -1,5 +1,5 @@
 import { render } from "solid-js/web";
-import { SearchParams, WidgetMessage } from "@gotcha-widget/lib";
+import { SearchParams, WidgetMessage, Interaction } from "@gotcha-widget/lib";
 import {
   Accessor,
   createResource,
@@ -82,7 +82,12 @@ export function GotchaWidget(props: GotchaWidgetProps) {
     let message = event.data;
     switch (message.type) {
       case "response-callback":
-        let response = await processChallenge(props.sitekey, message.success);
+        let response = await processChallenge(
+          props.sitekey,
+          message.success,
+          challengeData.url,
+          message.interactions,
+        );
         if (response !== null) {
           props.callback?.(response);
         } else {
@@ -151,7 +156,7 @@ type Challenge = {
   height: number;
 };
 
-async function fetchChallenge(secret: string): Promise<Challenge> {
+async function fetchChallenge(): Promise<Challenge> {
   const origin = new URL(import.meta.url).origin;
   const url = new URL(`${origin}/api/challenge`);
 
@@ -164,8 +169,10 @@ type ChallengeResponse = {
 };
 
 async function processChallenge(
-  secret: string,
+  site_key: string,
   success: boolean,
+  challengeUrl: string,
+  interactions: Interaction[],
 ): Promise<string | null> {
   try {
     const origin = new URL(import.meta.url).origin;
@@ -175,7 +182,13 @@ async function processChallenge(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ success, secret }),
+      body: JSON.stringify({
+        success,
+        site_key,
+        hostname: window.location.hostname,
+        challenge: challengeUrl,
+        interactions,
+      }),
     });
     const { token }: ChallengeResponse = await response.json();
 

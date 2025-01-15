@@ -4,19 +4,19 @@ use std::sync::Arc;
 use anyhow::Context;
 use axum::extract::ConnectInfo;
 use axum::{extract::State, Json};
-use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
+use url::{Host, Url};
 
 use super::errors::ChallengeError;
-use crate::analysis::interaction::Interaction;
+use crate::analysis::interaction::{Interaction, Score};
 use crate::extractors::ThisOrigin;
-use crate::{db, response_token, AppState};
+use crate::{analysis, db, response_token, AppState};
 use crate::{db::DbChallenge, response_token::ResponseClaims};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetChallenge {
-    pub url: String,
+    pub url: Url,
     pub width: u16,
     pub height: u16,
 }
@@ -41,9 +41,11 @@ pub async fn get_challenge(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeResults {
     pub success: bool,
-    pub secret: String,
-    pub challenge: Option<String>,
-    pub interactions: Option<Vec<Interaction>>,
+    pub site_key: String,
+    #[serde(with = "host_as_str")]
+    pub hostname: Host,
+    pub challenge: Url,
+    pub interactions: Vec<Interaction>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,16 +53,30 @@ pub struct ChallengeResponse {
     pub token: String,
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state, results),
+    fields(
+        success = results.success,
+        site_key = results.site_key,
+        hostname = results.hostname.to_string(),
+        challenge = results.challenge.to_string(),
+    )
+)]
 pub async fn process_challenge(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(results): Json<ChallengeResults>,
 ) -> Result<Json<ChallengeResponse>, ChallengeError> {
+    let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
+    tracing::debug!("interaction analysis: Score({:?})", score);
+    let score = match results.success {
+        true => score,
+        false => 0.,
+    };
+
     Ok(Json(ChallengeResponse {
         token: response_token::encode(
-            ResponseClaims { success: results.success, authority: addr },
-            &db::fetch_api_key_by_site_key(&state.pool, &results.secret)
+            ResponseClaims { score, solver_addr: addr, hostname: results.hostname },
+            &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                 .await
                 .context("failed to fecth encoding key by api secret while processing challenge")?
                 .ok_or(ChallengeError::InvalidSecret)?
@@ -85,9 +101,32 @@ impl TryFrom<DbChallenge> for GetChallenge {
             .with_context(|| format!("malformed challenge url: {}", db_challenge.url))?;
 
         Ok(GetChallenge {
-            url: url.to_string(),
+            url,
             width: db_challenge.width as u16,
             height: db_challenge.height as u16,
         })
+    }
+}
+
+mod host_as_str {
+    use std::borrow::Cow;
+
+    use serde::{Deserializer, Serializer};
+
+    use super::*;
+
+    pub fn serialize<S>(host: &Host, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&host.to_string())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Host, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let str = Cow::<'de, str>::deserialize(deserializer)?;
+        Host::parse(&str).map_err(serde::de::Error::custom)
     }
 }

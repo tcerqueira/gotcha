@@ -98,14 +98,14 @@ impl From<reqwest::Error> for AuthError {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PathFields {
+pub struct ConsolePath {
     pub console_id: Uuid,
 }
 
 #[instrument(skip_all, err(Debug, level = Level::DEBUG))]
 pub async fn validate_console_id(
     State(state): State<Arc<AppState>>,
-    Path(PathFields { console_id }): Path<PathFields>,
+    Path(ConsolePath { console_id }): Path<ConsolePath>,
     User { user_id }: User,
     request: Request,
     next: Next,
@@ -114,6 +114,24 @@ pub async fn validate_console_id(
         true => Ok(next.run(request).await),
         false => Err(ConsoleError::Forbidden),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ApiKeyPath {
+    pub site_key: String,
+}
+
+#[instrument(skip_all, err(Debug, level = Level::DEBUG))]
+pub async fn validate_api_key(
+    State(_state): State<Arc<AppState>>,
+    Path(ApiKeyPath { .. }): Path<ApiKeyPath>,
+    Path(ConsolePath { .. }): Path<ConsolePath>,
+    request: Request,
+    next: Next,
+) -> Result<Response, ConsoleError> {
+    // TODO: validate that site_key belongs to the console, if the
+    // console belongs to the user is checked on `validate_console_id`
+    Ok(next.run(request).await)
 }
 
 #[instrument(skip_all)]

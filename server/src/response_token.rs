@@ -4,6 +4,7 @@ use anyhow::Context;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+use url::Host;
 
 pub static JWT_ALGORITHM: Algorithm = Algorithm::HS256;
 
@@ -19,8 +20,9 @@ pub struct Claims {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseClaims {
-    pub success: bool,
-    pub authority: SocketAddr,
+    pub score: f32,
+    pub solver_addr: SocketAddr,
+    pub hostname: Host,
 }
 
 pub fn encode(response_claims: ResponseClaims, enc_key_b64: &str) -> anyhow::Result<String> {
@@ -69,11 +71,11 @@ impl Claims {
         Self { exp: now + timeout, iat: now, custom: response }
     }
 
-    pub fn exp(&self) -> OffsetDateTime {
-        self.exp
+    pub fn exp(&self) -> &OffsetDateTime {
+        &self.exp
     }
 
-    pub fn iat(&self) -> OffsetDateTime {
-        self.iat
+    pub fn iat(&self) -> &OffsetDateTime {
+        &self.iat
     }
 }

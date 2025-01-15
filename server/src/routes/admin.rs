@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use axum::{extract::State, Json};
-use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
+use url::Url;
 
 use crate::{
     db::{self, RowsAffected},

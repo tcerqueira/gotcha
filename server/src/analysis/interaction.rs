@@ -7,7 +7,7 @@ use time::OffsetDateTime;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Interaction {
-    #[serde(with = "time::serde::timestamp")]
+    #[serde(with = "time::serde::timestamp::milliseconds")]
     ts: OffsetDateTime,
     event: Event,
 }
@@ -18,11 +18,21 @@ enum Event {
     #[serde(rename = "mousemovement")]
     MouseMovement { x: i32, y: i32 },
     #[serde(rename = "mouseclick")]
-    MouseClick { up_down: UpDown },
+    MouseClick {
+        #[serde(rename = "mouse")]
+        up_down: UpDown,
+    },
     #[serde(rename = "mouseenter")]
-    MouseEnter { in_out: InOut },
+    MouseEnter {
+        #[serde(rename = "mouse")]
+        in_out: InOut,
+    },
     #[serde(rename = "keypress")]
-    KeyPress { up_down: UpDown, key: String },
+    KeyPress {
+        #[serde(rename = "keyMove")]
+        up_down: UpDown,
+        key: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -102,7 +112,10 @@ pub fn interaction_analysis(interactions: &[Interaction]) -> Score {
         })
         .sum();
 
-    Score(score_sum / (actions.len() as f32))
+    Score(match actions.len() {
+        0 => 0.,
+        len => score_sum / (len as f32),
+    })
 }
 
 fn timing_score_for_click(ts1: i64, ts2: i64) -> f32 {
@@ -152,7 +165,7 @@ mod tests {
         ];
 
         let Score(score) = interaction_analysis(&interactions);
-        assert!(dbg!(score) >= 0.5f32);
+        assert!(dbg!(score) >= 0.5);
 
         Ok(())
     }

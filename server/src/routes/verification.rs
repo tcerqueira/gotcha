@@ -70,9 +70,9 @@ pub async fn site_verify(
         .map_err(|err_code| VerificationResponse::failure(vec![err_code]))?;
 
     Ok(Json(VerificationResponse {
-        success: claims.custom.success,
-        challenge_ts: claims.iat(),
-        authority: Some(claims.custom.authority),
+        success: claims.custom.score >= 0.5,
+        challenge_ts: *claims.iat(),
+        authority: Some(claims.custom.solver_addr),
         error_codes: None,
     }))
 }

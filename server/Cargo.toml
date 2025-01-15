@@ -41,6 +41,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 rand = { version = "0.8", features = ["min_const_gen"] }
 base64 = "0.22"
 fitting = "0.5"
+url = { version = "2", features = ["serde"] }
 lambda_http = { version = "0.13", optional = true }
 
 [dev-dependencies]

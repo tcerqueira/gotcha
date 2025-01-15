@@ -8,7 +8,7 @@ use reqwest::StatusCode;
 async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let nonce = server.test_id();
-    let url = format!("https://integration-test.com/index.html?nonce={nonce}");
+    let url = format!("https://gotcha-integration.test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
@@ -32,7 +32,7 @@ async fn add_challenge_bad_url(server: TestContext) -> anyhow::Result<()> {
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .bearer_auth(test_helpers::auth_jwt().await)
         .json(&AddChallenge {
-            url: "bad_url::integration-test.com/index.html".into(),
+            url: "bad_url::gotcha-integration.test.com/index.html".into(),
             width: 50,
             height: 50,
         })
@@ -51,7 +51,7 @@ async fn add_challenge_negative_dimensions(server: TestContext) -> anyhow::Resul
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .bearer_auth(test_helpers::auth_jwt().await)
         .json(&serde_json::json!({
-            "url": "https://integration-test.com/index.html",
+            "url": "https://gotcha-integration.test.com/index.html",
             "width": -1,
             "height": 50
         }))
@@ -70,7 +70,7 @@ async fn add_challenge_zero_dimensions(server: TestContext) -> anyhow::Result<()
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .bearer_auth(test_helpers::auth_jwt().await)
         .json(&AddChallenge {
-            url: "https://integration-test.com/index.html".into(),
+            url: "https://gotcha-integration.test.com/index.html".into(),
             width: 50,
             height: 0,
         })
@@ -86,7 +86,7 @@ async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()>
     let port = server.port();
     let auth_key = test_helpers::auth_jwt().await;
     let nonce = server.test_id();
-    let url = format!("https://integration-test.com/index.html?nonce={nonce}");
+    let url = format!("https://gotcha-integration.test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
@@ -112,7 +112,7 @@ async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> 
     let port = server.port();
     let auth_key = test_helpers::auth_jwt().await;
     let nonce = server.test_id();
-    let url = format!("https://integration-test.com/index.html?nonce={nonce}");
+    let url = format!("https://gotcha-integration.test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
@@ -137,7 +137,7 @@ async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> 
 async fn remove_challenge_not_found(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let nonce = server.test_id();
-    let url = format!("https://integration-test.com/index.html?nonce={nonce}");
+    let url = format!("https://gotcha-integration.test.com/index.html?nonce={nonce}");
 
     let response = HTTP_CLIENT
         .delete(format!("http://localhost:{port}/api/admin/challenge"))
@@ -158,7 +158,7 @@ async fn challenge_endpoint_missing_auth_key(server: TestContext) -> anyhow::Res
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .json(&AddChallenge {
-            url: format!("https://integration-test.com/index.html?nonce={nonce}"),
+            url: format!("https://gotcha-integration.test.com/index.html?nonce={nonce}"),
             width: 50,
             height: 50,
         })
@@ -178,7 +178,7 @@ async fn challenge_endpoint_wrong_auth_key(server: TestContext) -> anyhow::Resul
         .post(format!("http://localhost:{port}/api/admin/challenge"))
         .bearer_auth("wrong-auth-key")
         .json(&AddChallenge {
-            url: format!("https://integration-test.com/index.html?nonce={nonce}"),
+            url: format!("https://gotcha-integration.test.com/index.html?nonce={nonce}"),
             width: 50,
             height: 50,
         })
