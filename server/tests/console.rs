@@ -280,6 +280,51 @@ async fn revoke_api_key(server: TestContext) -> anyhow::Result<()> {
 }
 
 #[gotcha_server_macros::integration_test]
+async fn update_forbidden_api_key(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+    let console_id = server.db_console().await;
+
+    let (other_console_id, site_key) = create_api_key_on_another_console(port).await?;
+
+    let response = HTTP_CLIENT
+        .patch(format!(
+            "http://localhost:{port}/api/console/{console_id}/api-key/{site_key}"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&UpdateApiKeyRequest { label: Some("updated".into()) })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    db::delete_console(pool, &other_console_id).await?;
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn revoke_forbidden_api_key(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+    let console_id = server.db_console().await;
+
+    let (other_console_id, site_key) = create_api_key_on_another_console(port).await?;
+
+    let response = HTTP_CLIENT
+        .delete(format!(
+            "http://localhost:{port}/api/console/{console_id}/api-key/{site_key}"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    db::delete_console(pool, &other_console_id).await?;
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
 async fn add_origin(_server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
@@ -287,4 +332,29 @@ async fn add_origin(_server: TestContext) -> anyhow::Result<()> {
 #[gotcha_server_macros::integration_test]
 async fn remove_origin(_server: TestContext) -> anyhow::Result<()> {
     Ok(())
+}
+
+async fn create_api_key_on_another_console(port: u16) -> anyhow::Result<(Uuid, String)> {
+    // create console
+    let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
+    let ConsoleResponse { id: console_id, .. } = HTTP_CLIENT
+        .post(format!("http://localhost:{port}/api/console"))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&CreateConsoleRequest { label })
+        .send()
+        .await?
+        .json()
+        .await?;
+    // create api key
+    let ApiKeyResponse { site_key, .. } = HTTP_CLIENT
+        .post(format!(
+            "http://localhost:{port}/api/console/{console_id}/api-key"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    Ok((console_id, site_key))
 }

@@ -123,15 +123,16 @@ pub struct ApiKeyPath {
 
 #[instrument(skip_all, err(Debug, level = Level::DEBUG))]
 pub async fn validate_api_key(
-    State(_state): State<Arc<AppState>>,
-    Path(ApiKeyPath { .. }): Path<ApiKeyPath>,
-    Path(ConsolePath { .. }): Path<ConsolePath>,
+    State(state): State<Arc<AppState>>,
+    Path(ApiKeyPath { site_key }): Path<ApiKeyPath>,
+    Path(ConsolePath { console_id }): Path<ConsolePath>,
     request: Request,
     next: Next,
 ) -> Result<Response, ConsoleError> {
-    // TODO: validate that site_key belongs to the console, if the
-    // console belongs to the user is checked on `validate_console_id`
-    Ok(next.run(request).await)
+    match db::exists_api_key_for_console(&state.pool, &site_key, &console_id).await? {
+        true => Ok(next.run(request).await),
+        false => Err(ConsoleError::Forbidden),
+    }
 }
 
 #[instrument(skip_all)]

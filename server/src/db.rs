@@ -96,6 +96,21 @@ pub async fn insert_api_key(
     Ok(())
 }
 
+pub async fn exists_api_key_for_console(
+    exec: impl PgExecutor<'_> + Send,
+    site_key: &str,
+    console_id: &Uuid,
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar!(
+        "select exists (select 1 from api_key where site_key = $1 and console_id = $2) as found_site_key_for_console",
+        site_key,
+        console_id,
+    )
+    .fetch_one(exec)
+    .await
+    .map(|r| r.unwrap_or(false))
+}
+
 pub async fn with_console_insert_api_key(
     exec: impl PgExecutor<'_> + Send,
     console_label: &str,

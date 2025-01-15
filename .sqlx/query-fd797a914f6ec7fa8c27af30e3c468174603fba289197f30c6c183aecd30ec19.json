@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select exists (select 1 from api_key where site_key = $1 and console_id = $2) as found_site_key_for_console",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "found_site_key_for_console",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "fd797a914f6ec7fa8c27af30e3c468174603fba289197f30c6c183aecd30ec19"
+}
