@@ -179,8 +179,6 @@ pub async fn auth_jwt() -> &'static str {
     #[derive(Debug, Deserialize)]
     struct TokenResponse {
         access_token: String,
-        #[expect(dead_code)]
-        token_type: String,
     }
 
     static AUTH_JWT: OnceCell<String> = OnceCell::const_new();

@@ -85,6 +85,63 @@ pub async fn process_challenge(
     }))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PreAnalysisRequest {
+    pub site_key: String,
+    #[serde(with = "host_as_str")]
+    pub hostname: Host,
+    pub interactions: Vec<Interaction>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "result")]
+#[serde(rename_all = "kebab-case")]
+pub enum PreAnalysisResponse {
+    Success { response: ChallengeResponse },
+    Failure,
+}
+
+#[instrument(skip(state, results),
+    fields(
+        site_key = results.site_key,
+        hostname = results.hostname.to_string(),
+    )
+)]
+pub async fn process_pre_analysis(
+    State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Json(results): Json<PreAnalysisRequest>,
+) -> Result<Json<PreAnalysisResponse>, ChallengeError> {
+    // TODO: look at cookies and other fingerprints
+    let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
+    tracing::debug!("interaction analysis: Score({:?})", score);
+
+    let response = match score {
+        0f32..0.5 => PreAnalysisResponse::Failure,
+        0.5..=1. => PreAnalysisResponse::Success {
+            response: ChallengeResponse {
+                token: response_token::encode(
+                    ResponseClaims { score, solver_addr: addr, hostname: results.hostname },
+                    &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
+                        .await
+                        .context(
+                            "failed to fecth encoding key by api secret while processing challenge",
+                        )?
+                        .ok_or(ChallengeError::InvalidSecret)?
+                        .encoding_key,
+                )?,
+            },
+        },
+        _ => {
+            return Err(ChallengeError::Unexpected(anyhow::anyhow!(
+                "score not in range [0.0 .. 1.0]"
+            )))
+        }
+    };
+
+    Ok(Json(response))
+}
+
 fn choose_challenge(mut challenges: Vec<DbChallenge>) -> Option<DbChallenge> {
     match &challenges[..] {
         [] => None,

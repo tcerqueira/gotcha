@@ -1,6 +1,6 @@
 use gotcha_server::{
     response_token::Claims,
-    routes::challenge::{ChallengeResponse, ChallengeResults, GetChallenge},
+    routes::challenge::{ChallengeResponse, ChallengeResults, GetChallenge, PreAnalysisResponse},
     HTTP_CLIENT,
 };
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
@@ -18,6 +18,7 @@ async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
+// This test overtime gets more meaningless and untestable
 #[gotcha_server_macros::integration_test]
 async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
@@ -96,6 +97,58 @@ async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::R
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    Ok(())
+}
+
+// This test overtime gets more meaningless and untestable
+#[gotcha_server_macros::integration_test]
+async fn process_pre_analysis_success(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let site_key = server.db_api_site_key().await;
+
+    let response = HTTP_CLIENT
+        .post(format!(
+            "http://localhost:{port}/api/challenge/process-pre-analysis"
+        ))
+        .json(&ChallengeResults {
+            success: true,
+            site_key,
+            hostname: Host::parse("website-integration.test.com")?,
+            challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
+            interactions: vec![],
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let _: PreAnalysisResponse = response.json().await?;
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn process_pre_analysis_failure(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let site_key = server.db_api_site_key().await;
+
+    let response = HTTP_CLIENT
+        .post(format!(
+            "http://localhost:{port}/api/challenge/process-pre-analysis"
+        ))
+        .json(&ChallengeResults {
+            success: true,
+            site_key,
+            hostname: Host::parse("website-integration.test.com")?,
+            challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
+            interactions: vec![],
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let response: PreAnalysisResponse = response.json().await?;
+    assert!(matches!(response, PreAnalysisResponse::Failure));
 
     Ok(())
 }

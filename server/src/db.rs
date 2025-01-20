@@ -3,7 +3,7 @@ use std::time::Duration;
 use secrecy::ExposeSecret;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
-    prelude::FromRow,
+    prelude::*,
     PgExecutor, PgPool,
 };
 use uuid::Uuid;

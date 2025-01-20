@@ -50,7 +50,6 @@ export function createWidget(): Widget {
   return {
     render: renderWidget,
     reset: () => {
-      // TODO: remove this hack, control state directly
       if (!containerElem) return;
       containerElem.getElementsByClassName("gotcha-widget")[0]?.remove();
       renderWidget(containerElem, params!);
@@ -164,7 +163,7 @@ async function fetchChallenge(): Promise<Challenge> {
   return (await response.json()) as Challenge;
 }
 
-type ChallengeResponse = {
+export type ChallengeResponse = {
   token: string;
 };
 
@@ -190,6 +189,10 @@ async function processChallenge(
         interactions,
       }),
     });
+    if (response.status !== 200)
+      throw new Error(
+        `processChallenge returned status code ${response.status}`,
+      );
     const { token }: ChallengeResponse = await response.json();
 
     return token;

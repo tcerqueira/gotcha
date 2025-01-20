@@ -5,7 +5,7 @@ use axum::{
     routing::{delete, get, patch, post},
     Router,
 };
-use challenge::{get_challenge, process_challenge};
+use challenge::{get_challenge, process_challenge, process_pre_analysis};
 use console::{
     create_console, delete_console, gen_api_key, get_api_keys, get_consoles, revoke_api_key,
     update_api_key, update_console,
@@ -27,6 +27,7 @@ pub fn challenge(state: &Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(get_challenge))
         .route("/process", post(process_challenge))
+        .route("/process-pre-analysis", post(process_pre_analysis))
         .with_state(state)
 }
 
