@@ -1,5 +1,6 @@
 import { Interaction } from "@gotcha-widget/lib";
 import {
+  createEffect,
   createMemo,
   createSignal,
   Match,
@@ -11,36 +12,40 @@ import {
 import { RenderParams } from "../grecaptcha";
 import { ChallengeResponse } from "./gotcha-widget";
 
-type State = "blank" | "verifying" | "verified" | "failed";
+type State = "blank" | "verified" | "verifying";
 
 export type AnalysisResponse =
   | { result: "failure" }
   | { result: "success"; response: ChallengeResponse };
 type ImNotRobotProps = {
   params: RenderParams;
+  state: State;
   onResponse: (res: AnalysisResponse) => void;
 };
 
 export default function ImNotRobot(props: ImNotRobotProps) {
-  const [state, setState] = createSignal<State>("blank");
+  const [innerState, setInnerState] = createSignal<State>("blank");
   const checked = createMemo(
-    () => state() === "verifying" || state() === "verified",
+    () => innerState() === "verified" || props.state === "verified",
+  );
+  const verifying = createMemo(
+    () => innerState() === "verifying" || props.state === "verifying",
   );
 
   const handleCheck = async () => {
     if (checked()) return;
 
-    setState("verifying");
+    setInnerState("verifying");
     let response = await processPreAnalysis(props.params.sitekey, interactions);
     if (!response) {
-      setState("failed");
+      setInnerState("blank");
       return;
     }
 
     if (response.result === "success") {
-      setState("verified");
+      setInnerState("verified");
     } else {
-      setState("failed");
+      setInnerState("blank");
     }
     props.onResponse(response);
   };
@@ -55,41 +60,35 @@ export default function ImNotRobot(props: ImNotRobotProps) {
     <div class="bg-gray-100 p-6 rounded-lg shadow-md w-[304px] h-[78px]">
       <div class="flex items-center space-x-4">
         <div
-          class={`w-6 h-6 border-2 rounded cursor-pointer transition-all duration-200 ${
+          class={`w-6 aspect-square border-2 rounded cursor-pointer transition-all duration-200 relative ${
             checked() ? "bg-green-500 border-green-500" : "border-gray-300"
-          }`}
+          } ${verifying() ? "bg-transparent border-transparent" : ""}`}
           onClick={handleCheck}
         >
-          <Show when={checked()}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 text-white"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </Show>
+          <Switch>
+            <Match when={verifying()}>
+              <div class="absolute inset-0">
+                <div class="animate-spin w-6 h-6 border-2 border-gray-300 border-t-purple-500 rounded-full" />
+              </div>
+            </Match>
+            <Match when={checked()}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-white"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </Match>
+          </Switch>
         </div>
         <span class="text-gray-700">I'm not a robot</span>
       </div>
-      <Switch>
-        <Match when={state() === "verifying"}>
-          <div class="mt-2 text-sm text-gray-500">Verifying...</div>
-        </Match>
-        <Match when={state() === "verified"}>
-          <div class="mt-2 text-sm text-green-500">
-            Verification successful!
-          </div>
-        </Match>
-        <Match when={state() === "failed"}>
-          <div class="mt-2 text-sm text-red-500">Try again...</div>
-        </Match>
-      </Switch>
     </div>
   );
 }

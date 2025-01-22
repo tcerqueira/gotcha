@@ -1,6 +1,6 @@
 import { getJsParams } from "./js-params";
 import { render } from "solid-js/web";
-import { createWidget, Widget } from "./components/gotcha-widget";
+import { createWidget, Widget } from "./widget";
 
 export class GreCaptcha {
   widgets: Widget[] = [];

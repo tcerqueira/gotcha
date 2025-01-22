@@ -1,7 +1,7 @@
-import { render } from "solid-js/web";
 import { SearchParams, WidgetMessage, Interaction } from "@gotcha-widget/lib";
 import {
   Accessor,
+  createMemo,
   createResource,
   createSignal,
   Match,
@@ -13,68 +13,27 @@ import {
 import { defaultRenderParams, RenderParams } from "../grecaptcha";
 import ImNotRobot, { AnalysisResponse } from "./im-not-a-robot";
 import Modal from "./modal";
-
-export interface Widget {
-  render: (container: Element, parameters: RenderParams) => void;
-  reset: () => void;
-}
-
-type State = "live" | "expired";
-
-export function createWidget(): Widget {
-  let containerElem: Element | undefined;
-  let params: GotchaWidgetProps | undefined;
-  const [state, setState] = createSignal<State>("live");
-  let timeout: NodeJS.Timeout | undefined;
-
-  const renderWidget = (container: Element, parameters: RenderParams) => {
-    containerElem = container;
-    params = {
-      ...parameters,
-      "expired-callback": () => {
-        setState("expired");
-        parameters["expired-callback"]?.();
-      },
-      callback: (token) => {
-        setState("live");
-        parameters.callback?.(token);
-        clearTimeout(timeout);
-        timeout = setTimeout(() => params?.["expired-callback"]?.(), 30000);
-      },
-      state,
-    };
-
-    render(
-      () => <GotchaWidget {...(params as GotchaWidgetProps)} />,
-      containerElem,
-    );
-  };
-
-  return {
-    render: renderWidget,
-    reset: () => {
-      if (!containerElem) return;
-      containerElem.getElementsByClassName("gotcha-widget")[0]?.remove();
-      renderWidget(containerElem, params!);
-    },
-  };
-}
+import { LiveState } from "../widget";
 
 type AdditionalParams = {
-  state: Accessor<State>;
+  liveState: Accessor<LiveState>;
 };
 export type GotchaWidgetProps = RenderParams & AdditionalParams;
 
+type State = "live" | "verifying" | "verified" | "failed" | "error";
+
 export function GotchaWidget(props: GotchaWidgetProps) {
-  const [showChallenge, setShowChallenge] = createSignal(false);
   let iframeElement: HTMLIFrameElement | null = null;
+  const [state, setState] = createSignal<State>("live");
   const [challenge] = createResource(props.sitekey, fetchChallenge);
+  const showChallenge = createMemo(() => state() === "verifying");
 
   const handlePreChallengeResponse = (response: AnalysisResponse) => {
     if (response.result === "success") {
+      setState("verified");
       props.callback?.(response.response.token);
     } else {
-      setShowChallenge(true);
+      setState("verifying");
     }
   };
 
@@ -100,16 +59,18 @@ export function GotchaWidget(props: GotchaWidgetProps) {
           message.interactions,
         );
         if (response !== null) {
+          setState(message.success ? "verified" : "failed");
           props.callback?.(response);
         } else {
+          setState("error");
           props["error-callback"]?.();
         }
         break;
       case "error-callback":
+        setState("error");
         props["error-callback"]?.();
         break;
     }
-    setShowChallenge(false);
   };
   onMount(() => {
     window.addEventListener("message", handleMessage);
@@ -126,12 +87,50 @@ export function GotchaWidget(props: GotchaWidgetProps) {
     sv: window.location.origin,
   };
 
+  const notRobotState = createMemo(() => {
+    switch (state()) {
+      case "verified":
+        return "verified";
+      case "verifying":
+        return "verifying";
+      default:
+        return "blank";
+    }
+  });
+
   return (
     <div class="gotcha-widget inline-block">
       <div class={`border-2 border-purple-200 rounded box-content bg-gray-50`}>
-        <ImNotRobot params={props} onResponse={handlePreChallengeResponse} />
+        <ImNotRobot
+          params={props}
+          state={notRobotState()}
+          onResponse={handlePreChallengeResponse}
+        />
+        <div class="flex justify-between p-1 bg-gray-200">
+          <p class="text-left">
+            <Switch>
+              <Match when={state() === "verified"}>
+                <span class="text-green-400">Verified!</span>
+              </Match>
+              <Match when={state() === "verifying"}>
+                <span class="text-gray-500">Verifiying...</span>
+              </Match>
+              <Match when={state() === "failed"}>
+                <span class="text-red-400">Verification failed.</span>
+              </Match>
+              <Match when={state() === "error"}>
+                <span class="text-red-400">Oops! Something went wrong...</span>
+              </Match>
+              <Match when={props.liveState() === "expired"}>
+                <span class="text-red-400">Verification expired.</span>
+              </Match>
+            </Switch>
+          </p>
+          <p class="text-right">Gotcha</p>
+        </div>
+
         <Show when={showChallenge()}>
-          <Modal open={showChallenge()}>
+          <Modal open={showChallenge()} onClose={() => setState("failed")}>
             <Switch>
               <Match when={challenge.loading}>
                 <p>Loading...</p>
@@ -155,13 +154,6 @@ export function GotchaWidget(props: GotchaWidgetProps) {
             </Switch>
           </Modal>
         </Show>
-
-        <div class="flex justify-between p-1 bg-gray-200">
-          <p class="text-left text-red-400">
-            {props.state() === "expired" ? "Verification expired" : ""}
-          </p>
-          <p class="text-right">Gotcha</p>
-        </div>
       </div>
     </div>
   );
