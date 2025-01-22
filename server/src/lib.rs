@@ -26,6 +26,7 @@ pub mod db;
 pub mod extractors;
 pub mod response_token;
 pub mod routes;
+mod serde;
 pub mod test_helpers;
 
 pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);

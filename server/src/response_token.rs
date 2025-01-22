@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, time::Duration};
+use std::{net::IpAddr, time::Duration};
 
 use anyhow::Context;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -21,7 +21,7 @@ pub struct Claims {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseClaims {
     pub score: f32,
-    pub solver_addr: SocketAddr,
+    pub ip_addr: IpAddr,
     pub hostname: Host,
 }
 

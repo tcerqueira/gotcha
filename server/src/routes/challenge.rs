@@ -42,7 +42,7 @@ pub async fn get_challenge(
 pub struct ChallengeResults {
     pub success: bool,
     pub site_key: String,
-    #[serde(with = "host_as_str")]
+    #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub challenge: Url,
     pub interactions: Vec<Interaction>,
@@ -75,7 +75,7 @@ pub async fn process_challenge(
 
     Ok(Json(ChallengeResponse {
         token: response_token::encode(
-            ResponseClaims { score, solver_addr: addr, hostname: results.hostname },
+            ResponseClaims { score, ip_addr: addr.ip(), hostname: results.hostname },
             &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                 .await
                 .context("failed to fecth encoding key by api secret while processing challenge")?
@@ -88,7 +88,7 @@ pub async fn process_challenge(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PreAnalysisRequest {
     pub site_key: String,
-    #[serde(with = "host_as_str")]
+    #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub interactions: Vec<Interaction>,
 }
@@ -125,7 +125,7 @@ pub async fn process_pre_analysis(
         0.5..=1. => PreAnalysisResponse::Success {
             response: ChallengeResponse {
                 token: response_token::encode(
-                    ResponseClaims { score, solver_addr: addr, hostname: results.hostname },
+                    ResponseClaims { score, ip_addr: addr.ip(), hostname: results.hostname },
                     &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                         .await
                         .context(
@@ -167,28 +167,5 @@ impl TryFrom<DbChallenge> for GetChallenge {
             width: db_challenge.width as u16,
             height: db_challenge.height as u16,
         })
-    }
-}
-
-mod host_as_str {
-    use std::borrow::Cow;
-
-    use serde::{Deserializer, Serializer};
-
-    use super::*;
-
-    pub fn serialize<S>(host: &Host, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&host.to_string())
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Host, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let str = Cow::<'de, str>::deserialize(deserializer)?;
-        Host::parse(&str).map_err(serde::de::Error::custom)
     }
 }

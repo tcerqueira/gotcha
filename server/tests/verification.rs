@@ -1,5 +1,5 @@
 mod verify_site {
-    use std::net::SocketAddr;
+    use std::net::IpAddr;
 
     use gotcha_server::{
         response_token::{self, ResponseClaims},
@@ -18,7 +18,7 @@ mod verify_site {
         let token = response_token::encode(
             ResponseClaims {
                 score: 0.75,
-                solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                ip_addr: [127, 0, 0, 1].into(),
                 hostname: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
@@ -39,6 +39,74 @@ mod verify_site {
     }
 
     #[gotcha_server_macros::integration_test]
+    async fn sucessful_challenge_with_remoteip(server: TestContext) -> anyhow::Result<()> {
+        let port = server.port();
+        let secret = server.db_api_secret().await;
+        let enc_key = server.db_enconding_key().await;
+        let ip_addr = [127, 0, 0, 1].into();
+
+        let token = response_token::encode(
+            ResponseClaims {
+                score: 0.75,
+                ip_addr,
+                hostname: Host::parse("gotcha-integration.test.com")?,
+            },
+            &enc_key,
+        )?;
+
+        let response = HTTP_CLIENT
+            .post(format!("http://localhost:{port}/api/siteverify"))
+            .form(&[
+                ("secret", &secret),
+                ("response", &token),
+                ("remoteip", &ip_addr.to_string()),
+            ])
+            .send()
+            .await?;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let verification: VerificationResponse = response.json().await?;
+        assert!(verification.success);
+        assert_eq!(verification.error_codes, None);
+
+        Ok(())
+    }
+
+    #[gotcha_server_macros::integration_test]
+    async fn sucessful_challenge_with_remoteip_mismatch(server: TestContext) -> anyhow::Result<()> {
+        let port = server.port();
+        let secret = server.db_api_secret().await;
+        let enc_key = server.db_enconding_key().await;
+
+        let token = response_token::encode(
+            ResponseClaims {
+                score: 0.75,
+                ip_addr: [127, 0, 0, 1].into(),
+                hostname: Host::parse("gotcha-integration.test.com")?,
+            },
+            &enc_key,
+        )?;
+
+        let other_addr = IpAddr::from([127, 0, 0, 2]);
+        let response = HTTP_CLIENT
+            .post(format!("http://localhost:{port}/api/siteverify"))
+            .form(&[
+                ("secret", &secret),
+                ("response", &token),
+                ("remoteip", &other_addr.to_string()),
+            ])
+            .send()
+            .await?;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let verification: VerificationResponse = response.json().await?;
+        assert!(!verification.success);
+        assert_eq!(verification.error_codes, None);
+
+        Ok(())
+    }
+
+    #[gotcha_server_macros::integration_test]
     async fn failed_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
@@ -47,7 +115,7 @@ mod verify_site {
         let token = response_token::encode(
             ResponseClaims {
                 score: 0.3,
-                solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                ip_addr: [127, 0, 0, 1].into(),
                 hostname: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
@@ -75,7 +143,7 @@ mod verify_site {
         let token = response_token::encode(
             ResponseClaims {
                 score: 1.,
-                solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                ip_addr: [127, 0, 0, 1].into(),
                 hostname: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
@@ -155,7 +223,7 @@ mod verify_site {
         let token = response_token::encode(
             ResponseClaims {
                 score: 1.,
-                solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                ip_addr: [127, 0, 0, 1].into(),
                 hostname: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
@@ -182,6 +250,42 @@ mod verify_site {
     #[gotcha_server_macros::integration_test]
     async fn invalid_secret_but_exists(_server: TestContext) -> anyhow::Result<()> {
         // TODO
+        Ok(())
+    }
+
+    #[gotcha_server_macros::integration_test]
+    async fn invalid_remoteip(server: TestContext) -> anyhow::Result<()> {
+        let port = server.port();
+        let secret = server.db_api_secret().await;
+        let enc_key = server.db_enconding_key().await;
+
+        let token = response_token::encode(
+            ResponseClaims {
+                score: 0.75,
+                ip_addr: [127, 0, 0, 1].into(),
+                hostname: Host::parse("gotcha-integration.test.com")?,
+            },
+            &enc_key,
+        )?;
+
+        let response = HTTP_CLIENT
+            .post(format!("http://localhost:{port}/api/siteverify"))
+            .form(&[
+                ("secret", secret.as_str()),
+                ("response", token.as_str()),
+                ("remoteip", "127.0.0.1:433/invalid-addr"),
+            ])
+            .send()
+            .await?;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let verification: VerificationResponse = response.json().await?;
+        assert!(!verification.success);
+        assert!(verification
+            .error_codes
+            .expect("must have error codes")
+            .contains(&ErrorCodes::BadRequest));
+
         Ok(())
     }
 
@@ -232,7 +336,7 @@ mod verify_site {
                 Duration::from_secs(0),
                 ResponseClaims {
                     score: 1.,
-                    solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    ip_addr: [127, 0, 0, 1].into(),
                     hostname: Host::parse("gotcha-integration.test.com")?,
                 },
                 &enc_key,
@@ -296,7 +400,7 @@ mod verify_site {
                 &Header::new(JWT_ALGORITHM),
                 &Claims::new(ResponseClaims {
                     score: 1.,
-                    solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    ip_addr: [127, 0, 0, 1].into(),
                     hostname: Host::parse("gotcha-integration.test.com")?,
                 }),
                 &EncodingKey::from_base64_secret(
@@ -331,7 +435,7 @@ mod verify_site {
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
                 &Claims::new(ResponseClaims {
                     score: 1.,
-                    solver_addr: SocketAddr::new([127, 0, 0, 1].into(), port),
+                    ip_addr: [127, 0, 0, 1].into(),
                     hostname: Host::parse("gotcha-integration.test.com")?,
                 }),
                 &EncodingKey::from_base64_secret(&enc_key)?,
