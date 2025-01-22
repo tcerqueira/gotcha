@@ -7,9 +7,12 @@ import {
   Match,
   onCleanup,
   onMount,
+  Show,
   Switch,
 } from "solid-js";
 import { defaultRenderParams, RenderParams } from "../grecaptcha";
+import ImNotRobot, { AnalysisResponse } from "./im-not-a-robot";
+import Modal from "./modal";
 
 export interface Widget {
   render: (container: Element, parameters: RenderParams) => void;
@@ -63,8 +66,17 @@ type AdditionalParams = {
 export type GotchaWidgetProps = RenderParams & AdditionalParams;
 
 export function GotchaWidget(props: GotchaWidgetProps) {
+  const [showChallenge, setShowChallenge] = createSignal(false);
   let iframeElement: HTMLIFrameElement | null = null;
   const [challenge] = createResource(props.sitekey, fetchChallenge);
+
+  const handlePreChallengeResponse = (response: AnalysisResponse) => {
+    if (response.result === "success") {
+      props.callback?.(response.response.token);
+    } else {
+      setShowChallenge(true);
+    }
+  };
 
   const handleMessage = async (event: MessageEvent<WidgetMessage>) => {
     const challengeData = challenge();
@@ -97,6 +109,7 @@ export function GotchaWidget(props: GotchaWidgetProps) {
         props["error-callback"]?.();
         break;
     }
+    setShowChallenge(false);
   };
   onMount(() => {
     window.addEventListener("message", handleMessage);
@@ -115,36 +128,41 @@ export function GotchaWidget(props: GotchaWidgetProps) {
 
   return (
     <div class="gotcha-widget inline-block">
-      <Switch>
-        <Match when={challenge.loading}>
-          <p>Loading...</p>
-        </Match>
-        <Match when={challenge.error}>
-          <span>Error: {challenge.error}</span>
-        </Match>
-        <Match when={challenge()}>
-          <div
-            class="border-2 border-purple-200 rounded box-content bg-gray-50"
-            style={{ width: `${challenge()?.width ?? 304}px` }}
-          >
-            <iframe
-              class="border-none overflow-hidden m-0 p-0 focus-visible:outline-none"
-              ref={(el) => (iframeElement = el)}
-              src={buildChallengeUrl(challenge()!.url, params)}
-              width={challenge()!.width}
-              height={challenge()!.height}
-              role="presentation"
-              sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
-            ></iframe>
-            <div class="flex justify-between p-1 bg-gray-200">
-              <p class="text-left text-red-400">
-                {props.state() === "expired" ? "Verification expired" : ""}
-              </p>
-              <p class="text-right">Gotcha</p>
-            </div>
-          </div>
-        </Match>
-      </Switch>
+      <div class={`border-2 border-purple-200 rounded box-content bg-gray-50`}>
+        <ImNotRobot params={props} onResponse={handlePreChallengeResponse} />
+        <Show when={showChallenge()}>
+          <Modal open={showChallenge()}>
+            <Switch>
+              <Match when={challenge.loading}>
+                <p>Loading...</p>
+              </Match>
+              <Match when={challenge.error}>
+                <span>Error {challenge.error}</span>
+              </Match>
+              <Match when={challenge()}>
+                <div class={`w-[${challenge()!.width}px]`}>
+                  <iframe
+                    class="border-none overflow-hidden m-0 p-0 focus-visible:outline-none"
+                    ref={(el) => (iframeElement = el)}
+                    src={buildChallengeUrl(challenge()!.url, params)}
+                    width={challenge()!.width}
+                    height={challenge()!.height}
+                    role="presentation"
+                    sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
+                  ></iframe>
+                </div>
+              </Match>
+            </Switch>
+          </Modal>
+        </Show>
+
+        <div class="flex justify-between p-1 bg-gray-200">
+          <p class="text-left text-red-400">
+            {props.state() === "expired" ? "Verification expired" : ""}
+          </p>
+          <p class="text-right">Gotcha</p>
+        </div>
+      </div>
     </div>
   );
 }

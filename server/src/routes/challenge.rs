@@ -117,7 +117,11 @@ pub async fn process_pre_analysis(
     tracing::debug!("interaction analysis: Score({:?})", score);
 
     let response = match score {
+        _ => PreAnalysisResponse::Failure,
+        // For now, assume pre-analysis always fails
+        #[allow(unreachable_patterns)]
         0f32..0.5 => PreAnalysisResponse::Failure,
+        #[allow(unreachable_patterns)]
         0.5..=1. => PreAnalysisResponse::Success {
             response: ChallengeResponse {
                 token: response_token::encode(
@@ -132,6 +136,7 @@ pub async fn process_pre_analysis(
                 )?,
             },
         },
+        #[allow(unreachable_patterns)]
         _ => {
             return Err(ChallengeError::Unexpected(anyhow::anyhow!(
                 "score not in range [0.0 .. 1.0]"

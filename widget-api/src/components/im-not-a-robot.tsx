@@ -3,6 +3,7 @@ import {
   createMemo,
   createSignal,
   Match,
+  onCleanup,
   onMount,
   Show,
   Switch,
@@ -12,7 +13,7 @@ import { ChallengeResponse } from "./gotcha-widget";
 
 type State = "blank" | "verifying" | "verified" | "failed";
 
-type AnalysisResponse =
+export type AnalysisResponse =
   | { result: "failure" }
   | { result: "success"; response: ChallengeResponse };
 type ImNotRobotProps = {
@@ -31,22 +32,27 @@ export default function ImNotRobot(props: ImNotRobotProps) {
 
     setState("verifying");
     let response = await processPreAnalysis(props.params.sitekey, interactions);
-    if (!response || response.result === "failure") {
+    if (!response) {
       setState("failed");
       return;
     }
 
-    setState("verified");
+    if (response.result === "success") {
+      setState("verified");
+    } else {
+      setState("failed");
+    }
     props.onResponse(response);
   };
 
   const interactions: Interaction[] = [];
   onMount(() => {
-    captureInteractions(interactions);
+    const cleanup = captureInteractions(interactions);
+    onCleanup(cleanup);
   });
 
   return (
-    <div class="bg-gray-100 p-6 rounded-lg shadow-md w-screen h-screen">
+    <div class="bg-gray-100 p-6 rounded-lg shadow-md w-[304px] h-[78px]">
       <div class="flex items-center space-x-4">
         <div
           class={`w-6 h-6 border-2 rounded cursor-pointer transition-all duration-200 ${
@@ -118,78 +124,89 @@ async function processPreAnalysis(
   }
 }
 
-function captureInteractions(interactions: Interaction[]) {
-  // Memory leak, fuck this
-  document.addEventListener("mousemove", (evt: MouseEvent) => {
-    interactions.push({
-      ts: Date.now(),
-      event: {
-        kind: "mousemovement",
-        x: evt.offsetX,
-        y: evt.offsetY,
-      },
-    });
+function captureInteractions(interactions: Interaction[]): () => void {
+  const handlers = {
+    mousemove: (evt: MouseEvent) => {
+      interactions.push({
+        ts: Date.now(),
+        event: {
+          kind: "mousemovement",
+          x: evt.offsetX,
+          y: evt.offsetY,
+        },
+      });
+    },
+    mouseup: (evt: MouseEvent) => {
+      interactions.push({
+        ts: Date.now(),
+        event: {
+          kind: "mouseclick",
+          mouse: "up",
+        },
+      });
+    },
+    mousedown: (evt: MouseEvent) => {
+      interactions.push({
+        ts: Date.now(),
+        event: {
+          kind: "mouseclick",
+          mouse: "down",
+        },
+      });
+    },
+    mouseenter: (evt: MouseEvent) => {
+      interactions.push({
+        ts: Date.now(),
+        event: {
+          kind: "mouseenter",
+          mouse: "in",
+        },
+      });
+    },
+    mouseleave: (evt: MouseEvent) => {
+      interactions.push({
+        ts: Date.now(),
+        event: {
+          kind: "mouseenter",
+          mouse: "out",
+        },
+      });
+    },
+    keyup: (evt: KeyboardEvent) => {
+      interactions.push({
+        ts: Date.now(),
+        event: {
+          kind: "keypress",
+          keyMove: "up",
+          key: evt.key,
+        },
+      });
+    },
+    keydown: (evt: KeyboardEvent) => {
+      interactions.push({
+        ts: Date.now(),
+        event: {
+          kind: "keypress",
+          keyMove: "down",
+          key: evt.key,
+        },
+      });
+    },
+  };
+
+  Object.entries(handlers).forEach(([event, handler]) => {
+    document.addEventListener(
+      event as keyof DocumentEventMap,
+      handler as EventListener,
+    );
   });
 
-  document.addEventListener("mouseup", (evt: MouseEvent) => {
-    interactions.push({
-      ts: Date.now(),
-      event: {
-        kind: "mouseclick",
-        mouse: "up",
-      },
+  return () => {
+    Object.entries(handlers).forEach(([event, handler]) => {
+      document.removeEventListener(
+        event as keyof DocumentEventMap,
+        handler as EventListener,
+      );
     });
-  });
-
-  document.addEventListener("mousedown", (evt: MouseEvent) => {
-    interactions.push({
-      ts: Date.now(),
-      event: {
-        kind: "mouseclick",
-        mouse: "down",
-      },
-    });
-  });
-
-  document.addEventListener("mouseenter", (evt: MouseEvent) => {
-    interactions.push({
-      ts: Date.now(),
-      event: {
-        kind: "mouseenter",
-        mouse: "in",
-      },
-    });
-  });
-
-  document.addEventListener("mouseleave", (evt: MouseEvent) => {
-    interactions.push({
-      ts: Date.now(),
-      event: {
-        kind: "mouseenter",
-        mouse: "out",
-      },
-    });
-  });
-
-  document.addEventListener("keyup", (evt: KeyboardEvent) => {
-    interactions.push({
-      ts: Date.now(),
-      event: {
-        kind: "keypress",
-        keyMove: "up",
-        key: evt.key,
-      },
-    });
-  });
-
-  document.addEventListener("keydown", (evt: KeyboardEvent) => {
-    interactions.push({
-      ts: Date.now(),
-      event: {
-        kind: "keypress",
-        keyMove: "down",
-        key: evt.key,
-      },
-    });
-  });
+  };
 }
