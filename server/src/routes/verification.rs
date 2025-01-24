@@ -43,7 +43,7 @@ pub enum ErrorCodes {
     TimeoutOrDuplicate,
 }
 
-#[instrument(skip(state), err(Debug, level = Level::DEBUG))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG))]
 pub async fn site_verify(
     State(state): State<Arc<AppState>>,
     WithRejection(Form(verification), _): WithRejection<
@@ -71,12 +71,12 @@ pub async fn site_verify(
 
     let solver_check = verification
         .remoteip
-        .map_or(true, |solver| solver == claims.custom.ip_addr);
+        .map_or(true, |solver| solver == claims.custom.addr);
 
     Ok(Json(VerificationResponse {
         success: claims.custom.score >= 0.5 && solver_check,
         challenge_ts: *claims.iat(),
-        hostname: Host::parse(&claims.custom.hostname.to_string()).ok(),
+        hostname: Some(claims.custom.hostname),
         error_codes: None,
     }))
 }

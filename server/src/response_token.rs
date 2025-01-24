@@ -21,7 +21,8 @@ pub struct Claims {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseClaims {
     pub score: f32,
-    pub ip_addr: IpAddr,
+    pub addr: IpAddr,
+    #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
 }
 
