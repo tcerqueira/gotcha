@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use secrecy::Secret;
 use serde::Deserialize;
-use serde_aux::field_attributes::deserialize_number_from_string;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -13,7 +12,7 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct ApplicationConfig {
     pub host: String,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
+    #[serde(with = "crate::serde::as_string")]
     pub port: u16,
     pub serve_dir: PathBuf,
     pub auth_origin: String,
@@ -23,7 +22,7 @@ pub struct ApplicationConfig {
 pub struct DatabaseConfig {
     pub username: String,
     pub password: Secret<String>,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
+    #[serde(with = "crate::serde::as_string")]
     pub port: u16,
     pub host: String,
     pub database_name: String,
