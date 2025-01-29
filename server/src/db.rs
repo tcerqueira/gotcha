@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::configuration::DatabaseConfig;
 
 pub fn connect_database(config: DatabaseConfig) -> PgPool {
-    let pool_options = PgPoolOptions::default().acquire_timeout(Duration::from_secs(5));
+    let pool_options = PgPoolOptions::default().acquire_timeout(Duration::from_secs(3));
     let conn_options = PgConnectOptions::new()
         .host(&config.host)
         .username(&config.username)
