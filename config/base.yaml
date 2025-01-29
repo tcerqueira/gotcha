@@ -2,7 +2,6 @@ application:
   port: 0
   host: 0.0.0.0
   serve_dir: "./dist"
-  challenges: []
 database:
   host: "127.0.0.1"
   port: 5432

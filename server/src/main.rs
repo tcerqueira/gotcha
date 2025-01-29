@@ -2,11 +2,8 @@ use gotcha_server::{configuration::Config, db};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let Config {
-        application: app_conf,
-        database: db_conf,
-        ..
-    } = gotcha_server::get_configuration()?;
+    let Config { application: app_conf, database: db_conf, .. } =
+        gotcha_server::get_configuration()?;
 
     #[cfg(not(feature = "aws-lambda"))]
     gotcha_server::init_tracing();

@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
+use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum::http::StatusCode;
-use axum::{async_trait, extract::FromRequestParts};
 
 #[cfg(feature = "aws-lambda")]
 mod aws_lambda {
@@ -58,7 +60,6 @@ pub fn extract_lambda_origin<B>(mut request: Request<B>) -> Request<B> {
 #[derive(Debug, Clone)]
 pub struct ThisOrigin(pub String);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ThisOrigin
 where
     S: Send + Sync,
@@ -74,5 +75,25 @@ where
                 tracing::error!("Could not extract origin");
                 StatusCode::INTERNAL_SERVER_ERROR
             })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct User {
+    pub user_id: Arc<str>,
+}
+
+impl<S> FromRequestParts<S> for User
+where
+    S: Send + Sync,
+{
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<User>()
+            .cloned()
+            .ok_or(StatusCode::UNAUTHORIZED)
     }
 }

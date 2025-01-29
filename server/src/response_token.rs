@@ -1,9 +1,10 @@
-use std::{net::SocketAddr, time::Duration};
+use std::{net::IpAddr, time::Duration};
 
 use anyhow::Context;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+use url::Host;
 
 pub static JWT_ALGORITHM: Algorithm = Algorithm::HS256;
 
@@ -19,8 +20,10 @@ pub struct Claims {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseClaims {
-    pub success: bool,
-    pub authority: SocketAddr,
+    pub score: f32,
+    pub addr: IpAddr,
+    #[serde(with = "crate::serde::host_as_str")]
+    pub hostname: Host,
 }
 
 pub fn encode(response_claims: ResponseClaims, enc_key_b64: &str) -> anyhow::Result<String> {
@@ -66,18 +69,14 @@ impl Claims {
 
     pub fn with_timeout(timeout: Duration, response: ResponseClaims) -> Self {
         let now = OffsetDateTime::now_utc();
-        Self {
-            exp: now + timeout,
-            iat: now,
-            custom: response,
-        }
+        Self { exp: now + timeout, iat: now, custom: response }
     }
 
-    pub fn exp(&self) -> OffsetDateTime {
-        self.exp
+    pub fn exp(&self) -> &OffsetDateTime {
+        &self.exp
     }
 
-    pub fn iat(&self) -> OffsetDateTime {
-        self.iat
+    pub fn iat(&self) -> &OffsetDateTime {
+        &self.iat
     }
 }

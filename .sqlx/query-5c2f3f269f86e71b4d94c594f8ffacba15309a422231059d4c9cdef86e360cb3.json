@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update console set label = coalesce($1, label) where id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5c2f3f269f86e71b4d94c594f8ffacba15309a422231059d4c9cdef86e360cb3"
+}

@@ -1,6 +1,6 @@
 import { getJsParams } from "./js-params";
 import { render } from "solid-js/web";
-import { createWidget, Widget } from "./components/gotcha-widget";
+import { createWidget, Widget } from "./widget";
 
 export class GreCaptcha {
   widgets: Widget[] = [];
@@ -62,6 +62,7 @@ export class GreCaptcha {
       },
       "expired-callback": () => {
         this.setResponseTextarea(null, widgetId);
+        widget.reset();
         parameters["expired-callback"]?.();
       },
       "error-callback": () => {
@@ -158,7 +159,7 @@ export type RenderParams = {
 /**
  * Default configuration parameters for the widget
  */
-const defaultRenderParams: RenderParams = {
+export const defaultRenderParams: RenderParams = {
   sitekey: "",
   theme: "light",
   size: "normal",

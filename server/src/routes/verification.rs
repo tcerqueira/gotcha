@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, fmt::Display, net::IpAddr, str::FromStr, sync::Arc};
 
 use anyhow::Context;
 use axum::{extract::State, Form, Json};
@@ -8,7 +8,8 @@ use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use time::OffsetDateTime;
-use tracing::instrument;
+use tracing::{instrument, Level};
+use url::Host;
 
 use super::errors::VerificationError;
 use crate::{db, response_token, AppState};
@@ -17,8 +18,7 @@ use crate::{db, response_token, AppState};
 pub struct VerificationRequest {
     secret: Secret<String>,
     response: String,
-    #[expect(dead_code)]
-    remoteip: Option<String>,
+    remoteip: Option<IpAddr>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Error)]
@@ -26,8 +26,8 @@ pub struct VerificationResponse {
     pub success: bool,
     #[serde(with = "time::serde::iso8601")]
     pub challenge_ts: OffsetDateTime,
-    #[serde(rename = "hostname", with = "none_as_empty_string")]
-    pub authority: Option<SocketAddr>,
+    #[serde(with = "crate::serde::option_host_as_str")]
+    pub hostname: Option<Host>,
     #[serde(rename = "error-codes", skip_serializing_if = "Option::is_none")]
     pub error_codes: Option<Vec<ErrorCodes>>,
 }
@@ -43,24 +43,24 @@ pub enum ErrorCodes {
     TimeoutOrDuplicate,
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG))]
 pub async fn site_verify(
     State(state): State<Arc<AppState>>,
     WithRejection(Form(verification), _): WithRejection<
         Form<HashMap<String, String>>,
         VerificationError,
     >,
-) -> super::Result<Json<VerificationResponse>> {
+) -> Result<Json<VerificationResponse>, VerificationError> {
     let verification: Result<VerificationRequest, Vec<ErrorCodes>> = verification.try_into();
-
     let verification = verification.map_err(VerificationResponse::failure)?;
 
-    let enc_key = db::fetch_encoding_key(&state.pool, verification.secret.expose_secret())
+    let enc_key = db::fetch_api_key_by_secret(&state.pool, verification.secret.expose_secret())
         .await
         .context("failed to fetch encoding key bey api secret while verifying challenge")?
         .ok_or(VerificationResponse::failure(vec![
             ErrorCodes::InvalidInputSecret,
-        ]))?;
+        ]))?
+        .encoding_key;
 
     let claims = response_token::decode(&verification.response, &enc_key)
         .map_err(|err| match err.into_kind() {
@@ -69,10 +69,14 @@ pub async fn site_verify(
         })
         .map_err(|err_code| VerificationResponse::failure(vec![err_code]))?;
 
+    let solver_check = verification
+        .remoteip
+        .map_or(true, |solver| solver == claims.custom.addr);
+
     Ok(Json(VerificationResponse {
-        success: claims.custom.success,
-        challenge_ts: claims.iat(),
-        authority: Some(claims.custom.authority),
+        success: claims.custom.score >= 0.5 && solver_check,
+        challenge_ts: *claims.iat(),
+        hostname: Some(claims.custom.hostname),
         error_codes: None,
     }))
 }
@@ -82,7 +86,7 @@ impl VerificationResponse {
         Self {
             success: false,
             challenge_ts: OffsetDateTime::UNIX_EPOCH,
-            authority: None,
+            hostname: None,
             error_codes: Some(errors),
         }
     }
@@ -99,6 +103,12 @@ impl TryFrom<HashMap<String, String>> for VerificationRequest {
         if !form.contains_key("response") {
             errors.push(ErrorCodes::MissingInputResponse);
         }
+        let remoteip = form.remove("remoteip").as_deref().and_then(|ip| {
+            IpAddr::from_str(ip).ok().or_else(|| {
+                errors.push(ErrorCodes::BadRequest);
+                None
+            })
+        });
         if !errors.is_empty() {
             return Err(errors);
         }
@@ -111,7 +121,7 @@ impl TryFrom<HashMap<String, String>> for VerificationRequest {
             response: form
                 .remove("response")
                 .expect("checked if it contains key before"),
-            remoteip: form.remove("remoteip"),
+            remoteip,
         })
     }
 }
@@ -121,38 +131,7 @@ impl Display for VerificationResponse {
         writeln!(
             f,
             "verification: challenge loaded at {} in `{:?}` - {:?}",
-            self.challenge_ts, self.authority, self.error_codes
+            self.challenge_ts, self.hostname, self.error_codes
         )
-    }
-}
-
-mod none_as_empty_string {
-    use serde::{self, Deserialize, Deserializer, Serializer};
-    use std::{fmt::Display, str::FromStr};
-
-    pub fn serialize<S, T>(value: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: Display,
-    {
-        match value {
-            Some(addr) => serializer.serialize_str(&addr.to_string()),
-            None => serializer.serialize_str(""),
-        }
-    }
-
-    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-        T: FromStr,
-        <T as FromStr>::Err: Display,
-    {
-        match String::deserialize(deserializer)?.as_str() {
-            "" => Ok(None),
-            s => s
-                .parse()
-                .map(Some)
-                .map_err(|e| serde::de::Error::custom(format!("Invalid socket address: {}", e))),
-        }
     }
 }

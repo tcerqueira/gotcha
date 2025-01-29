@@ -12,6 +12,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
 
 jobs:
   test:
@@ -46,7 +47,11 @@ jobs:
         run: sqlx migrate run
       - name: Run sqlx check
         run: cargo sqlx prepare --check --workspace -- --all-targets --all-features
-      - run: cargo test --all-features
+      - name: Run tests
+        env:
+          TEST_AUTH_CLIENT_ID: ${{ secrets.TEST_AUTH_CLIENT_ID }}
+          TEST_AUTH_CLIENT_SECRET: ${{ secrets.TEST_AUTH_CLIENT_SECRET }}
+        run: cargo test --all-features
 
   lambda:
     name: Lambda build

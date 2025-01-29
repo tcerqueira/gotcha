@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use secrecy::Secret;
 use serde::Deserialize;
-use serde_aux::field_attributes::deserialize_number_from_string;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -13,31 +12,21 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct ApplicationConfig {
     pub host: String,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
+    #[serde(with = "crate::serde::as_string")]
     pub port: u16,
     pub serve_dir: PathBuf,
-    pub admin_auth_key: Secret<String>,
-    pub challenges: Vec<ChallengeConfig>,
+    pub auth_origin: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct DatabaseConfig {
     pub username: String,
     pub password: Secret<String>,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
+    #[serde(with = "crate::serde::as_string")]
     pub port: u16,
     pub host: String,
     pub database_name: String,
     pub require_ssl: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ChallengeConfig {
-    pub url: String,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub width: u16,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub height: u16,
 }
 
 pub fn server_dir() -> PathBuf {
