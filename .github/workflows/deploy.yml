@@ -57,6 +57,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
           SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
+          SUPABASE_PORT: ${{ secrets.SUPABASE_PORT }}
           SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
           SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
           SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
