@@ -67,7 +67,7 @@ jobs:
             --env-var APP_DATABASE__USERNAME=$SUPABASE_USER \
             --env-var APP_DATABASE__PASSWORD=$SUPABASE_PASSWORD \
             --env-var APP_DATABASE__DATABASE_NAME=$SUPABASE_DB_NAME \
-            --env-var APP_DATABASE__DATABASE_PORT=$SUPABASE_PORT \
+            --env-var APP_DATABASE__PORT=$SUPABASE_PORT \
             --env-var APP_APPLICATION__ADMIN_AUTH_KEY=$ADMIN_AUTH_KEY \
 
       - name: Deploy CDK stack
