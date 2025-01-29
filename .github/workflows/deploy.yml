@@ -47,6 +47,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build lambda function
+        env:
+          SQLX_OFFLINE: true
         run: cargo build-lambda
 
       - name: Deploy lambda Function
