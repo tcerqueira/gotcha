@@ -81,5 +81,5 @@ jobs:
 
       - name: Run Migrations
         env:
-          DATABASE_URL: postgres://${{ secrets.SUPABASE_USER }}:${{ secrets.SUPABASE_PASSWORD }}@${{ secrets.SUPABASE_HOST }}:5432/${{ secrets.SUPABASE_DB_NAME }}
+          DATABASE_URL: postgresql://${{ secrets.SUPABASE_USER }}:${{ secrets.SUPABASE_PASSWORD }}@${{ secrets.SUPABASE_HOST }}:${{ secrets.SUPABASE_PORT }}/${{ secrets.SUPABASE_DB_NAME }}
         run: sqlx migrate run
