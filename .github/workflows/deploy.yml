@@ -56,20 +56,15 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-          SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
-          SUPABASE_PORT: ${{ secrets.SUPABASE_PORT }}
-          SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
           SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
           SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
-          ADMIN_AUTH_KEY: ${{ secrets.ADMIN_AUTH_KEY }}
         run: |
           cargo deploy-lambda \
-            --env-var APP_DATABASE__HOST=$SUPABASE_HOST \
-            --env-var APP_DATABASE__USERNAME=$SUPABASE_USER \
-            --env-var APP_DATABASE__PASSWORD=$SUPABASE_PASSWORD \
-            --env-var APP_DATABASE__DATABASE_NAME=$SUPABASE_DB_NAME \
-            --env-var APP_DATABASE__PORT=$SUPABASE_PORT \
-            --env-var APP_APPLICATION__ADMIN_AUTH_KEY=$ADMIN_AUTH_KEY \
+            --env-var APP_DATABASE__HOST=${{ secrets.SUPABASE_HOST }} \
+            --env-var APP_DATABASE__USERNAME=${{ secrets.SUPABASE_USER }} \
+            --env-var APP_DATABASE__PASSWORD=${{ secrets.SUPABASE_PASSWORD }} \
+            --env-var APP_DATABASE__DATABASE_NAME=${{ secrets.SUPABASE_DB_NAME }} \
+            --env-var APP_DATABASE__PORT=${{ secrets.SUPABASE_PORT }} \
 
       - name: Deploy CDK stack
         working-directory: ./infra/gotcha-server
