@@ -5,7 +5,7 @@ use anyhow::Context;
 use axum::extract::ConnectInfo;
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
+use tracing::{instrument, Level};
 use url::{Host, Url};
 
 use super::errors::ChallengeError;
@@ -21,7 +21,7 @@ pub struct GetChallenge {
     pub height: u16,
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn get_challenge(
     State(state): State<Arc<AppState>>,
     ThisOrigin(origin): ThisOrigin,
@@ -54,7 +54,7 @@ pub struct ChallengeResponse {
     pub token: String,
 }
 
-#[instrument(skip(state, results),
+#[instrument(skip(state, results), ret(Debug, level = Level::INFO),
     fields(
         success = results.success,
         site_key = results.site_key,
@@ -67,6 +67,7 @@ pub async fn process_challenge(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(results): Json<ChallengeResults>,
 ) -> Result<Json<ChallengeResponse>, ChallengeError> {
+    // TODO: potentially heavy CPU operation - offload to rayon
     let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
     tracing::debug!("interaction analysis: Score({:?})", score);
     let score = match results.success {
@@ -102,7 +103,7 @@ pub enum PreAnalysisResponse {
     Failure,
 }
 
-#[instrument(skip(state, results),
+#[instrument(skip(state, results), ret(Debug, level = Level::INFO),
     fields(
         site_key = results.site_key,
         hostname = results.hostname.to_string(),
@@ -114,6 +115,7 @@ pub async fn process_pre_analysis(
     Json(results): Json<PreAnalysisRequest>,
 ) -> Result<Json<PreAnalysisResponse>, ChallengeError> {
     // TODO: look at cookies and other fingerprints
+    // TODO: potentially heavy CPU operation - offload to rayon
     let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
     tracing::debug!("interaction analysis: Score({:?})", score);
 

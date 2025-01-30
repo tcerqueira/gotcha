@@ -22,9 +22,9 @@ pub enum ChallengeError {
 
 impl IntoResponse for ChallengeError {
     fn into_response(self) -> Response {
+        tracing::error!(error = ?self, "ChallengeError");
         match self {
             ChallengeError::Unexpected(_) | ChallengeError::Sql(_) => {
-                tracing::error!(error = ?self, "Internal Server Error ocurred.");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
             ChallengeError::InvalidSecret => {
@@ -50,9 +50,9 @@ pub enum ConsoleError {
 
 impl IntoResponse for ConsoleError {
     fn into_response(self) -> Response {
+        tracing::error!(error = ?self, "ConsoleError");
         match self {
             ConsoleError::Unexpected(_) | ConsoleError::Sql(_) | ConsoleError::Duplicate => {
-                tracing::error!(error = ?self, "Internal Server Error ocurred.");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
             ConsoleError::NotFound { what: _ } => {
@@ -107,9 +107,9 @@ pub enum AdminError {
 
 impl IntoResponse for AdminError {
     fn into_response(self) -> Response {
+        tracing::error!(error = ?self, "AdminError");
         match self {
             AdminError::Unexpected(_) | AdminError::Sql(_) => {
-                tracing::error!(error = ?self, "Internal Server Error ocurred.");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
             AdminError::NotUnique { what: _ } => {
@@ -165,9 +165,9 @@ pub enum VerificationError {
 
 impl IntoResponse for VerificationError {
     fn into_response(self) -> Response {
+        tracing::error!(error = ?self, "VerificationError");
         match self {
             VerificationError::Unexpected(_) | VerificationError::Sql(_) => {
-                tracing::error!(error = ?self, "Internal Server Error ocurred.");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
             VerificationError::UserError(verification) => Json(verification).into_response(),

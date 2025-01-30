@@ -28,7 +28,7 @@ pub struct ConsoleResponse {
     pub label: Option<String>,
 }
 
-#[instrument(skip_all, ret(level = Level::DEBUG))]
+#[instrument(skip_all, ret(level = Level::INFO))]
 pub async fn get_consoles(
     State(state): State<Arc<AppState>>,
     User { user_id }: User,
@@ -42,7 +42,7 @@ pub async fn get_consoles(
     Ok(Json(consoles))
 }
 
-#[instrument(skip(state, user_id), ret(level = Level::DEBUG))]
+#[instrument(skip(state, user_id), ret(level = Level::INFO))]
 pub async fn create_console(
     State(state): State<Arc<AppState>>,
     User { user_id }: User,
@@ -57,7 +57,7 @@ pub struct UpdateConsoleRequest {
     pub label: Option<String>,
 }
 
-#[instrument(skip(state), ret(level = Level::DEBUG))]
+#[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn update_console(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -72,7 +72,7 @@ pub async fn update_console(
     }
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn delete_console(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -92,7 +92,7 @@ pub struct ApiKeyResponse {
     pub label: Option<String>,
 }
 
-#[instrument(skip(state), ret(level = Level::DEBUG))]
+#[instrument(skip(state), ret(level = Level::INFO))]
 pub async fn get_api_keys(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -107,7 +107,7 @@ pub async fn get_api_keys(
     Ok(Json(keys))
 }
 
-#[instrument(skip(state), ret(level = Level::DEBUG))]
+#[instrument(skip(state), ret(level = Level::INFO))]
 pub async fn gen_api_key(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -134,7 +134,7 @@ pub struct UpdateApiKeyRequest {
     pub label: Option<String>,
 }
 
-#[instrument(skip(state), ret(level = Level::DEBUG))]
+#[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn update_api_key(
     State(state): State<Arc<AppState>>,
     Path((console_id, site_key)): Path<(Uuid, String)>,
@@ -158,7 +158,7 @@ pub struct RevokeKeyRequest {
     pub site_key: String,
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn revoke_api_key(
     State(state): State<Arc<AppState>>,
     Path((console_id, site_key)): Path<(Uuid, String)>,

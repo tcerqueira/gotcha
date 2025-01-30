@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
+use tracing::{instrument, Level};
 use url::Url;
 
 use crate::{
@@ -19,7 +19,7 @@ pub struct AddChallenge {
     pub height: u16,
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn add_challenge(
     State(state): State<Arc<AppState>>,
     Json(challenge): Json<AddChallenge>,
@@ -41,7 +41,7 @@ pub struct DeleteChallenge {
     pub url: String,
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn remove_challenge(
     State(state): State<Arc<AppState>>,
     Json(challenge): Json<DeleteChallenge>,

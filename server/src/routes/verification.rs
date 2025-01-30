@@ -43,7 +43,7 @@ pub enum ErrorCodes {
     TimeoutOrDuplicate,
 }
 
-#[instrument(skip(state), ret(Debug, level = Level::DEBUG))]
+#[instrument(skip(state), ret(Debug, level = Level::INFO))]
 pub async fn site_verify(
     State(state): State<Arc<AppState>>,
     WithRejection(Form(verification), _): WithRejection<

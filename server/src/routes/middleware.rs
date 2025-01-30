@@ -21,7 +21,7 @@ use crate::{db, extractors::User, AppState, HTTP_CACHE_CLIENT};
 
 use super::errors::ConsoleError;
 
-#[instrument(fields(user_id), skip(state, auth_header, request, next), err(Debug, level = Level::DEBUG))]
+#[instrument(fields(user_id), skip(state, auth_header, request, next), err(Debug, level = Level::ERROR))]
 pub async fn require_auth(
     State(state): State<Arc<AppState>>,
     auth_header: TypedHeader<Authorization<Bearer>>,
@@ -78,14 +78,12 @@ pub enum AuthError {
 
 impl IntoResponse for AuthError {
     fn into_response(self) -> axum::response::Response {
+        tracing::error!(error = ?self, "AuthError");
         match self {
-            AuthError::Jwk(err) => {
-                tracing::error!("Could not retrieve JWK set: {:?}", err);
-                match err.is_decode() {
-                    true => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
-                    false => (StatusCode::SERVICE_UNAVAILABLE).into_response(),
-                }
-            }
+            AuthError::Jwk(err) => match err.is_decode() {
+                true => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+                false => (StatusCode::SERVICE_UNAVAILABLE).into_response(),
+            },
             AuthError::Token(_) | AuthError::Other(_) => (StatusCode::UNAUTHORIZED).into_response(),
         }
     }
@@ -102,7 +100,7 @@ pub struct ConsolePath {
     pub console_id: Uuid,
 }
 
-#[instrument(skip_all, err(Debug, level = Level::DEBUG))]
+#[instrument(skip_all, err(Debug, level = Level::ERROR))]
 pub async fn validate_console_id(
     State(state): State<Arc<AppState>>,
     Path(ConsolePath { console_id }): Path<ConsolePath>,
@@ -121,7 +119,7 @@ pub struct ApiKeyPath {
     pub site_key: String,
 }
 
-#[instrument(skip_all, err(Debug, level = Level::DEBUG))]
+#[instrument(skip_all, err(Debug, level = Level::ERROR))]
 pub async fn validate_api_key(
     State(state): State<Arc<AppState>>,
     Path(ApiKeyPath { site_key }): Path<ApiKeyPath>,
@@ -146,6 +144,9 @@ pub async fn require_admin(
         "Bk9vgyK6FiQ0oMHDT3b4EfQoIVRDs3ZM@clients" |    // dev
         "google-oauth2|106674402838515911816"           // tiago@bitfashioned.com
             => next.run(request).await,
-        _ => StatusCode::FORBIDDEN.into_response(),
+        u => {
+            tracing::error!(user = u, "user not admin");
+            StatusCode::FORBIDDEN.into_response()
+        },
     }
 }
