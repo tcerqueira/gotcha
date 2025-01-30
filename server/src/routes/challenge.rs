@@ -45,6 +45,7 @@ pub struct ChallengeResults {
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub challenge: Url,
+    #[serde(default)]
     pub interactions: Vec<Interaction>,
 }
 
