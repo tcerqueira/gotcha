@@ -23,7 +23,7 @@ pub struct ResponseClaims {
     pub score: f32,
     pub addr: IpAddr,
     #[serde(with = "crate::serde::host_as_str")]
-    pub hostname: Host,
+    pub host: Host,
 }
 
 pub fn encode(response_claims: ResponseClaims, enc_key_b64: &str) -> anyhow::Result<String> {
