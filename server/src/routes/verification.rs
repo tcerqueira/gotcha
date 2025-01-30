@@ -76,7 +76,7 @@ pub async fn site_verify(
     Ok(Json(VerificationResponse {
         success: claims.custom.score >= 0.5 && solver_check,
         challenge_ts: *claims.iat(),
-        hostname: Some(claims.custom.hostname),
+        hostname: Some(claims.custom.host),
         error_codes: None,
     }))
 }

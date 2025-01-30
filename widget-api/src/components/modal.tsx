@@ -21,7 +21,11 @@ export default function Modal(props: ModalProps) {
   });
 
   return (
-    <dialog ref={(el) => (dialogRef = el)} onClose={props.onClose}>
+    <dialog
+      class="m-auto"
+      ref={(el) => (dialogRef = el)}
+      onClose={props.onClose}
+    >
       {props.children}
     </dialog>
   );

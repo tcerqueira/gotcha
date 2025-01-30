@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Crypto Faucet - Get Free Tokens</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: Arial, sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #13151a 0%, #1f2937 100%);
+                color: white;
+                padding: 20px;
+            }
+
+            .container {
+                text-align: center;
+                padding: 2rem;
+                background-color: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
+                border-radius: 16px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                width: 320px; /* Reduced width */
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                position: relative;
+                z-index: 1;
+            }
+
+            h1 {
+                font-size: 24px;
+                margin-bottom: 20px;
+                background: linear-gradient(45deg, #00f5a0 0%, #00d9f5 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            .wallet-input {
+                width: 100%;
+                padding: 12px;
+                margin: 1rem 0;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.05);
+                font-size: 14px;
+                color: white;
+                transition: all 0.3s ease;
+            }
+
+            .wallet-input:focus {
+                outline: none;
+                border-color: rgba(0, 245, 160, 0.5);
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            .wallet-input::placeholder {
+                color: rgba(255, 255, 255, 0.5);
+            }
+
+            .verify-button {
+                padding: 12px 24px;
+                font-size: 14px;
+                background: linear-gradient(45deg, #00f5a0, #00d9f5);
+                color: #13151a;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin: 1rem 0;
+                text-transform: uppercase;
+                font-weight: bold;
+                width: 160px; /* Reduced width */
+            }
+
+            .verify-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 245, 160, 0.3);
+            }
+
+            .verify-button:active {
+                transform: translateY(0);
+            }
+
+            .faucet-info {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 8px;
+                padding: 15px;
+                margin: 15px 0;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .faucet-info p {
+                margin: 5px 0;
+                font-size: 14px;
+                color: rgba(255, 255, 255, 0.9);
+            }
+
+            .timer {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.7);
+                margin: 10px 0;
+            }
+
+            .success-state,
+            .error-state {
+                display: none;
+                padding: 20px;
+                text-align: center;
+                animation: fadeIn 0.5s ease-in;
+            }
+
+            .icon {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 15px;
+            }
+
+            .success-icon {
+                background: linear-gradient(45deg, #00f5a0, #00d9f5);
+            }
+
+            .error-icon {
+                background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            }
+
+            .icon-symbol {
+                color: #13151a;
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .message {
+                color: white;
+                font-size: 18px;
+                margin: 10px 0;
+            }
+
+            .sub-message {
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 14px;
+                margin-top: 5px;
+            }
+
+            .try-again-button {
+                margin-top: 15px;
+                padding: 10px 20px;
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .try-again-button:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            .modal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8);
+                z-index: 1000;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .modal-content {
+                position: relative;
+                background-color: #1f2937;
+                padding: 20px;
+                border-radius: 12px;
+                text-align: center;
+                max-width: 95vw;
+                max-height: 95vh;
+                width: auto;
+                margin: 0;
+                overflow: auto;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .close {
+                position: absolute;
+                top: 10px;
+                right: 15px;
+                font-size: 24px;
+                cursor: pointer;
+                color: rgba(255, 255, 255, 0.5);
+                z-index: 1;
+            }
+
+            .close:hover {
+                color: rgba(255, 255, 255, 0.8);
+            }
+
+            #captcha-container {
+                display: inline-block;
+                margin: 10px 0;
+            }
+
+            .modal-title {
+                margin-top: 0;
+                margin-bottom: 15px;
+                padding-right: 20px;
+                color: white;
+                font-size: 18px;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                }
+                to {
+                    opacity: 1;
+                }
+            }
+
+            .fade-in {
+                animation: fadeIn 0.5s ease-in;
+            }
+
+            @keyframes tokenFall {
+                0% {
+                    transform: translateY(-100vh) rotate(0deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(100vh) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+
+            .token {
+                position: fixed;
+                width: 24px;
+                height: 24px;
+                background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMwMGY1YTAiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4IiBmaWxsPSIjMDBkOWY1Ii8+PC9zdmc+");
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            .gotcha-logo {
+                max-width: 80px; /* Reduced width */
+                margin: 1rem auto;
+                opacity: 0.7;
+                transition: opacity 0.3s ease;
+            }
+
+            .gotcha-logo:hover {
+                opacity: 1;
+            }
+
+            .powered-by {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.5);
+                margin-top: 1.5rem;
+            }
+
+            /* Responsive adjustments */
+            @media (max-width: 360px) {
+                .container {
+                    width: 100%;
+                    padding: 1.5rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Free Token Faucet</h1>
+
+            <div class="faucet-info">
+                <p>Available: 1000 TOKENS</p>
+                <p>Per Claim: 10 TOKENS</p>
+                <div class="timer">Next claim available in: 24:00:00</div>
+            </div>
+
+            <div id="verification-step">
+                <input
+                    type="text"
+                    class="wallet-input"
+                    placeholder="Enter your wallet address"
+                    required
+                />
+                <p>Complete verification to receive tokens</p>
+                <button class="verify-button" onclick="showCaptcha()">
+                    Claim Tokens
+                </button>
+
+                <div class="powered-by">
+                    <p>Protected by</p>
+                    <img
+                        src="gotcha_horizontal_logo_2.png"
+                        alt="Gotcha Logo"
+                        class="gotcha-logo"
+                    />
+                </div>
+            </div>
+
+            <div id="success-state" class="success-state">
+                <div class="icon success-icon">
+                    <span class="icon-symbol">✓</span>
+                </div>
+                <h2 class="message">Tokens Sent!</h2>
+                <p class="sub-message">
+                    10 TOKENS have been sent to your wallet
+                </p>
+            </div>
+
+            <div id="error-state" class="error-state">
+                <div class="icon error-icon">
+                    <span class="icon-symbol">!</span>
+                </div>
+                <h2 class="message">Verification Failed</h2>
+                <p class="sub-message">Please try again.</p>
+                <button class="try-again-button" onclick="showCaptcha()">
+                    Try Again
+                </button>
+            </div>
+        </div>
+
+        <div id="captchaModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <h2 class="modal-title">Complete Verification</h2>
+                <div id="captcha-container"></div>
+            </div>
+        </div>
+
+        <script src="http://localhost:8080/api.js?render=explicit"></script>
+        <script>
+            let captchaInitialized = false;
+            const SITEKEY =
+                "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
+            const SECRET =
+                "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
+
+            function showCaptcha() {
+                const modal = document.getElementById("captchaModal");
+                modal.style.display = "flex";
+
+                if (!captchaInitialized) {
+                    grecaptcha.render("captcha-container", {
+                        sitekey: SITEKEY,
+                        callback: onCaptchaResponse,
+                        "expired-callback": onCaptchaExpired,
+                        "error-callback": onCaptchaError,
+                    });
+                    captchaInitialized = true;
+                } else {
+                    grecaptcha.reset();
+                }
+            }
+
+            function closeModal() {
+                const modal = document.getElementById("captchaModal");
+                modal.style.display = "none";
+            }
+
+            function createTokenAnimation() {
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        const token = document.createElement("div");
+                        token.className = "token";
+                        token.style.left = `${Math.random() * 100}vw`;
+                        token.style.animation = `tokenFall ${1 + Math.random() * 2}s linear`;
+                        document.body.appendChild(token);
+
+                        token.addEventListener("animationend", () => {
+                            token.remove();
+                        });
+                    }, i * 100);
+                }
+            }
+
+            function showSuccessState() {
+                hideAllStates();
+                const successState = document.getElementById("success-state");
+                successState.style.display = "block";
+                successState.classList.add("fade-in");
+                createTokenAnimation();
+
+                updateTimer(24 * 60 * 60);
+
+                setTimeout(() => {
+                    location.reload();
+                }, 5000);
+            }
+
+            function showErrorState() {
+                hideAllStates();
+                const errorState = document.getElementById("error-state");
+                errorState.style.display = "block";
+                errorState.classList.add("fade-in");
+            }
+
+            function hideAllStates() {
+                document.getElementById("verification-step").style.display =
+                    "none";
+                document.getElementById("success-state").style.display = "none";
+                document.getElementById("error-state").style.display = "none";
+            }
+
+            async function verifyCaptcha(responseToken) {
+                try {
+                    const form = new FormData();
+                    form.append("secret", SECRET);
+                    form.append("response", responseToken);
+
+                    const response = await fetch(
+                        "http://localhost:8080/api/siteverify",
+                        {
+                            method: "POST",
+                            body: new URLSearchParams(form),
+                        },
+                    );
+
+                    if (!response.ok) {
+                        throw new Error("Verification failed");
+                    }
+
+                    const data = await response.json();
+                    return data.success === true;
+                } catch (error) {
+                    console.error("Verification error:", error);
+                    return false;
+                }
+            }
+
+            async function onCaptchaResponse(token) {
+                closeModal();
+
+                if (!token) {
+                    showErrorState();
+                    return;
+                }
+
+                const isVerified = await verifyCaptcha(token);
+
+                if (isVerified) {
+                    showSuccessState();
+                } else {
+                    showErrorState();
+                }
+            }
+
+            function onCaptchaExpired() {
+                closeModal();
+                showErrorState();
+            }
+
+            function onCaptchaError() {
+                closeModal();
+                showErrorState();
+            }
+
+            function updateTimer(seconds) {
+                const timerElement = document.querySelector(".timer");
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+
+                timerElement.textContent = `Next claim available in: ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+                if (seconds > 0) {
+                    setTimeout(() => updateTimer(seconds - 1), 1000);
+                }
+            }
+
+            window.onclick = function (event) {
+                const modal = document.getElementById("captchaModal");
+                if (event.target === modal) {
+                    closeModal();
+                }
+            };
+
+            // Initialize timer
+            updateTimer(24 * 60 * 60); // 24 hours in seconds
+        </script>
+    </body>
+</html>

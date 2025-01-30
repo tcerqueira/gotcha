@@ -77,7 +77,7 @@ pub async fn process_challenge(
 
     Ok(Json(ChallengeResponse {
         token: response_token::encode(
-            ResponseClaims { score, addr: addr.ip(), hostname: results.hostname },
+            ResponseClaims { score, addr: addr.ip(), host: results.hostname },
             &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                 .await
                 .context("failed to fecth encoding key by api secret while processing challenge")?
@@ -128,7 +128,7 @@ pub async fn process_pre_analysis(
         0.5..=1. => PreAnalysisResponse::Success {
             response: ChallengeResponse {
                 token: response_token::encode(
-                    ResponseClaims { score, addr: addr.ip(), hostname: results.hostname },
+                    ResponseClaims { score, addr: addr.ip(), host: results.hostname },
                     &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                         .await
                         .context(

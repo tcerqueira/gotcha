@@ -19,7 +19,7 @@ mod verify_site {
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
-                hostname: Host::parse("gotcha-integration.test.com")?,
+                host: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -46,11 +46,7 @@ mod verify_site {
         let addr = [127, 0, 0, 1].into();
 
         let token = response_token::encode(
-            ResponseClaims {
-                score: 0.75,
-                addr,
-                hostname: Host::parse("gotcha-integration.test.com")?,
-            },
+            ResponseClaims { score: 0.75, addr, host: Host::parse("gotcha-integration.test.com")? },
             &enc_key,
         )?;
 
@@ -82,7 +78,7 @@ mod verify_site {
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
-                hostname: Host::parse("gotcha-integration.test.com")?,
+                host: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -116,7 +112,7 @@ mod verify_site {
             ResponseClaims {
                 score: 0.3,
                 addr: [127, 0, 0, 1].into(),
-                hostname: Host::parse("gotcha-integration.test.com")?,
+                host: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -144,7 +140,7 @@ mod verify_site {
             ResponseClaims {
                 score: 1.,
                 addr: [127, 0, 0, 1].into(),
-                hostname: Host::parse("gotcha-integration.test.com")?,
+                host: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -224,7 +220,7 @@ mod verify_site {
             ResponseClaims {
                 score: 1.,
                 addr: [127, 0, 0, 1].into(),
-                hostname: Host::parse("gotcha-integration.test.com")?,
+                host: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -263,7 +259,7 @@ mod verify_site {
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
-                hostname: Host::parse("gotcha-integration.test.com")?,
+                host: Host::parse("gotcha-integration.test.com")?,
             },
             &enc_key,
         )?;
@@ -337,7 +333,7 @@ mod verify_site {
                 ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
-                    hostname: Host::parse("gotcha-integration.test.com")?,
+                    host: Host::parse("gotcha-integration.test.com")?,
                 },
                 &enc_key,
             )?;
@@ -401,7 +397,7 @@ mod verify_site {
                 &Claims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
-                    hostname: Host::parse("gotcha-integration.test.com")?,
+                    host: Host::parse("gotcha-integration.test.com")?,
                 }),
                 &EncodingKey::from_base64_secret(
                     "bXktd3Jvbmctc2VjcmV0", /* `my-wrong-secret` in base64 */
@@ -436,7 +432,7 @@ mod verify_site {
                 &Claims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
-                    hostname: Host::parse("gotcha-integration.test.com")?,
+                    host: Host::parse("gotcha-integration.test.com")?,
                 }),
                 &EncodingKey::from_base64_secret(&enc_key)?,
             )?;

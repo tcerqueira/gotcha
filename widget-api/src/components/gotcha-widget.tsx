@@ -141,7 +141,7 @@ export function GotchaWidget(props: GotchaWidgetProps) {
               <Match when={challenge()}>
                 <div class={`w-[${challenge()!.width}px]`}>
                   <iframe
-                    class="border-none overflow-hidden m-0 p-0 focus-visible:outline-none"
+                    class="border-4 rounded border-purple-200 overflow-hidden m-0 p-0 focus-visible:outline-none"
                     ref={(el) => (iframeElement = el)}
                     src={buildChallengeUrl(challenge()!.url, params)}
                     width={challenge()!.width}
