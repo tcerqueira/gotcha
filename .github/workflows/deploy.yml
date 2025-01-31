@@ -14,6 +14,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/master' && 'production' || 'preview' }}
     permissions:
       id-token: write
       contents: read
