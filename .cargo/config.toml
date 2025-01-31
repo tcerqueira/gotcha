@@ -16,5 +16,5 @@ watch-client = [
     "server/examples",
 ]
 build-lambda = "lambda build --release --arm64 --features aws-lambda"
-deploy-lambda = "lambda deploy gotcha-server --include dist/ --include config/"
+deploy-lambda = "lambda deploy --include dist/ --include config/"
 sqlx-prepare = "sqlx prepare --workspace -- --all-targets --all-features"

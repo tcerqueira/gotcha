@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - dev
   workflow_dispatch:
 
 env:
@@ -59,7 +60,7 @@ jobs:
           SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
           SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
         run: |
-          cargo deploy-lambda \
+          cargo deploy-lambda --binary-name gotcha-server gotcha-server-${{ vars.ENV_TAG }} \
             --env-var APP_DATABASE__HOST=${{ secrets.SUPABASE_HOST }} \
             --env-var APP_DATABASE__USERNAME=${{ secrets.SUPABASE_USER }} \
             --env-var APP_DATABASE__PASSWORD=${{ secrets.SUPABASE_PASSWORD }} \
