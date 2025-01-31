@@ -64,7 +64,7 @@ jobs:
           cargo deploy-lambda --binary-name gotcha-server gotcha-server-${{ vars.ENV_TAG }} \
             --env-var APP_DATABASE__HOST=${{ secrets.SUPABASE_HOST }} \
             --env-var APP_DATABASE__USERNAME=${{ secrets.SUPABASE_USER }} \
-            --env-var APP_DATABASE__PASSWORD=${{ secrets.SUPABASE_PASSWORD }} \
+            --env-var APP_DATABASE__PASSWORD=${{ secrets.SUPABASE_SECRET }} \
             --env-var APP_DATABASE__DATABASE_NAME=${{ secrets.SUPABASE_DB_NAME }} \
             --env-var APP_DATABASE__PORT=${{ secrets.SUPABASE_PORT }} \
 
