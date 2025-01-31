@@ -38,6 +38,11 @@ jobs:
         with:
           crate: sqlx-cli
 
+      - name: Build lambda function
+        env:
+          SQLX_OFFLINE: true
+        run: cargo build-lambda
+
       - uses: actions/cache@v3
         with:
           path: |
@@ -48,23 +53,16 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build lambda function
-        env:
-          SQLX_OFFLINE: true
-        run: cargo build-lambda
-
       - name: Deploy lambda Function
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-          SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
-          SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
         run: |
           cargo deploy-lambda --binary-name gotcha-server gotcha-server-${{ vars.ENV_TAG }} \
             --env-var APP_DATABASE__HOST=${{ secrets.SUPABASE_HOST }} \
             --env-var APP_DATABASE__USERNAME=${{ secrets.SUPABASE_USER }} \
-            --env-var APP_DATABASE__PASSWORD=${{ secrets.SUPABASE_SECRET }} \
+            --env-var APP_DATABASE__PASSWORD=${{ secrets.SUPABASE_PASSWORD }} \
             --env-var APP_DATABASE__DATABASE_NAME=${{ secrets.SUPABASE_DB_NAME }} \
             --env-var APP_DATABASE__PORT=${{ secrets.SUPABASE_PORT }} \
 
@@ -76,7 +74,9 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
         run: |
           npm ci
-          npm run cdk deploy -- --require-approval never
+          stage=${{ vars.ENV_TAG }}
+          stage=$(tr '[:lower:]' '[:upper:]' <<< ${stage:0:1})${stage:1}
+          npm run cdk deploy $(echo $stage)/GotchaServerStack -- --require-approval never
 
       - name: Run Migrations
         env:
