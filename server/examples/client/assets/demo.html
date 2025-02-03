@@ -346,7 +346,7 @@
             </div>
         </div>
 
-        <script src="http://localhost:8080/api.js?render=explicit"></script>
+        <script src="https://dxwccqlvo8.execute-api.us-east-1.amazonaws.com/api.js?render=explicit"></script>
         <script>
             let captchaInitialized = false;
             const SITEKEY =
@@ -427,7 +427,7 @@
                     form.append("response", responseToken);
 
                     const response = await fetch(
-                        "http://localhost:8080/api/siteverify",
+                        "https://dxwccqlvo8.execute-api.us-east-1.amazonaws.com/api/siteverify",
                         {
                             method: "POST",
                             body: new URLSearchParams(form),
