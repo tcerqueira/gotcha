@@ -2,6 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, FnArg, ItemFn, Pat, PatType, ReturnType};
 
+// TODO: unchatGPT this hot garbage code
 #[proc_macro_attribute]
 pub fn integration_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);

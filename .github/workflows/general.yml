@@ -74,7 +74,10 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo build-lambda
+      - name: Build lambda function
+        env:
+          SQLX_OFFLINE: true
+        run: cargo build-lambda
 
   fmt:
     name: Rustfmt

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - dev
   workflow_dispatch:
 
 env:
@@ -13,6 +14,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/master' && 'production' || 'preview' }}
     permissions:
       id-token: write
       contents: read
@@ -36,6 +38,11 @@ jobs:
         with:
           crate: sqlx-cli
 
+      - name: Build lambda function
+        env:
+          SQLX_OFFLINE: true
+        run: cargo build-lambda
+
       - uses: actions/cache@v3
         with:
           path: |
@@ -46,30 +53,18 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build lambda function
-        env:
-          SQLX_OFFLINE: true
-        run: cargo build-lambda
-
       - name: Deploy lambda Function
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-          SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
-          SUPABASE_PORT: ${{ secrets.SUPABASE_PORT }}
-          SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
-          SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
-          SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
-          ADMIN_AUTH_KEY: ${{ secrets.ADMIN_AUTH_KEY }}
         run: |
-          cargo deploy-lambda \
-            --env-var APP_DATABASE__HOST=$SUPABASE_HOST \
-            --env-var APP_DATABASE__USERNAME=$SUPABASE_USER \
-            --env-var APP_DATABASE__PASSWORD=$SUPABASE_PASSWORD \
-            --env-var APP_DATABASE__DATABASE_NAME=$SUPABASE_DB_NAME \
-            --env-var APP_DATABASE__PORT=$SUPABASE_PORT \
-            --env-var APP_APPLICATION__ADMIN_AUTH_KEY=$ADMIN_AUTH_KEY \
+          cargo deploy-lambda --binary-name gotcha-server gotcha-server-${{ vars.ENV_TAG }} \
+            --env-var APP_DATABASE__HOST=${{ secrets.SUPABASE_HOST }} \
+            --env-var APP_DATABASE__USERNAME=${{ secrets.SUPABASE_USER }} \
+            --env-var APP_DATABASE__PASSWORD=${{ secrets.SUPABASE_PASSWORD }} \
+            --env-var APP_DATABASE__DATABASE_NAME=${{ secrets.SUPABASE_DB_NAME }} \
+            --env-var APP_DATABASE__PORT=${{ secrets.SUPABASE_PORT }} \
 
       - name: Deploy CDK stack
         working-directory: ./infra/gotcha-server
@@ -79,7 +74,9 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
         run: |
           npm ci
-          npm run cdk deploy -- --require-approval never
+          stage=${{ vars.ENV_TAG }}
+          stage=$(tr '[:lower:]' '[:upper:]' <<< ${stage:0:1})${stage:1}
+          npm run cdk deploy $(echo $stage)/GotchaServerStack -- --require-approval never
 
       - name: Run Migrations
         env:
