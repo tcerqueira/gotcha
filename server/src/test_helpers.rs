@@ -14,7 +14,7 @@ use crate::{
 };
 
 const DEMO_CONSOLE_LABEL_PREFIX: &str = "console_for_integration_tests";
-const DEMO_USER: &str = "Bk9vgyK6FiQ0oMHDT3b4EfQoIVRDs3ZM@clients";
+const DEMO_USER: &str = "hHgkLidgUrzw6rv1ujDn1rvK9BM2DzVl@clients";
 
 #[derive(Debug, Clone)]
 pub struct TestContext {
@@ -185,7 +185,7 @@ pub async fn auth_jwt() -> &'static str {
     AUTH_JWT
         .get_or_init(|| async {
             HTTP_CLIENT
-                .post("https://dev-650a4wh1mgk55eiy.us.auth0.com/oauth/token")
+                .post("https://dev-gptk3ouno03gtjgs.us.auth0.com/oauth/token")
                 .json(&TokenRequest {
                     client_id: std::env::var("TEST_AUTH_CLIENT_ID")
                         .expect("env var TEST_AUTH_CLIENT_ID")
@@ -193,7 +193,7 @@ pub async fn auth_jwt() -> &'static str {
                     client_secret: std::env::var("TEST_AUTH_CLIENT_SECRET")
                         .expect("env var TEST_AUTH_CLIENT_SECRET")
                         .leak(),
-                    audience: "https://console-rust-backend",
+                    audience: "https://gotcha.land/",
                     grant_type: "client_credentials",
                 })
                 .send()

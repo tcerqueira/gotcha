@@ -41,7 +41,7 @@ pub async fn require_auth(
         .await?;
 
     let mut validation = Validation::new(jsonwebtoken::Algorithm::RS256);
-    validation.set_audience(&["https://console-rust-backend"]);
+    validation.set_audience(&["https://gotcha.land/"]);
     validation.set_required_spec_claims(&["exp", "aud", "iss", "sub"]);
 
     let claims = jsonwebtoken::decode::<AuthClaims>(
@@ -141,8 +141,8 @@ pub async fn require_admin(
     next: Next,
 ) -> Response {
     match user_id.as_ref() {
-        "Bk9vgyK6FiQ0oMHDT3b4EfQoIVRDs3ZM@clients" |    // dev
-        "google-oauth2|106674402838515911816"           // tiago@bitfashioned.com
+        "google-oauth2|106674402838515911816"      |    // tiago@bitfashioned.com
+        "hHgkLidgUrzw6rv1ujDn1rvK9BM2DzVl@clients"      // dev
             => next.run(request).await,
         u => {
             tracing::error!(user = u, "user not admin");
