@@ -1,6 +1,6 @@
 application:
   host: 0.0.0.0
   port: 8080
-  auth_origin: "https://dev-650a4wh1mgk55eiy.us.auth0.com"
+  auth_origin: "https://dev-gptk3ouno03gtjgs.us.auth0.com"
 database:
   require_ssl: false

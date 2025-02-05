@@ -50,15 +50,12 @@ pub fn integration_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     // Handle return type
-    let (return_type, is_result) = match &input.sig.output {
-        ReturnType::Default => (quote!(()), false),
-        ReturnType::Type(_, ty) => {
-            let type_str = quote!(#ty).to_string();
-            (quote!(#ty), type_str.contains("Result"))
-        }
+    let return_type = match &input.sig.output {
+        ReturnType::Default => None,
+        ReturnType::Type(_, ty) => Some(quote!(#ty)),
     };
 
-    let output = if is_result {
+    let output = if return_type.is_some() {
         quote! {
             #(#attrs)*
             #[tokio::test]
