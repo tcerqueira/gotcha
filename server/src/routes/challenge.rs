@@ -71,7 +71,10 @@ pub async fn process_challenge(
     let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
     tracing::debug!("interaction analysis: Score({:?})", score);
     let score = match results.success {
-        true => score,
+        true => {
+            tracing::warn!("interaction analysis disabled");
+            1.
+        }
         false => 0.,
     };
 
