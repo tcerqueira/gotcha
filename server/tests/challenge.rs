@@ -1,9 +1,12 @@
 use gotcha_server::{
-    response_token::Claims,
     routes::challenge::{ChallengeResponse, ChallengeResults, GetChallenge, PreAnalysisResponse},
+    tokens::{
+        response::{ResponseClaims, JWT_RESPONSE_ALGORITHM},
+        Claims,
+    },
     HTTP_CLIENT,
 };
-use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
+use jsonwebtoken::{DecodingKey, Validation};
 use reqwest::StatusCode;
 use url::{Host, Url};
 
@@ -39,12 +42,13 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
     assert_eq!(response.status(), StatusCode::OK);
 
     let ChallengeResponse { token } = response.json().await?;
-    let token_data: TokenData<Claims> = jsonwebtoken::decode(
+    eprintln!("{token}");
+    let token_data = jsonwebtoken::decode::<Claims<ResponseClaims>>(
         &token,
         &DecodingKey::from_base64_secret(&enc_key)?,
-        &Validation::new(Algorithm::HS256),
+        &Validation::new(JWT_RESPONSE_ALGORITHM),
     )?;
-    assert_eq!(token_data.header.alg, Algorithm::HS256);
+    assert_eq!(token_data.header.alg, JWT_RESPONSE_ALGORITHM);
     // assert!(token_data.claims.custom.score >= 0.5);
 
     Ok(())
@@ -70,12 +74,13 @@ async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     let ChallengeResponse { token } = response.json().await?;
-    let token_data = jsonwebtoken::decode::<Claims>(
+    eprintln!("{token}");
+    let token_data = jsonwebtoken::decode::<Claims<ResponseClaims>>(
         &token,
         &DecodingKey::from_base64_secret(&enc_key)?,
-        &Validation::new(Algorithm::HS256),
+        &Validation::new(JWT_RESPONSE_ALGORITHM),
     )?;
-    assert_eq!(token_data.header.alg, Algorithm::HS256);
+    assert_eq!(token_data.header.alg, JWT_RESPONSE_ALGORITHM);
     assert!(token_data.claims.custom.score == 0.);
 
     Ok(())

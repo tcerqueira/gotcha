@@ -24,10 +24,10 @@ pub mod configuration;
 pub mod crypto;
 pub mod db;
 pub mod extractors;
-pub mod response_token;
 pub mod routes;
 mod serde;
 pub mod test_helpers;
+pub mod tokens;
 
 pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 pub static HTTP_CACHE_CLIENT: LazyLock<ClientWithMiddleware> = LazyLock::new(|| {

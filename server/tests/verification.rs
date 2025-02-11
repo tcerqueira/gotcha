@@ -2,8 +2,8 @@ mod verify_site {
     use std::net::IpAddr;
 
     use gotcha_server::{
-        response_token::{self, ResponseClaims},
         routes::verification::{ErrorCodes, VerificationResponse},
+        tokens::response::{self, ResponseClaims},
         HTTP_CLIENT,
     };
     use reqwest::StatusCode;
@@ -15,7 +15,7 @@ mod verify_site {
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
@@ -45,7 +45,7 @@ mod verify_site {
         let enc_key = server.db_enconding_key().await;
         let addr = [127, 0, 0, 1].into();
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims { score: 0.75, addr, host: Host::parse("gotcha-integration.test.com")? },
             &enc_key,
         )?;
@@ -74,7 +74,7 @@ mod verify_site {
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
@@ -108,7 +108,7 @@ mod verify_site {
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 0.3,
                 addr: [127, 0, 0, 1].into(),
@@ -136,7 +136,7 @@ mod verify_site {
         let port = server.port();
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 1.,
                 addr: [127, 0, 0, 1].into(),
@@ -216,7 +216,7 @@ mod verify_site {
         let port = server.port();
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 1.,
                 addr: [127, 0, 0, 1].into(),
@@ -255,7 +255,7 @@ mod verify_site {
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
@@ -313,11 +313,12 @@ mod verify_site {
         Ok(())
     }
 
-    mod response {
+    mod response_token {
         use std::time::Duration;
 
+        use gotcha_server::tokens::Claims;
         use jsonwebtoken::{EncodingKey, Header};
-        use response_token::{Claims, JWT_ALGORITHM};
+        use response::JWT_RESPONSE_ALGORITHM;
         use url::Host;
 
         use super::*;
@@ -328,14 +329,14 @@ mod verify_site {
             let secret = server.db_api_secret().await;
             let enc_key = server.db_enconding_key().await;
 
-            let token = response_token::encode_with_timeout(
-                Duration::from_secs(0),
+            let token = response::encode_with_timeout(
                 ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
                     host: Host::parse("gotcha-integration.test.com")?,
                 },
                 &enc_key,
+                Duration::from_secs(0),
             )?;
             // expired by 1 second
             tokio::time::sleep(Duration::from_secs(1)).await;
@@ -393,7 +394,7 @@ mod verify_site {
             let secret = server.db_api_secret().await;
 
             let token = jsonwebtoken::encode(
-                &Header::new(JWT_ALGORITHM),
+                &Header::new(JWT_RESPONSE_ALGORITHM),
                 &Claims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),

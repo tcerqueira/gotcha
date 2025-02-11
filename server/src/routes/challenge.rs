@@ -11,8 +11,12 @@ use url::{Host, Url};
 use super::errors::ChallengeError;
 use crate::analysis::interaction::{Interaction, Score};
 use crate::extractors::ThisOrigin;
-use crate::{analysis, db, response_token, AppState};
-use crate::{db::DbChallenge, response_token::ResponseClaims};
+use crate::{
+    analysis,
+    db::{self, DbChallenge},
+    tokens::response::{self, ResponseClaims},
+    AppState,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetChallenge {
@@ -79,14 +83,15 @@ pub async fn process_challenge(
     };
 
     Ok(Json(ChallengeResponse {
-        token: response_token::encode(
+        token: response::encode(
             ResponseClaims { score, addr: addr.ip(), host: results.hostname },
             &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                 .await
                 .context("failed to fecth encoding key by api secret while processing challenge")?
                 .ok_or(ChallengeError::InvalidSecret)?
                 .encoding_key,
-        )?,
+        )
+        .context("failed encoding jwt response")?,
     }))
 }
 
@@ -125,12 +130,12 @@ pub async fn process_pre_analysis(
     let response = match score {
         _ => PreAnalysisResponse::Failure,
         // For now, assume pre-analysis always fails
-        #[allow(unreachable_patterns)]
+        #[expect(unreachable_patterns)]
         0f32..0.5 => PreAnalysisResponse::Failure,
-        #[allow(unreachable_patterns)]
+        #[expect(unreachable_patterns)]
         0.5..=1. => PreAnalysisResponse::Success {
             response: ChallengeResponse {
-                token: response_token::encode(
+                token: response::encode(
                     ResponseClaims { score, addr: addr.ip(), host: results.hostname },
                     &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                         .await
@@ -139,10 +144,11 @@ pub async fn process_pre_analysis(
                         )?
                         .ok_or(ChallengeError::InvalidSecret)?
                         .encoding_key,
-                )?,
+                )
+                .context("failed encoding jwt response")?,
             },
         },
-        #[allow(unreachable_patterns)]
+        #[expect(unreachable_patterns)]
         _ => {
             return Err(ChallengeError::Unexpected(anyhow::anyhow!(
                 "score not in range [0.0 .. 1.0]"

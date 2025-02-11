@@ -12,7 +12,7 @@ use tracing::{instrument, Level};
 use url::Host;
 
 use super::errors::VerificationError;
-use crate::{db, response_token, AppState};
+use crate::{db, tokens::response, AppState};
 
 #[derive(Debug)]
 pub struct VerificationRequest {
@@ -62,7 +62,7 @@ pub async fn site_verify(
         ]))?
         .encoding_key;
 
-    let claims = response_token::decode(&verification.response, &enc_key)
+    let claims = response::decode(&verification.response, &enc_key)
         .map_err(|err| match err.into_kind() {
             ErrorKind::ExpiredSignature => ErrorCodes::TimeoutOrDuplicate,
             _ => ErrorCodes::InvalidInputResponse,
