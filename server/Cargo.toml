@@ -43,6 +43,7 @@ base64 = "0.22"
 fitting = "0.5"
 url = { version = "2", features = ["serde"] }
 lambda_http = { version = "0.13", optional = true }
+sha2 = "0.10"
 
 [dev-dependencies]
 gotcha-server-macros = { path = "../server-macros" }
