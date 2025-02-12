@@ -1,4 +1,5 @@
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 use time::OffsetDateTime;
@@ -11,7 +12,7 @@ pub enum PowError {
     DifficultyNotMet,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PowChallenge {
     pub nonce: u64,
     pub difficulty: u16,

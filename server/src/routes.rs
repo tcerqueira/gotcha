@@ -5,7 +5,9 @@ use axum::{
     routing::{delete, get, patch, post},
     Router,
 };
-use challenge::{get_challenge, process_challenge, process_pre_analysis};
+use challenge::{
+    get_challenge, get_proof_of_work_challenge, process_challenge, process_pre_analysis,
+};
 use console::{
     create_console, delete_console, gen_api_key, get_api_keys, get_consoles, revoke_api_key,
     update_api_key, update_console,
@@ -19,6 +21,7 @@ pub mod admin;
 pub mod challenge;
 pub mod console;
 mod errors;
+pub mod extractors;
 pub mod middleware;
 pub mod verification;
 
@@ -26,6 +29,7 @@ pub fn challenge(state: &Arc<AppState>) -> Router {
     let state = Arc::clone(state);
     Router::new()
         .route("/", get(get_challenge))
+        .route("/proof-of-work", get(get_proof_of_work_challenge))
         .route("/process", post(process_challenge))
         .route("/process-pre-analysis", post(process_pre_analysis))
         .with_state(state)

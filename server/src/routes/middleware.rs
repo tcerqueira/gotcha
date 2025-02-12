@@ -17,7 +17,7 @@ use thiserror::Error;
 use tracing::{instrument, Level};
 use uuid::Uuid;
 
-use crate::{db, extractors::User, AppState, HTTP_CACHE_CLIENT};
+use crate::{db, routes::extractors::User, AppState, HTTP_CACHE_CLIENT};
 
 use super::errors::ConsoleError;
 

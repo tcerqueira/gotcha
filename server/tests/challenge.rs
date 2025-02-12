@@ -1,5 +1,7 @@
 use gotcha_server::{
-    routes::challenge::{ChallengeResponse, ChallengeResults, GetChallenge, PreAnalysisResponse},
+    routes::challenge::{
+        ChallengeResponse, ChallengeResults, GetChallenge, PowResponse, PreAnalysisResponse,
+    },
     tokens::{
         response::{ResponseClaims, JWT_RESPONSE_ALGORITHM},
         Claims,
@@ -154,6 +156,40 @@ async fn process_pre_analysis_failure(server: TestContext) -> anyhow::Result<()>
 
     let response: PreAnalysisResponse = response.json().await?;
     assert!(matches!(response, PreAnalysisResponse::Failure));
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn proof_of_work_challenge(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let site_key = server.db_api_site_key().await;
+
+    let response = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/challenge/proof-of-work?site_key={site_key}"
+        ))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let response: PowResponse = response.json().await?;
+    assert!(!response.token.is_empty());
+
+    Ok(())
+}
+
+#[gotcha_server_macros::integration_test]
+async fn proof_of_work_challenge_no_site_key(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+
+    let response = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/challenge/proof-of-work"
+        ))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
     Ok(())
 }

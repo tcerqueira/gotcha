@@ -12,8 +12,8 @@ use super::verification::{ErrorCodes, VerificationResponse};
 
 #[derive(Debug, Error)]
 pub enum ChallengeError {
-    #[error("Invalid secret")]
-    InvalidSecret,
+    #[error("Invalid key")]
+    InvalidKey,
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
     #[error(transparent)]
@@ -27,9 +27,7 @@ impl IntoResponse for ChallengeError {
             ChallengeError::Unexpected(_) | ChallengeError::Sql(_) => {
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
-            ChallengeError::InvalidSecret => {
-                (StatusCode::FORBIDDEN, self.to_string()).into_response()
-            }
+            ChallengeError::InvalidKey => (StatusCode::FORBIDDEN, self.to_string()).into_response(),
         }
     }
 }

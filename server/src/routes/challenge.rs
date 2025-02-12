@@ -2,15 +2,17 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::extract::ConnectInfo;
+use axum::extract::{ConnectInfo, Query};
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Level};
 use url::{Host, Url};
 
 use super::errors::ChallengeError;
+use super::extractors::ThisOrigin;
 use crate::analysis::interaction::{Interaction, Score};
-use crate::extractors::ThisOrigin;
+use crate::analysis::proof_of_work::PowChallenge;
+use crate::tokens::pow_challenge;
 use crate::{
     analysis,
     db::{self, DbChallenge},
@@ -40,6 +42,33 @@ pub async fn get_challenge(
     });
 
     Ok(Json(challenge.try_into()?))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PowSiteKey {
+    pub site_key: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PowResponse {
+    pub token: String,
+}
+
+#[instrument(skip(state), err(Debug, level = Level::ERROR))]
+pub async fn get_proof_of_work_challenge(
+    Query(query): Query<PowSiteKey>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<PowResponse>, ChallengeError> {
+    let enc_key = db::fetch_api_key_by_site_key(&state.pool, &query.site_key)
+        .await
+        .context("failed to fecth encoding key by api secret while processing challenge")?
+        .ok_or(ChallengeError::InvalidKey)?
+        .encoding_key;
+
+    Ok(Json(PowResponse {
+        token: pow_challenge::encode(PowChallenge::gen(4), &enc_key)
+            .context("failed encoding jwt response")?,
+    }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,7 +117,7 @@ pub async fn process_challenge(
             &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                 .await
                 .context("failed to fecth encoding key by api secret while processing challenge")?
-                .ok_or(ChallengeError::InvalidSecret)?
+                .ok_or(ChallengeError::InvalidKey)?
                 .encoding_key,
         )
         .context("failed encoding jwt response")?,
@@ -142,7 +171,7 @@ pub async fn process_pre_analysis(
                         .context(
                             "failed to fecth encoding key by api secret while processing challenge",
                         )?
-                        .ok_or(ChallengeError::InvalidSecret)?
+                        .ok_or(ChallengeError::InvalidKey)?
                         .encoding_key,
                 )
                 .context("failed encoding jwt response")?,

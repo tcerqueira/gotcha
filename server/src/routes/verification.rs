@@ -43,7 +43,7 @@ pub enum ErrorCodes {
     TimeoutOrDuplicate,
 }
 
-#[instrument(skip(state), ret(Debug, level = Level::INFO))]
+#[instrument(skip(state), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR))]
 pub async fn site_verify(
     State(state): State<Arc<AppState>>,
     WithRejection(Form(verification), _): WithRejection<
@@ -130,8 +130,14 @@ impl Display for VerificationResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "verification: challenge loaded at {} in `{:?}` - {:?}",
-            self.challenge_ts, self.hostname, self.error_codes
+            "verification: challenge {}, loaded at {} in `{:?}` - {:?}",
+            match self.success {
+                true => "solved successfully",
+                false => "failed",
+            },
+            self.challenge_ts,
+            self.hostname,
+            self.error_codes
         )
     }
 }

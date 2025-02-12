@@ -4,6 +4,7 @@ use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use time::OffsetDateTime;
 
+pub mod pow_challenge;
 pub mod response;
 
 #[derive(Debug, Serialize, Deserialize)]

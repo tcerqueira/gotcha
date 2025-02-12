@@ -9,11 +9,10 @@ use serde::{Deserialize, Serialize};
 use tracing::{instrument, Level};
 use uuid::Uuid;
 
-use super::errors::ConsoleError;
+use super::{errors::ConsoleError, extractors::User};
 use crate::{
     crypto::{self, KEY_SIZE},
     db::{self, DbApiKey, DbConsole, DbUpdateApiKey, DbUpdateConsole, RowsAffected},
-    extractors::User,
     AppState,
 };
 
