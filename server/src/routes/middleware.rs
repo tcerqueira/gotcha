@@ -11,13 +11,13 @@ use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
-use jsonwebtoken::{jwk::JwkSet, DecodingKey, Validation};
+use jsonwebtoken::{jwk::JwkSet, DecodingKey};
 use serde::Deserialize;
 use thiserror::Error;
 use tracing::{instrument, Level};
 use uuid::Uuid;
 
-use crate::{db, routes::extractors::User, AppState, HTTP_CACHE_CLIENT};
+use crate::{db, routes::extractors::User, tokens, AppState, HTTP_CACHE_CLIENT};
 
 use super::errors::ConsoleError;
 
@@ -28,10 +28,10 @@ pub async fn require_auth(
     mut request: Request,
     next: Next,
 ) -> Result<Response, AuthError> {
-    tracing::trace!(auth_header = ?auth_header);
+    tracing::debug!(auth_header = ?auth_header);
     let token = auth_header.token();
     let header = jsonwebtoken::decode_header(token)?;
-    let kid = header.kid.context("kid not present in header")?;
+    let kid = header.kid.context("kid not present in token header")?;
 
     let jwks: JwkSet = HTTP_CACHE_CLIENT
         .get(format!("{}/.well-known/jwks.json", state.auth_origin))
@@ -40,30 +40,21 @@ pub async fn require_auth(
         .json()
         .await?;
 
-    let mut validation = Validation::new(jsonwebtoken::Algorithm::RS256);
-    validation.set_audience(&["https://gotcha.land/"]);
-    validation.set_required_spec_claims(&["exp", "aud", "iss", "sub"]);
-
-    let claims = jsonwebtoken::decode::<AuthClaims>(
+    let claims = tokens::auth::decode(
         token,
         &DecodingKey::from_jwk(
             jwks.find(&kid)
                 .with_context(|| format!("kid {} not found in jwks", kid))?,
         )
         .context("could not create decoding key from JWK")?,
-        &validation,
     )?;
-    tracing::Span::current().record("user_id", &claims.claims.sub);
 
+    tracing::Span::current().record("user_id", claims.sub());
     request
         .extensions_mut()
-        .insert(User { user_id: Arc::from(claims.claims.sub) });
-    Ok(next.run(request).await)
-}
+        .insert(User { user_id: Arc::from(claims.sub()) });
 
-#[derive(Debug, Deserialize)]
-struct AuthClaims {
-    sub: String,
+    Ok(next.run(request).await)
 }
 
 #[derive(Debug, Error)]

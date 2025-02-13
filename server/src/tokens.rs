@@ -1,73 +1,40 @@
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use jsonwebtoken::Validation;
+use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+use url::Url;
 
+pub mod auth;
 pub mod pow_challenge;
 pub mod response;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Claims<T> {
+pub struct TimeClaims<T> {
     #[serde(with = "time::serde::timestamp")]
     exp: OffsetDateTime,
     #[serde(with = "time::serde::timestamp")]
     iat: OffsetDateTime,
     #[serde(flatten)]
-    pub custom: T,
+    pub other: T,
 }
 
-fn encode<T: Serialize>(
-    alg: Algorithm,
-    custom_claims: T,
-    enc_key_b64: &str,
-) -> Result<String, jsonwebtoken::errors::Error> {
-    jsonwebtoken::encode(
-        &Header::new(alg),
-        &Claims::new(custom_claims),
-        &EncodingKey::from_base64_secret(enc_key_b64)?,
-    )
-}
-
-fn encode_with_timeout<T: Serialize>(
-    alg: Algorithm,
-    custom_claims: T,
-    enc_key_b64: &str,
-    timeout: Duration,
-) -> Result<String, jsonwebtoken::errors::Error> {
-    jsonwebtoken::encode(
-        &Header::new(alg),
-        &Claims::with_timeout(timeout, custom_claims),
-        &EncodingKey::from_base64_secret(enc_key_b64)?,
-    )
-}
-
-fn decode<T: DeserializeOwned>(
-    alg: Algorithm,
-    jwt: &str,
-    dec_key_b64: &str,
-) -> Result<Claims<T>, jsonwebtoken::errors::Error> {
-    let mut validation = Validation::new(alg);
-    validation.leeway = 0;
-
-    jsonwebtoken::decode::<Claims<T>>(
-        jwt,
-        &DecodingKey::from_base64_secret(dec_key_b64)?,
-        &validation,
-    )
-    .map(|tok| tok.claims)
-}
-
-impl<T> Claims<T> {
+impl<T> TimeClaims<T> {
     pub const TIMEOUT_SECS: u64 = 30;
 
-    pub fn new(custom_claims: T) -> Self {
-        Self::with_timeout(Duration::from_secs(Self::TIMEOUT_SECS), custom_claims)
+    pub fn new(other_claims: T) -> Self {
+        Self::with_timeout(Duration::from_secs(Self::TIMEOUT_SECS), other_claims)
     }
 
-    pub fn with_timeout(timeout: Duration, custom_claims: T) -> Self {
+    pub fn with_timeout(timeout: Duration, other_claims: T) -> Self {
         let now = OffsetDateTime::now_utc();
-        Self { exp: now + timeout, iat: now, custom: custom_claims }
+        Self { exp: now + timeout, iat: now, other: other_claims }
+    }
+
+    pub fn build_validation(validation: &mut Validation) {
+        validation.required_spec_claims.insert("exp".into());
+        validation.validate_exp = true;
+        validation.leeway = 0;
     }
 
     pub fn exp(&self) -> &OffsetDateTime {
@@ -76,5 +43,43 @@ impl<T> Claims<T> {
 
     pub fn iat(&self) -> &OffsetDateTime {
         &self.iat
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthClaims<T> {
+    #[serde(
+        with = "crate::serde::single_or_sequence",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    aud: Vec<Url>,
+    sub: String,
+    iss: String,
+    #[serde(flatten)]
+    pub other: T,
+}
+
+impl<T> AuthClaims<T> {
+    pub fn build_validation(validation: &mut Validation) {
+        validation
+            .required_spec_claims
+            .extend(["aud".into(), "iss".into(), "sub".into()]);
+        validation
+            .aud
+            .get_or_insert_with(HashSet::default)
+            .insert("https://gotcha.land/".into());
+        validation.validate_aud = true;
+    }
+
+    pub fn sub(&self) -> &str {
+        &self.sub
+    }
+
+    pub fn iss(&self) -> &str {
+        &self.iss
+    }
+
+    pub fn aud(&self) -> &[Url] {
+        &self.aud
     }
 }

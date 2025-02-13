@@ -4,7 +4,7 @@ use gotcha_server::{
     },
     tokens::{
         response::{ResponseClaims, JWT_RESPONSE_ALGORITHM},
-        Claims,
+        TimeClaims,
     },
     HTTP_CLIENT,
 };
@@ -45,7 +45,7 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
 
     let ChallengeResponse { token } = response.json().await?;
     eprintln!("{token}");
-    let token_data = jsonwebtoken::decode::<Claims<ResponseClaims>>(
+    let token_data = jsonwebtoken::decode::<TimeClaims<ResponseClaims>>(
         &token,
         &DecodingKey::from_base64_secret(&enc_key)?,
         &Validation::new(JWT_RESPONSE_ALGORITHM),
@@ -77,13 +77,13 @@ async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
 
     let ChallengeResponse { token } = response.json().await?;
     eprintln!("{token}");
-    let token_data = jsonwebtoken::decode::<Claims<ResponseClaims>>(
+    let token_data = jsonwebtoken::decode::<TimeClaims<ResponseClaims>>(
         &token,
         &DecodingKey::from_base64_secret(&enc_key)?,
         &Validation::new(JWT_RESPONSE_ALGORITHM),
     )?;
     assert_eq!(token_data.header.alg, JWT_RESPONSE_ALGORITHM);
-    assert!(token_data.claims.custom.score == 0.);
+    assert!(token_data.claims.other.score == 0.);
 
     Ok(())
 }

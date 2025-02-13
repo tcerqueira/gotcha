@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn successful_verify_solution() {
-        let challenge = PowChallenge::gen(5);
+        let challenge = PowChallenge::gen(4);
 
         let solution = challenge.solve();
 
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn failed_verify_solution() {
-        let challenge = PowChallenge::gen(5);
+        let challenge = PowChallenge::gen(4);
 
         let solution = challenge.solve() - 1;
 

@@ -316,7 +316,7 @@ mod verify_site {
     mod response_token {
         use std::time::Duration;
 
-        use gotcha_server::tokens::Claims;
+        use gotcha_server::tokens::TimeClaims;
         use jsonwebtoken::{EncodingKey, Header};
         use response::JWT_RESPONSE_ALGORITHM;
         use url::Host;
@@ -395,7 +395,7 @@ mod verify_site {
 
             let token = jsonwebtoken::encode(
                 &Header::new(JWT_RESPONSE_ALGORITHM),
-                &Claims::new(ResponseClaims {
+                &TimeClaims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
                     host: Host::parse("gotcha-integration.test.com")?,
@@ -430,7 +430,7 @@ mod verify_site {
 
             let token = jsonwebtoken::encode(
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
-                &Claims::new(ResponseClaims {
+                &TimeClaims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
                     host: Host::parse("gotcha-integration.test.com")?,

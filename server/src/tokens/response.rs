@@ -1,9 +1,9 @@
-use jsonwebtoken::Algorithm;
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use std::{net::IpAddr, time::Duration};
 use url::Host;
 
-use super::Claims;
+use super::TimeClaims;
 
 pub static JWT_RESPONSE_ALGORITHM: Algorithm = Algorithm::HS256;
 
@@ -19,7 +19,11 @@ pub fn encode(
     response_claims: ResponseClaims,
     enc_key_b64: &str,
 ) -> Result<String, jsonwebtoken::errors::Error> {
-    super::encode(JWT_RESPONSE_ALGORITHM, response_claims, enc_key_b64)
+    jsonwebtoken::encode(
+        &Header::new(JWT_RESPONSE_ALGORITHM),
+        &TimeClaims::new(response_claims),
+        &EncodingKey::from_base64_secret(enc_key_b64)?,
+    )
 }
 
 pub fn encode_with_timeout(
@@ -27,17 +31,24 @@ pub fn encode_with_timeout(
     enc_key_b64: &str,
     timeout: Duration,
 ) -> Result<String, jsonwebtoken::errors::Error> {
-    super::encode_with_timeout(
-        JWT_RESPONSE_ALGORITHM,
-        response_claims,
-        enc_key_b64,
-        timeout,
+    jsonwebtoken::encode(
+        &Header::new(JWT_RESPONSE_ALGORITHM),
+        &TimeClaims::with_timeout(timeout, response_claims),
+        &EncodingKey::from_base64_secret(enc_key_b64)?,
     )
 }
 
 pub fn decode(
     jwt: &str,
     dec_key_b64: &str,
-) -> Result<Claims<ResponseClaims>, jsonwebtoken::errors::Error> {
-    super::decode(JWT_RESPONSE_ALGORITHM, jwt, dec_key_b64)
+) -> Result<TimeClaims<ResponseClaims>, jsonwebtoken::errors::Error> {
+    let mut validation = Validation::new(JWT_RESPONSE_ALGORITHM);
+    TimeClaims::<ResponseClaims>::build_validation(&mut validation);
+
+    jsonwebtoken::decode::<TimeClaims<_>>(
+        jwt,
+        &DecodingKey::from_base64_secret(dec_key_b64)?,
+        &validation,
+    )
+    .map(|tok| tok.claims)
 }

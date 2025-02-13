@@ -71,12 +71,12 @@ pub async fn site_verify(
 
     let solver_check = verification
         .remoteip
-        .map_or(true, |solver| solver == claims.custom.addr);
+        .map_or(true, |solver| solver == claims.other.addr);
 
     Ok(Json(VerificationResponse {
-        success: claims.custom.score >= 0.5 && solver_check,
+        success: claims.other.score >= 0.5 && solver_check,
         challenge_ts: *claims.iat(),
-        hostname: Some(claims.custom.host),
+        hostname: Some(claims.other.host),
         error_codes: None,
     }))
 }
