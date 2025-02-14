@@ -1,22 +1,26 @@
 import { Interaction } from "@gotcha-widget/lib";
 import {
-  createEffect,
   createMemo,
   createSignal,
   Match,
   onCleanup,
   onMount,
-  Show,
   Switch,
 } from "solid-js";
+import * as jose from "jose";
 import { RenderParams } from "../grecaptcha";
 import { ChallengeResponse } from "./gotcha-widget";
+import { PowChallenge, ProofOfWork } from "../proof-of-work";
 
-type State = "blank" | "verified" | "verifying";
+type State = "blank" | "verified" | "verifying" | "failed";
 
 export type AnalysisResponse =
   | { result: "failure" }
   | { result: "success"; response: ChallengeResponse };
+export type ProofOfWorkChallenge = {
+  token: string;
+};
+
 type ImNotRobotProps = {
   params: RenderParams;
   state: State;
@@ -36,7 +40,19 @@ export default function ImNotRobot(props: ImNotRobotProps) {
     if (checked()) return;
 
     setInnerState("verifying");
-    let response = await processPreAnalysis(props.params.sitekey, interactions);
+    const powChallenge = await getProofOfWorkChallenge(props.params.sitekey);
+    if (!powChallenge) {
+      setInnerState("blank");
+      return;
+    }
+    const claims: PowChallenge = jose.decodeJwt(powChallenge.token);
+    const solution = (await ProofOfWork.solve(claims)) - 1;
+
+    const response = await processPreAnalysis(
+      props.params.sitekey,
+      { challenge: powChallenge.token, solution },
+      interactions,
+    );
     if (!response) {
       setInnerState("blank");
       return;
@@ -95,6 +111,7 @@ export default function ImNotRobot(props: ImNotRobotProps) {
 
 async function processPreAnalysis(
   site_key: string,
+  proofOfWork: { challenge: string; solution: number },
   interactions: Interaction[],
 ): Promise<AnalysisResponse | null> {
   try {
@@ -109,11 +126,32 @@ async function processPreAnalysis(
         site_key,
         hostname: window.location.hostname,
         interactions,
+        proof_of_work: proofOfWork,
       }),
     });
     if (response.status !== 200)
       throw new Error(
         `processPreAnalysis returned status code ${response.status}`,
+      );
+
+    return await response.json();
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+}
+
+async function getProofOfWorkChallenge(
+  site_key: string,
+): Promise<ProofOfWorkChallenge | null> {
+  try {
+    const origin = new URL(import.meta.url).origin;
+    const response = await fetch(
+      `${origin}/api/challenge/proof-of-work?site_key=${site_key}`,
+    );
+    if (response.status !== 200)
+      throw new Error(
+        `getProofOfWorkChallenge returned status code ${response.status}`,
       );
 
     return await response.json();

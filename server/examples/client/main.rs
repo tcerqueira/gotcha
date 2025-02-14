@@ -49,7 +49,7 @@ async fn submit(
         .form(&[
             (
                 "secret",
-                "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+                "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
             ),
             ("response", token),
             ("remoteip", &addr.ip().to_string()),

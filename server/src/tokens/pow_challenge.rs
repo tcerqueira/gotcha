@@ -31,14 +31,11 @@ pub fn encode_with_timeout(
     )
 }
 
-pub fn decode(
-    jwt: &str,
-    dec_key_b64: &str,
-) -> Result<TimeClaims<PowChallenge>, jsonwebtoken::errors::Error> {
+pub fn decode(jwt: &str, dec_key_b64: &str) -> Result<PowChallenge, jsonwebtoken::errors::Error> {
     let mut validation = Validation::new(JWT_POW_ALGORITHM);
     TimeClaims::<PowChallenge>::build_validation(&mut validation);
 
-    jsonwebtoken::decode::<TimeClaims<_>>(
+    jsonwebtoken::decode::<_>(
         jwt,
         &DecodingKey::from_base64_secret(dec_key_b64)?,
         &validation,

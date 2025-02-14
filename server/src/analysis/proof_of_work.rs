@@ -1,16 +1,7 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use thiserror::Error;
 use time::OffsetDateTime;
-
-#[derive(Debug, Error)]
-pub enum PowError {
-    #[error("Invalid difficulty")]
-    InvalidDifficulty,
-    #[error("Solution doesn't meet difficulty requirement")]
-    DifficultyNotMet,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PowChallenge {
@@ -28,17 +19,13 @@ impl PowChallenge {
         }
     }
 
-    pub fn verify_solution(&self, solution: u64) -> Result<bool, PowError> {
+    pub fn verify_solution(&self, solution: u64) -> bool {
         if self.difficulty == 0 || self.difficulty > 32 {
-            return Err(PowError::InvalidDifficulty);
+            return false;
         }
 
         let hash = self.hash_solution(solution);
-        if !Self::is_solution(&hash, self.difficulty) {
-            return Err(PowError::DifficultyNotMet);
-        }
-
-        Ok(true)
+        Self::is_solution(&hash, self.difficulty)
     }
 
     pub fn hash_solution(&self, solution: u64) -> String {
@@ -79,7 +66,7 @@ mod tests {
         let solution = challenge.solve();
 
         let result = challenge.verify_solution(solution);
-        assert!(result.is_ok());
+        assert!(result);
     }
 
     #[test]
@@ -89,6 +76,6 @@ mod tests {
         let solution = challenge.solve() - 1;
 
         let result = challenge.verify_solution(solution);
-        assert!(result.is_err());
+        assert!(!result);
     }
 }

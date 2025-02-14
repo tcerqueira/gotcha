@@ -93,7 +93,7 @@ pub async fn db_dev_populate(pool: &PgPool) -> sqlx::Result<()> {
         &mut *txn,
         "demo",
         "demo|user",
-        "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+        "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
         "dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m",
     )
     .await;

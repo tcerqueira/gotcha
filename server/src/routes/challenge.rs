@@ -12,7 +12,7 @@ use super::errors::ChallengeError;
 use super::extractors::ThisOrigin;
 use crate::analysis::interaction::{Interaction, Score};
 use crate::analysis::proof_of_work::PowChallenge;
-use crate::tokens::pow_challenge;
+use crate::tokens::{self, pow_challenge};
 use crate::{
     analysis,
     db::{self, DbChallenge},
@@ -87,7 +87,7 @@ pub struct ChallengeResponse {
     pub token: String,
 }
 
-#[instrument(skip(state, results), ret(Debug, level = Level::INFO),
+#[instrument(skip(state, results), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
         success = results.success,
         site_key = results.site_key,
@@ -130,6 +130,13 @@ pub struct PreAnalysisRequest {
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub interactions: Vec<Interaction>,
+    pub proof_of_work: ProofOfWork,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProofOfWork {
+    pub challenge: String,
+    pub solution: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -140,7 +147,7 @@ pub enum PreAnalysisResponse {
     Failure,
 }
 
-#[instrument(skip(state, results), ret(Debug, level = Level::INFO),
+#[instrument(skip(state, results), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
         site_key = results.site_key,
         hostname = results.hostname.to_string(),
@@ -152,6 +159,19 @@ pub async fn process_pre_analysis(
     Json(results): Json<PreAnalysisRequest>,
 ) -> Result<Json<PreAnalysisResponse>, ChallengeError> {
     // TODO: look at cookies and other fingerprints
+    let dec_key = db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
+        .await
+        .context("failed to fecth encoding key by api secret while processing challenge")?
+        .ok_or(ChallengeError::InvalidKey)?
+        .encoding_key;
+
+    let pow_challenge = tokens::pow_challenge::decode(&results.proof_of_work.challenge, &dec_key)?;
+    let is_proof = pow_challenge.verify_solution(results.proof_of_work.solution);
+    if !is_proof {
+        tracing::debug!("failed proof of work challenge");
+        return Err(ChallengeError::FailedProofOfWork);
+    }
+
     // TODO: potentially heavy CPU operation - offload to rayon
     let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
     tracing::debug!("interaction analysis: Score({:?})", score);
@@ -166,13 +186,7 @@ pub async fn process_pre_analysis(
             response: ChallengeResponse {
                 token: response::encode(
                     ResponseClaims { score, addr: addr.ip(), host: results.hostname },
-                    &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
-                        .await
-                        .context(
-                            "failed to fecth encoding key by api secret while processing challenge",
-                        )?
-                        .ok_or(ChallengeError::InvalidKey)?
-                        .encoding_key,
+                    &dec_key,
                 )
                 .context("failed encoding jwt response")?,
             },

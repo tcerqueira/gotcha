@@ -17,9 +17,18 @@
                         new FormData(evt.target),
                     ).toString(),
                 })
-                    .then((response) => response.json())
+                    .then((response) => {
+                        if (response.status != 200) {
+                            throw new Error("status code " + response.status);
+                        }
+                        return response.json();
+                    })
                     .then((data) => {
                         console.log("Success:", data);
+                        alert("Success");
+                    })
+                    .catch((e) => {
+                        alert("Failed " + e);
                     });
             };
             var widgetId1;
@@ -29,19 +38,19 @@
                 // The id of the reCAPTCHA widget is assigned to 'widgetId1'.
                 widgetId1 = grecaptcha.render("example1", {
                     sitekey:
-                        "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+                        "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
                     theme: "light",
                 });
                 widgetId2 = grecaptcha.render(
                     document.getElementById("example2"),
                     {
                         sitekey:
-                            "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+                            "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
                     },
                 );
                 grecaptcha.render("example3", {
                     sitekey:
-                        "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+                        "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
                     callback: verifyCallback,
                     theme: "dark",
                 });

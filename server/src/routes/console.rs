@@ -27,7 +27,7 @@ pub struct ConsoleResponse {
     pub label: Option<String>,
 }
 
-#[instrument(skip_all, ret(level = Level::INFO))]
+#[instrument(skip_all, ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR))]
 pub async fn get_consoles(
     State(state): State<Arc<AppState>>,
     User { user_id }: User,
@@ -91,7 +91,7 @@ pub struct ApiKeyResponse {
     pub label: Option<String>,
 }
 
-#[instrument(skip(state), ret(level = Level::INFO))]
+#[instrument(skip(state), ret(level = Level::INFO), err(Debug, level = Level::ERROR))]
 pub async fn get_api_keys(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -106,7 +106,7 @@ pub async fn get_api_keys(
     Ok(Json(keys))
 }
 
-#[instrument(skip(state), ret(level = Level::INFO))]
+#[instrument(skip(state), ret(level = Level::INFO), err(Debug, level = Level::ERROR))]
 pub async fn gen_api_key(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
