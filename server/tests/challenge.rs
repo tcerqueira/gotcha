@@ -17,7 +17,10 @@ use url::{Host, Url};
 async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
-    let response = reqwest::get(format!("http://localhost:{port}/api/challenge")).await?;
+    let response = HTTP_CLIENT
+        .get(format!("http://localhost:{port}/api/challenge"))
+        .send()
+        .await?;
     assert_eq!(response.status(), StatusCode::OK);
     let _challenge: GetChallenge = response.json().await?;
 

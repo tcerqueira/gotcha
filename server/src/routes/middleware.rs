@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use anyhow::Context;
 use axum::{
@@ -8,9 +8,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::{
-    headers::{authorization::Bearer, Authorization},
+    headers::{authorization::Bearer, Authorization, UserAgent},
     TypedHeader,
 };
+use isbot::Bots;
 use jsonwebtoken::{jwk::JwkSet, DecodingKey};
 use serde::Deserialize;
 use thiserror::Error;
@@ -132,6 +133,7 @@ pub async fn require_admin(
     next: Next,
 ) -> Response {
     match user_id.as_ref() {
+        "github|197666798" |                            // infra.gotcha
         "google-oauth2|106674402838515911816"      |    // tiago@bitfashioned.com
         "hHgkLidgUrzw6rv1ujDn1rvK9BM2DzVl@clients"      // dev
             => next.run(request).await,
@@ -139,5 +141,23 @@ pub async fn require_admin(
             tracing::error!(user = u, "user not admin");
             StatusCode::FORBIDDEN.into_response()
         },
+    }
+}
+
+pub static BOTS: LazyLock<Bots> = LazyLock::new(Bots::default);
+
+#[instrument(skip_all, fields(user_agent))]
+pub async fn block_bot_agent(
+    TypedHeader(user_agent): TypedHeader<UserAgent>,
+    request: Request,
+    next: Next,
+) -> Response {
+    match BOTS.is_bot(user_agent.as_str()) {
+        false => next.run(request).await,
+        true => {
+            tracing::Span::current().record("user_agent", user_agent.as_str());
+            tracing::error!("bot detected");
+            StatusCode::FORBIDDEN.into_response()
+        }
     }
 }

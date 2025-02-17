@@ -29,9 +29,18 @@ mod serde;
 pub mod test_helpers;
 pub mod tokens;
 
-pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+fn build_client() -> Client {
+    const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+    Client::builder()
+        .user_agent(USER_AGENT)
+        .build()
+        .expect("error building HTTP_CLIENT")
+}
+
+pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(build_client);
 pub static HTTP_CACHE_CLIENT: LazyLock<ClientWithMiddleware> = LazyLock::new(|| {
-    ClientBuilder::new(Client::new())
+    let client = build_client();
+    ClientBuilder::new(client)
         .with(Cache(HttpCache {
             mode: CacheMode::Default,
             manager: CACacheManager { path: "/tmp/gotcha/".into() },

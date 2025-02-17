@@ -790,6 +790,7 @@ dependencies = [
  "fitting",
  "gotcha-server-macros",
  "http-cache-reqwest",
+ "isbot",
  "jsonwebtoken",
  "lambda_http",
  "rand",
@@ -1284,6 +1285,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf466541e9d546596ee94f9f69590f89473455f88372423e0008fc1a7daf100e"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "isbot"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f98d665d8689fd01bd1572c10fd58cf38a811f56c2d00b5ec5c0c50dc1eee956"
+dependencies = [
+ "regex",
 ]
 
 [[package]]
