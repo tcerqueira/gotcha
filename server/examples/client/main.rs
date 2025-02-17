@@ -3,6 +3,7 @@ use gotcha_server::routes::verification::VerificationResponse;
 use reqwest::Client;
 use std::{collections::HashMap, net::SocketAddr, sync::LazyLock};
 use tower_http::{services::ServeDir, trace::TraceLayer};
+use tracing::{instrument, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -35,6 +36,7 @@ fn app() -> Router {
 
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
 
+#[instrument(err(Debug, level = Level::ERROR))]
 async fn submit(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Form(data): Form<HashMap<String, String>>,
@@ -49,11 +51,12 @@ async fn submit(
         .form(&[
             (
                 "secret",
-                "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+                "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
             ),
             ("response", token),
             ("remoteip", &addr.ip().to_string()),
         ])
+        .header("User-Agent", "")
         .send()
         .await
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
@@ -62,8 +65,14 @@ async fn submit(
         .map_err(|_| StatusCode::BAD_REQUEST)?;
 
     match verification.success {
-        true => Ok((StatusCode::OK, Json(verification))),
-        false => Err(StatusCode::FORBIDDEN),
+        true => {
+            tracing::info!("site verification successful");
+            Ok((StatusCode::OK, Json(verification)))
+        }
+        false => {
+            tracing::error!("site verification failed");
+            Err(StatusCode::FORBIDDEN)
+        }
     }
 }
 

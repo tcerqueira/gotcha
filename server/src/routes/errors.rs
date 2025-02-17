@@ -12,8 +12,12 @@ use super::verification::{ErrorCodes, VerificationResponse};
 
 #[derive(Debug, Error)]
 pub enum ChallengeError {
-    #[error("Invalid secret")]
-    InvalidSecret,
+    #[error("Invalid key")]
+    InvalidKey,
+    #[error("Invalid proof of work challenge")]
+    InvalidProofOfWork(#[from] jsonwebtoken::errors::Error),
+    #[error("Failed proof of work challenge")]
+    FailedProofOfWork,
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
     #[error(transparent)]
@@ -27,8 +31,12 @@ impl IntoResponse for ChallengeError {
             ChallengeError::Unexpected(_) | ChallengeError::Sql(_) => {
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
-            ChallengeError::InvalidSecret => {
-                (StatusCode::FORBIDDEN, self.to_string()).into_response()
+            ChallengeError::InvalidKey => (StatusCode::FORBIDDEN, self.to_string()).into_response(),
+            ChallengeError::InvalidProofOfWork(_) => {
+                (StatusCode::BAD_REQUEST, self.to_string()).into_response()
+            }
+            ChallengeError::FailedProofOfWork => {
+                (StatusCode::BAD_REQUEST, self.to_string()).into_response()
             }
         }
     }

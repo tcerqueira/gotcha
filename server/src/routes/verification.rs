@@ -12,7 +12,7 @@ use tracing::{instrument, Level};
 use url::Host;
 
 use super::errors::VerificationError;
-use crate::{db, response_token, AppState};
+use crate::{db, tokens::response, AppState};
 
 #[derive(Debug)]
 pub struct VerificationRequest {
@@ -43,7 +43,7 @@ pub enum ErrorCodes {
     TimeoutOrDuplicate,
 }
 
-#[instrument(skip(state), ret(Debug, level = Level::INFO))]
+#[instrument(skip(state), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR))]
 pub async fn site_verify(
     State(state): State<Arc<AppState>>,
     WithRejection(Form(verification), _): WithRejection<
@@ -62,7 +62,7 @@ pub async fn site_verify(
         ]))?
         .encoding_key;
 
-    let claims = response_token::decode(&verification.response, &enc_key)
+    let claims = response::decode(&verification.response, &enc_key)
         .map_err(|err| match err.into_kind() {
             ErrorKind::ExpiredSignature => ErrorCodes::TimeoutOrDuplicate,
             _ => ErrorCodes::InvalidInputResponse,
@@ -71,12 +71,12 @@ pub async fn site_verify(
 
     let solver_check = verification
         .remoteip
-        .map_or(true, |solver| solver == claims.custom.addr);
+        .map_or(true, |solver| solver == claims.other.addr);
 
     Ok(Json(VerificationResponse {
-        success: claims.custom.score >= 0.5 && solver_check,
+        success: claims.other.score >= 0.5 && solver_check,
         challenge_ts: *claims.iat(),
-        hostname: Some(claims.custom.host),
+        hostname: Some(claims.other.host),
         error_codes: None,
     }))
 }
@@ -130,8 +130,14 @@ impl Display for VerificationResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "verification: challenge loaded at {} in `{:?}` - {:?}",
-            self.challenge_ts, self.hostname, self.error_codes
+            "verification: challenge {}, loaded at {} in `{:?}` - {:?}",
+            match self.success {
+                true => "solved successfully",
+                false => "failed",
+            },
+            self.challenge_ts,
+            self.hostname,
+            self.error_codes
         )
     }
 }

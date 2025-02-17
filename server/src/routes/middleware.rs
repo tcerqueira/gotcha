@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use anyhow::Context;
 use axum::{
@@ -8,16 +8,17 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::{
-    headers::{authorization::Bearer, Authorization},
+    headers::{authorization::Bearer, Authorization, UserAgent},
     TypedHeader,
 };
-use jsonwebtoken::{jwk::JwkSet, DecodingKey, Validation};
+use isbot::Bots;
+use jsonwebtoken::{jwk::JwkSet, DecodingKey};
 use serde::Deserialize;
 use thiserror::Error;
 use tracing::{instrument, Level};
 use uuid::Uuid;
 
-use crate::{db, extractors::User, AppState, HTTP_CACHE_CLIENT};
+use crate::{db, routes::extractors::User, tokens, AppState, HTTP_CACHE_CLIENT};
 
 use super::errors::ConsoleError;
 
@@ -28,10 +29,10 @@ pub async fn require_auth(
     mut request: Request,
     next: Next,
 ) -> Result<Response, AuthError> {
-    tracing::trace!(auth_header = ?auth_header);
+    tracing::debug!(auth_header = ?auth_header);
     let token = auth_header.token();
     let header = jsonwebtoken::decode_header(token)?;
-    let kid = header.kid.context("kid not present in header")?;
+    let kid = header.kid.context("kid not present in token header")?;
 
     let jwks: JwkSet = HTTP_CACHE_CLIENT
         .get(format!("{}/.well-known/jwks.json", state.auth_origin))
@@ -40,30 +41,21 @@ pub async fn require_auth(
         .json()
         .await?;
 
-    let mut validation = Validation::new(jsonwebtoken::Algorithm::RS256);
-    validation.set_audience(&["https://gotcha.land/"]);
-    validation.set_required_spec_claims(&["exp", "aud", "iss", "sub"]);
-
-    let claims = jsonwebtoken::decode::<AuthClaims>(
+    let claims = tokens::auth::decode(
         token,
         &DecodingKey::from_jwk(
             jwks.find(&kid)
                 .with_context(|| format!("kid {} not found in jwks", kid))?,
         )
         .context("could not create decoding key from JWK")?,
-        &validation,
     )?;
-    tracing::Span::current().record("user_id", &claims.claims.sub);
 
+    tracing::Span::current().record("user_id", claims.sub());
     request
         .extensions_mut()
-        .insert(User { user_id: Arc::from(claims.claims.sub) });
-    Ok(next.run(request).await)
-}
+        .insert(User { user_id: Arc::from(claims.sub()) });
 
-#[derive(Debug, Deserialize)]
-struct AuthClaims {
-    sub: String,
+    Ok(next.run(request).await)
 }
 
 #[derive(Debug, Error)]
@@ -141,6 +133,7 @@ pub async fn require_admin(
     next: Next,
 ) -> Response {
     match user_id.as_ref() {
+        "github|197666798" |                            // infra.gotcha
         "google-oauth2|106674402838515911816"      |    // tiago@bitfashioned.com
         "hHgkLidgUrzw6rv1ujDn1rvK9BM2DzVl@clients"      // dev
             => next.run(request).await,
@@ -148,5 +141,23 @@ pub async fn require_admin(
             tracing::error!(user = u, "user not admin");
             StatusCode::FORBIDDEN.into_response()
         },
+    }
+}
+
+pub static BOTS: LazyLock<Bots> = LazyLock::new(Bots::default);
+
+#[instrument(skip_all, fields(user_agent))]
+pub async fn block_bot_agent(
+    TypedHeader(user_agent): TypedHeader<UserAgent>,
+    request: Request,
+    next: Next,
+) -> Response {
+    match BOTS.is_bot(user_agent.as_str()) {
+        false => next.run(request).await,
+        true => {
+            tracing::Span::current().record("user_agent", user_agent.as_str());
+            tracing::error!("bot detected");
+            StatusCode::FORBIDDEN.into_response()
+        }
     }
 }

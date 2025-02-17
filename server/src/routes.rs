@@ -5,12 +5,16 @@ use axum::{
     routing::{delete, get, patch, post},
     Router,
 };
-use challenge::{get_challenge, process_challenge, process_pre_analysis};
+use challenge::{
+    get_challenge, get_proof_of_work_challenge, process_challenge, process_pre_analysis,
+};
 use console::{
     create_console, delete_console, gen_api_key, get_api_keys, get_consoles, revoke_api_key,
     update_api_key, update_console,
 };
-use middleware::{require_admin, require_auth, validate_api_key, validate_console_id};
+use middleware::{
+    block_bot_agent, require_admin, require_auth, validate_api_key, validate_console_id,
+};
 use verification::site_verify;
 
 use crate::AppState;
@@ -19,6 +23,7 @@ pub mod admin;
 pub mod challenge;
 pub mod console;
 mod errors;
+pub mod extractors;
 pub mod middleware;
 pub mod verification;
 
@@ -26,8 +31,10 @@ pub fn challenge(state: &Arc<AppState>) -> Router {
     let state = Arc::clone(state);
     Router::new()
         .route("/", get(get_challenge))
+        .route("/proof-of-work", get(get_proof_of_work_challenge))
         .route("/process", post(process_challenge))
         .route("/process-pre-analysis", post(process_pre_analysis))
+        .layer(axum::middleware::from_fn(block_bot_agent))
         .with_state(state)
 }
 
@@ -35,6 +42,7 @@ pub fn verification(state: &Arc<AppState>) -> Router {
     let state = Arc::clone(state);
     Router::new()
         .route("/siteverify", post(site_verify))
+        .layer(axum::middleware::from_fn(block_bot_agent))
         .with_state(state)
 }
 
