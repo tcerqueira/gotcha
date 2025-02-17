@@ -136,7 +136,7 @@ pub struct PreAnalysisRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProofOfWork {
     pub challenge: String,
-    pub solution: u64,
+    pub solution: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -151,6 +151,9 @@ pub enum PreAnalysisResponse {
     fields(
         site_key = results.site_key,
         hostname = results.hostname.to_string(),
+        pow_jwt,
+        pow_decoded,
+        solution = results.proof_of_work.solution,
     )
 )]
 pub async fn process_pre_analysis(
@@ -165,10 +168,14 @@ pub async fn process_pre_analysis(
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
-    let pow_challenge = tokens::pow_challenge::decode(&results.proof_of_work.challenge, &dec_key)?;
+    let pow_challenge = tokens::pow_challenge::decode(&results.proof_of_work.challenge, &dec_key)
+        .inspect_err(|_| {
+        tracing::Span::current().record("pow_jwt", &results.proof_of_work.challenge);
+    })?;
+    tracing::Span::current().record("pow_decoded", tracing::field::debug(&pow_challenge));
+
     let is_proof = pow_challenge.verify_solution(results.proof_of_work.solution);
     if !is_proof {
-        tracing::debug!("failed proof of work challenge");
         return Err(ChallengeError::FailedProofOfWork);
     }
 

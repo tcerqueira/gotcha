@@ -11,19 +11,29 @@ export class ProofOfWork {
     challenge: PowChallenge,
     solution: number,
   ): Promise<string> {
+    const nonce_bytes = new Uint8Array(
+      new Uint32Array([challenge.nonce]).buffer,
+    );
+    const difficulty_bytes = new Uint8Array(
+      new Uint16Array([challenge.difficulty]).buffer,
+    );
+    const timestamp_bytes = new Uint8Array(
+      new BigInt64Array([BigInt(challenge.timestamp)]).buffer,
+    );
+    const solution_bytes = new Uint8Array(new Uint32Array([solution]).buffer);
+
     const data = new Uint8Array([
-      ...new Uint8Array(new BigUint64Array([BigInt(challenge.nonce)]).buffer), // u64
-      ...new Uint8Array(new Uint16Array([challenge.difficulty]).buffer), // u16
-      ...new Uint8Array(
-        new BigInt64Array([BigInt(challenge.timestamp)]).buffer,
-      ), // i64
-      ...new Uint8Array(new BigUint64Array([BigInt(solution)]).buffer), // u64
+      ...nonce_bytes,
+      ...difficulty_bytes,
+      ...timestamp_bytes,
+      ...solution_bytes,
     ]);
 
     const hashBuffer = await crypto.subtle.digest(this.HASH_ALGORITHM, data);
-    return Array.from(new Uint8Array(hashBuffer))
+    const hash = Array.from(new Uint8Array(hashBuffer))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
+    return hash;
   }
 
   private static isSolution(hash: string, difficulty: number): boolean {

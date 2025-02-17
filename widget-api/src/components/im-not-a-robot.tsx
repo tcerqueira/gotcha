@@ -46,7 +46,7 @@ export default function ImNotRobot(props: ImNotRobotProps) {
       return;
     }
     const claims: PowChallenge = jose.decodeJwt(powChallenge.token);
-    const solution = (await ProofOfWork.solve(claims)) - 1;
+    const solution = await ProofOfWork.solve(claims);
 
     const response = await processPreAnalysis(
       props.params.sitekey,

@@ -5,7 +5,7 @@ use time::OffsetDateTime;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PowChallenge {
-    pub nonce: u64,
+    pub nonce: u32,
     pub difficulty: u16,
     pub timestamp: i64,
 }
@@ -13,13 +13,13 @@ pub struct PowChallenge {
 impl PowChallenge {
     pub fn gen(difficulty: u16) -> Self {
         Self {
-            nonce: rand::thread_rng().gen::<u64>(),
+            nonce: rand::thread_rng().gen::<u32>(),
             difficulty,
             timestamp: OffsetDateTime::now_utc().unix_timestamp(),
         }
     }
 
-    pub fn verify_solution(&self, solution: u64) -> bool {
+    pub fn verify_solution(&self, solution: u32) -> bool {
         if self.difficulty == 0 || self.difficulty > 32 {
             return false;
         }
@@ -28,7 +28,7 @@ impl PowChallenge {
         Self::is_solution(&hash, self.difficulty)
     }
 
-    pub fn hash_solution(&self, solution: u64) -> String {
+    pub fn hash_solution(&self, solution: u32) -> String {
         let mut hasher = Sha256::new();
         hasher.update(self.nonce.to_le_bytes());
         hasher.update(self.difficulty.to_le_bytes());
@@ -37,8 +37,7 @@ impl PowChallenge {
         format!("{:x}", hasher.finalize())
     }
 
-    #[cfg(test)]
-    fn solve(&self) -> u64 {
+    pub fn solve(&self) -> u32 {
         let mut solution = 0;
         loop {
             let hash = self.hash_solution(solution);
@@ -77,5 +76,21 @@ mod tests {
 
         let result = challenge.verify_solution(solution);
         assert!(!result);
+    }
+
+    #[test]
+    #[ignore = "useful for manually test values"]
+    fn verify_specific_solution() {
+        let challenge = PowChallenge { nonce: 4077096492, difficulty: 4, timestamp: 1739555092 };
+
+        let solution = 13062;
+        let hash = challenge.hash_solution(solution);
+        eprintln!("{hash}");
+
+        let actual_solution = challenge.solve();
+        eprintln!("{actual_solution}");
+
+        let result = challenge.verify_solution(solution);
+        assert!(result);
     }
 }
