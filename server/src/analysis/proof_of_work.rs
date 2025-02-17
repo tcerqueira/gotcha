@@ -30,10 +30,10 @@ impl PowChallenge {
 
     pub fn hash_solution(&self, solution: u32) -> String {
         let mut hasher = Sha256::new();
-        hasher.update(self.nonce.to_le_bytes());
-        hasher.update(self.difficulty.to_le_bytes());
-        hasher.update(self.timestamp.to_le_bytes());
-        hasher.update(solution.to_le_bytes());
+        hasher.update(self.nonce.to_be_bytes());
+        hasher.update(self.difficulty.to_be_bytes());
+        hasher.update(self.timestamp.to_be_bytes());
+        hasher.update(solution.to_be_bytes());
         format!("{:x}", hasher.finalize())
     }
 

@@ -7,20 +7,35 @@ export interface PowChallenge {
 export class ProofOfWork {
   private static readonly HASH_ALGORITHM = "SHA-256";
 
+  public static async solve(challenge: PowChallenge): Promise<number> {
+    if (challenge.difficulty === 0 || challenge.difficulty > 32) {
+      throw new Error("Invalid difficulty");
+    }
+
+    let solution = 0;
+    while (true) {
+      const hash = await this.hashSolution(challenge, solution);
+      if (this.isSolution(hash, challenge.difficulty)) {
+        return solution;
+      }
+
+      solution++;
+    }
+  }
+
+  private static isSolution(hash: string, difficulty: number): boolean {
+    const prefix = "0".repeat(difficulty);
+    return hash.startsWith(prefix);
+  }
+
   private static async hashSolution(
     challenge: PowChallenge,
     solution: number,
   ): Promise<string> {
-    const nonce_bytes = new Uint8Array(
-      new Uint32Array([challenge.nonce]).buffer,
-    );
-    const difficulty_bytes = new Uint8Array(
-      new Uint16Array([challenge.difficulty]).buffer,
-    );
-    const timestamp_bytes = new Uint8Array(
-      new BigInt64Array([BigInt(challenge.timestamp)]).buffer,
-    );
-    const solution_bytes = new Uint8Array(new Uint32Array([solution]).buffer);
+    const nonce_bytes = this.toBeBytes(challenge.nonce, 4);
+    const difficulty_bytes = this.toBeBytes(challenge.difficulty, 2);
+    const timestamp_bytes = this.toBeBytes(challenge.timestamp, 8, true);
+    const solution_bytes = this.toBeBytes(solution, 4);
 
     const data = new Uint8Array([
       ...nonce_bytes,
@@ -36,24 +51,37 @@ export class ProofOfWork {
     return hash;
   }
 
-  private static isSolution(hash: string, difficulty: number): boolean {
-    const prefix = "0".repeat(difficulty);
-    return hash.startsWith(prefix);
-  }
+  private static toBeBytes(
+    num: number | bigint,
+    byteSize: number,
+    signed: boolean = false,
+  ): Uint8Array {
+    const buffer = new ArrayBuffer(byteSize);
+    const view = new DataView(buffer);
 
-  public static async solve(challenge: PowChallenge): Promise<number> {
-    if (challenge.difficulty === 0 || challenge.difficulty > 32) {
-      throw new Error("Invalid difficulty");
+    switch (byteSize) {
+      case 1:
+        signed ? view.setInt8(0, Number(num)) : view.setUint8(0, Number(num));
+        break;
+      case 2:
+        signed
+          ? view.setInt16(0, Number(num), false)
+          : view.setUint16(0, Number(num), false);
+        break;
+      case 4:
+        signed
+          ? view.setInt32(0, Number(num), false)
+          : view.setUint32(0, Number(num), false);
+        break;
+      case 8:
+        signed
+          ? view.setBigInt64(0, BigInt(num), false)
+          : view.setBigUint64(0, BigInt(num), false);
+        break;
+      default:
+        throw new Error(`Unsupported byte size: ${byteSize}`);
     }
 
-    let solution = 0;
-    while (true) {
-      const hash = await this.hashSolution(challenge, solution);
-      if (this.isSolution(hash, challenge.difficulty)) {
-        return solution;
-      }
-
-      solution++;
-    }
+    return new Uint8Array(buffer);
   }
 }
