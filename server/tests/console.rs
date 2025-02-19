@@ -7,6 +7,7 @@ use gotcha_server::{
     },
     test_helpers, HTTP_CLIENT,
 };
+use gotcha_server_macros::integration_test;
 use rand::distributions::{Alphanumeric, DistString};
 use reqwest::StatusCode;
 use uuid::Uuid;
@@ -24,7 +25,7 @@ async fn post_console(port: u16) -> anyhow::Result<ConsoleResponse> {
     Ok(response)
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let console_id = server.db_console().await;
@@ -42,7 +43,7 @@ async fn get_consoles(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn create_console(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
@@ -68,7 +69,7 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn update_console(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
@@ -90,7 +91,7 @@ async fn update_console(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn update_nothing_console(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
@@ -117,7 +118,7 @@ async fn update_nothing_console(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn delete_console(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
@@ -133,7 +134,7 @@ async fn delete_console(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn delete_console_not_found(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let id = Uuid::new_v4();
@@ -149,7 +150,7 @@ async fn delete_console_not_found(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn get_api_keys(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let console_id = server.db_console().await;
@@ -168,7 +169,7 @@ async fn get_api_keys(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn gen_api_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
@@ -192,7 +193,7 @@ async fn gen_api_key(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn gen_api_key_configuration_not_found(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let console_id = Uuid::new_v4();
@@ -209,7 +210,7 @@ async fn gen_api_key_configuration_not_found(server: TestContext) -> anyhow::Res
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn gen_api_key_forbidden_console(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
@@ -229,7 +230,7 @@ async fn gen_api_key_forbidden_console(server: TestContext) -> anyhow::Result<()
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn update_api_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let console_id = server.db_console().await;
@@ -248,7 +249,7 @@ async fn update_api_key(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn revoke_api_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
@@ -279,7 +280,7 @@ async fn revoke_api_key(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn update_forbidden_api_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
@@ -302,7 +303,7 @@ async fn update_forbidden_api_key(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn revoke_forbidden_api_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
@@ -324,12 +325,12 @@ async fn revoke_forbidden_api_key(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn add_origin(_server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn remove_origin(_server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }

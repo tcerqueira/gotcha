@@ -1,7 +1,7 @@
 use gotcha_server::{
     routes::challenge::{
-        ChallengeResponse, ChallengeResults, GetChallenge, PowResponse, PreAnalysisRequest,
-        ProofOfWork,
+        AccessibilityRequest, ChallengeResponse, ChallengeResults, GetChallenge, PowResponse,
+        PreAnalysisRequest, ProofOfWork,
     },
     tokens::{
         response::{ResponseClaims, JWT_RESPONSE_ALGORITHM},
@@ -9,11 +9,12 @@ use gotcha_server::{
     },
     HTTP_CLIENT,
 };
+use gotcha_server_macros::integration_test;
 use jsonwebtoken::{DecodingKey, Validation};
 use reqwest::StatusCode;
 use url::{Host, Url};
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
@@ -28,7 +29,7 @@ async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
 }
 
 // This test overtime gets more meaningless and untestable
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let site_key = server.db_api_site_key().await;
@@ -60,7 +61,7 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let site_key = server.db_api_site_key().await;
@@ -92,7 +93,7 @@ async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
@@ -112,7 +113,7 @@ async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::R
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn process_pre_analysis_fails_on_invalid_proof_of_work(
     server: TestContext,
 ) -> anyhow::Result<()> {
@@ -136,7 +137,7 @@ async fn process_pre_analysis_fails_on_invalid_proof_of_work(
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn process_pre_analysis_fails_on_proof_of_work_failed(
     server: TestContext,
 ) -> anyhow::Result<()> {
@@ -169,7 +170,62 @@ async fn process_pre_analysis_fails_on_proof_of_work_failed(
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
+async fn process_accessibility_fails_on_invalid_proof_of_work(
+    server: TestContext,
+) -> anyhow::Result<()> {
+    let port = server.port();
+    let site_key = server.db_api_site_key().await;
+
+    let response = HTTP_CLIENT
+        .post(format!(
+            "http://localhost:{port}/api/challenge/process-accessibility"
+        ))
+        .json(&AccessibilityRequest {
+            site_key,
+            hostname: Host::parse("website-integration.test.com")?,
+            proof_of_work: ProofOfWork { challenge: "".into(), solution: 0 },
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    Ok(())
+}
+
+#[integration_test]
+async fn process_accessibility_fails_on_proof_of_work_failed(
+    server: TestContext,
+) -> anyhow::Result<()> {
+    let port = server.port();
+    let site_key = server.db_api_site_key().await;
+
+    let pow: PowResponse = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/challenge/proof-of-work?site_key={site_key}"
+        ))
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let response = HTTP_CLIENT
+        .post(format!(
+            "http://localhost:{port}/api/challenge/process-accessibility"
+        ))
+        .json(&AccessibilityRequest {
+            site_key,
+            hostname: Host::parse("website-integration.test.com")?,
+            proof_of_work: ProofOfWork { challenge: pow.token, solution: 0 },
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    Ok(())
+}
+
+#[integration_test]
 async fn get_proof_of_work_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let site_key = server.db_api_site_key().await;
@@ -188,7 +244,7 @@ async fn get_proof_of_work_challenge(server: TestContext) -> anyhow::Result<()> 
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn get_proof_of_work_challenge_no_site_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 

@@ -15,14 +15,14 @@ use isbot::Bots;
 use jsonwebtoken::{jwk::JwkSet, DecodingKey};
 use serde::Deserialize;
 use thiserror::Error;
-use tracing::{instrument, Level};
+use tracing::{field, instrument, Level, Span};
 use uuid::Uuid;
 
 use crate::{db, routes::extractors::User, tokens, AppState, HTTP_CACHE_CLIENT};
 
 use super::errors::ConsoleError;
 
-#[instrument(fields(user_id), skip(state, auth_header, request, next), err(Debug, level = Level::ERROR))]
+#[instrument(fields(user_id, jwt), skip_all, err(Debug, level = Level::ERROR))]
 pub async fn require_auth(
     State(state): State<Arc<AppState>>,
     auth_header: TypedHeader<Authorization<Bearer>>,
@@ -48,9 +48,12 @@ pub async fn require_auth(
                 .with_context(|| format!("kid {} not found in jwks", kid))?,
         )
         .context("could not create decoding key from JWK")?,
-    )?;
+    )
+    .inspect_err(|_| {
+        Span::current().record("jwt", token);
+    })?;
 
-    tracing::Span::current().record("user_id", claims.sub());
+    Span::current().record("user_id", claims.sub());
     request
         .extensions_mut()
         .insert(User { user_id: Arc::from(claims.sub()) });
@@ -92,7 +95,7 @@ pub struct ConsolePath {
     pub console_id: Uuid,
 }
 
-#[instrument(skip_all, err(Debug, level = Level::ERROR))]
+#[instrument(skip_all, fields(console_id, user_id), err(Debug, level = Level::ERROR))]
 pub async fn validate_console_id(
     State(state): State<Arc<AppState>>,
     Path(ConsolePath { console_id }): Path<ConsolePath>,
@@ -102,7 +105,11 @@ pub async fn validate_console_id(
 ) -> Result<Response, ConsoleError> {
     match db::exists_console_for_user(&state.pool, &console_id, &user_id).await? {
         true => Ok(next.run(request).await),
-        false => Err(ConsoleError::Forbidden),
+        false => {
+            Span::current().record("console_id", field::display(console_id));
+            Span::current().record("user_id", user_id.as_ref());
+            Err(ConsoleError::Forbidden)
+        }
     }
 }
 
@@ -111,7 +118,7 @@ pub struct ApiKeyPath {
     pub site_key: String,
 }
 
-#[instrument(skip_all, err(Debug, level = Level::ERROR))]
+#[instrument(skip_all, fields(site_key, console_id), err(Debug, level = Level::ERROR))]
 pub async fn validate_api_key(
     State(state): State<Arc<AppState>>,
     Path(ApiKeyPath { site_key }): Path<ApiKeyPath>,
@@ -121,7 +128,11 @@ pub async fn validate_api_key(
 ) -> Result<Response, ConsoleError> {
     match db::exists_api_key_for_console(&state.pool, &site_key, &console_id).await? {
         true => Ok(next.run(request).await),
-        false => Err(ConsoleError::Forbidden),
+        false => {
+            Span::current().record("site_key", site_key);
+            Span::current().record("console_id", field::display(console_id));
+            Err(ConsoleError::Forbidden)
+        }
     }
 }
 
@@ -155,7 +166,7 @@ pub async fn block_bot_agent(
     match BOTS.is_bot(user_agent.as_str()) {
         false => next.run(request).await,
         true => {
-            tracing::Span::current().record("user_agent", user_agent.as_str());
+            Span::current().record("user_agent", user_agent.as_str());
             tracing::error!("bot detected");
             StatusCode::FORBIDDEN.into_response()
         }

@@ -2,9 +2,10 @@ use gotcha_server::{
     routes::admin::{AddChallenge, DeleteChallenge},
     test_helpers, HTTP_CLIENT,
 };
+use gotcha_server_macros::integration_test;
 use reqwest::StatusCode;
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let nonce = server.test_id();
@@ -24,7 +25,7 @@ async fn add_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn add_challenge_bad_url(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
@@ -43,7 +44,7 @@ async fn add_challenge_bad_url(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn add_challenge_negative_dimensions(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
@@ -62,7 +63,7 @@ async fn add_challenge_negative_dimensions(server: TestContext) -> anyhow::Resul
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn add_challenge_zero_dimensions(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
@@ -81,7 +82,7 @@ async fn add_challenge_zero_dimensions(server: TestContext) -> anyhow::Result<()
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let auth_key = test_helpers::auth_jwt().await;
@@ -107,7 +108,7 @@ async fn add_challenge_already_exists(server: TestContext) -> anyhow::Result<()>
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let auth_key = test_helpers::auth_jwt().await;
@@ -133,7 +134,7 @@ async fn remove_challenge_successful(server: TestContext) -> anyhow::Result<()> 
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn remove_challenge_not_found(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let nonce = server.test_id();
@@ -150,7 +151,7 @@ async fn remove_challenge_not_found(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn challenge_endpoint_missing_auth_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let nonce = server.test_id();
@@ -169,7 +170,7 @@ async fn challenge_endpoint_missing_auth_key(server: TestContext) -> anyhow::Res
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn challenge_endpoint_wrong_auth_key(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let nonce = server.test_id();

@@ -6,10 +6,11 @@ mod verify_site {
         tokens::response::{self, ResponseClaims},
         HTTP_CLIENT,
     };
+    use gotcha_server_macros::integration_test;
     use reqwest::StatusCode;
     use url::Host;
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn sucessful_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
@@ -38,7 +39,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn sucessful_challenge_with_remoteip(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
@@ -68,7 +69,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn sucessful_challenge_with_remoteip_mismatch(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
@@ -102,7 +103,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn failed_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
@@ -131,7 +132,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn missing_secret(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let enc_key = server.db_enconding_key().await;
@@ -162,7 +163,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn missing_response(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
@@ -184,7 +185,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn missing_secret_and_response(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
 
@@ -211,7 +212,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn invalid_secret(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let enc_key = server.db_enconding_key().await;
@@ -243,13 +244,13 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn invalid_secret_but_exists(_server: TestContext) -> anyhow::Result<()> {
         // TODO
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn invalid_remoteip(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
@@ -285,7 +286,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn bad_request(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
 
@@ -307,7 +308,7 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn duplicate(_server: TestContext) -> anyhow::Result<()> {
         // TODO
         Ok(())
@@ -323,7 +324,7 @@ mod verify_site {
 
         use super::*;
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn expired_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
@@ -358,13 +359,13 @@ mod verify_site {
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn immature_signature(_server: TestContext) -> anyhow::Result<()> {
             // TODO
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn invalid_token(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
@@ -388,7 +389,7 @@ mod verify_site {
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn invalid_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
@@ -422,7 +423,7 @@ mod verify_site {
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn invalid_algorithm(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
@@ -455,7 +456,7 @@ mod verify_site {
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn invalid_base64(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;

@@ -5,7 +5,7 @@ use anyhow::Context;
 use axum::extract::{ConnectInfo, Query};
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
-use tracing::{instrument, Level};
+use tracing::{instrument, Level, Span};
 use url::{Host, Url};
 
 use super::errors::ChallengeError;
@@ -93,6 +93,7 @@ pub struct ChallengeResponse {
         site_key = results.site_key,
         hostname = results.hostname.to_string(),
         challenge = results.challenge.to_string(),
+        interaction_score,
     )
 )]
 pub async fn process_challenge(
@@ -102,7 +103,7 @@ pub async fn process_challenge(
 ) -> Result<Json<ChallengeResponse>, ChallengeError> {
     // TODO: potentially heavy CPU operation - offload to rayon
     let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
-    tracing::debug!("interaction analysis: Score({:?})", score);
+    Span::current().record("interaction_score", score);
     let score = match results.success {
         true => {
             tracing::warn!("interaction analysis disabled");
@@ -139,6 +140,18 @@ pub struct ProofOfWork {
     pub solution: u32,
 }
 
+impl ProofOfWork {
+    pub fn verify(&self, dec_key: &str) -> Result<bool, jsonwebtoken::errors::Error> {
+        let pow_challenge =
+            tokens::pow_challenge::decode(&self.challenge, dec_key).inspect_err(|_| {
+                Span::current().record("pow_jwt", &self.challenge);
+            })?;
+        Span::current().record("pow_decoded", tracing::field::debug(&pow_challenge));
+
+        Ok(pow_challenge.verify_solution(self.solution))
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "result")]
 #[serde(rename_all = "kebab-case")]
@@ -147,41 +160,36 @@ pub enum PreAnalysisResponse {
     Failure,
 }
 
-#[instrument(skip(state, results), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
+#[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
-        site_key = results.site_key,
-        hostname = results.hostname.to_string(),
+        site_key = request.site_key,
+        hostname = request.hostname.to_string(),
         pow_jwt,
         pow_decoded,
-        solution = results.proof_of_work.solution,
+        pow_solution = request.proof_of_work.solution,
+        interaction_score,
     )
 )]
 pub async fn process_pre_analysis(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    Json(results): Json<PreAnalysisRequest>,
+    Json(request): Json<PreAnalysisRequest>,
 ) -> Result<Json<PreAnalysisResponse>, ChallengeError> {
     // TODO: look at cookies and other fingerprints
-    let dec_key = db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
+    let dec_key = db::fetch_api_key_by_site_key(&state.pool, &request.site_key)
         .await
         .context("failed to fecth encoding key by api secret while processing challenge")?
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
-    let pow_challenge = tokens::pow_challenge::decode(&results.proof_of_work.challenge, &dec_key)
-        .inspect_err(|_| {
-        tracing::Span::current().record("pow_jwt", &results.proof_of_work.challenge);
-    })?;
-    tracing::Span::current().record("pow_decoded", tracing::field::debug(&pow_challenge));
-
-    let is_proof = pow_challenge.verify_solution(results.proof_of_work.solution);
-    if !is_proof {
+    let verified = request.proof_of_work.verify(&dec_key)?;
+    if !verified {
         return Err(ChallengeError::FailedProofOfWork);
     }
 
     // TODO: potentially heavy CPU operation - offload to rayon
-    let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
-    tracing::debug!("interaction analysis: Score({:?})", score);
+    let Score(score) = analysis::interaction::interaction_analysis(&request.interactions);
+    Span::current().record("interaction_score", score);
 
     let response = match score {
         _ => PreAnalysisResponse::Failure,
@@ -192,7 +200,7 @@ pub async fn process_pre_analysis(
         0.5..=1. => PreAnalysisResponse::Success {
             response: ChallengeResponse {
                 token: response::encode(
-                    ResponseClaims { score, addr: addr.ip(), host: results.hostname },
+                    ResponseClaims { score, addr: addr.ip(), host: request.hostname },
                     &dec_key,
                 )
                 .context("failed encoding jwt response")?,
@@ -207,6 +215,50 @@ pub async fn process_pre_analysis(
     };
 
     Ok(Json(response))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AccessibilityRequest {
+    pub site_key: String,
+    #[serde(with = "crate::serde::host_as_str")]
+    pub hostname: Host,
+    pub proof_of_work: ProofOfWork,
+}
+
+#[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
+    fields(
+        site_key = request.site_key,
+        hostname = request.hostname.to_string(),
+        pow_jwt,
+        pow_decoded,
+        solution = request.proof_of_work.solution,
+    )
+)]
+pub async fn process_accessibility_challenge(
+    State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Json(request): Json<AccessibilityRequest>,
+) -> Result<Json<PreAnalysisResponse>, ChallengeError> {
+    // TODO: look at cookies and other fingerprints
+    let crypt_key = db::fetch_api_key_by_site_key(&state.pool, &request.site_key)
+        .await
+        .context("failed to fecth encoding key by api secret while processing challenge")?
+        .ok_or(ChallengeError::InvalidKey)?
+        .encoding_key;
+
+    let verified = request.proof_of_work.verify(&crypt_key)?;
+    if !verified {
+        return Err(ChallengeError::FailedProofOfWork);
+    }
+
+    let token = response::encode(
+        ResponseClaims { score: 1.0, addr: addr.ip(), host: request.hostname },
+        &crypt_key,
+    )?;
+
+    Ok(Json(PreAnalysisResponse::Success {
+        response: ChallengeResponse { token },
+    }))
 }
 
 fn choose_challenge(mut challenges: Vec<DbChallenge>) -> Option<DbChallenge> {

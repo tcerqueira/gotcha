@@ -6,7 +6,8 @@ use axum::{
     Router,
 };
 use challenge::{
-    get_challenge, get_proof_of_work_challenge, process_challenge, process_pre_analysis,
+    get_challenge, get_proof_of_work_challenge, process_accessibility_challenge, process_challenge,
+    process_pre_analysis,
 };
 use console::{
     create_console, delete_console, gen_api_key, get_api_keys, get_consoles, revoke_api_key,
@@ -34,6 +35,10 @@ pub fn challenge(state: &Arc<AppState>) -> Router {
         .route("/proof-of-work", get(get_proof_of_work_challenge))
         .route("/process", post(process_challenge))
         .route("/process-pre-analysis", post(process_pre_analysis))
+        .route(
+            "/process-accessibility",
+            post(process_accessibility_challenge),
+        )
         .layer(axum::middleware::from_fn(block_bot_agent))
         .with_state(state)
 }

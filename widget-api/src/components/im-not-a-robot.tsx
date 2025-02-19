@@ -36,34 +36,48 @@ export default function ImNotRobot(props: ImNotRobotProps) {
     () => innerState() === "verifying" || props.state === "verifying",
   );
 
+  const handleChallenge = (
+    challengeFn: (r: PowResult) => Promise<AnalysisResponse | null>,
+  ): (() => Promise<void>) => {
+    return async () => {
+      if (checked()) return;
+
+      setInnerState("verifying");
+      const powResult = await solveProofOfWork(props.params.sitekey);
+      if (!powResult) {
+        setInnerState("blank");
+        return;
+      }
+
+      const response = await challengeFn(powResult);
+      if (!response) {
+        setInnerState("blank");
+        return;
+      }
+
+      if (response.result === "success") {
+        setInnerState("verified");
+      } else {
+        setInnerState("blank");
+      }
+      props.onResponse(response);
+    };
+  };
+
   const handleCheck = async () => {
-    if (checked()) return;
+    await handleChallenge(async (powResult) => {
+      return await processPreAnalysis(
+        props.params.sitekey,
+        powResult,
+        interactions,
+      );
+    })();
+  };
 
-    setInnerState("verifying");
-    const powChallenge = await getProofOfWorkChallenge(props.params.sitekey);
-    if (!powChallenge) {
-      setInnerState("blank");
-      return;
-    }
-    const claims: PowChallenge = jose.decodeJwt(powChallenge.token);
-    const solution = await ProofOfWork.solve(claims);
-
-    const response = await processPreAnalysis(
-      props.params.sitekey,
-      { challenge: powChallenge.token, solution },
-      interactions,
-    );
-    if (!response) {
-      setInnerState("blank");
-      return;
-    }
-
-    if (response.result === "success") {
-      setInnerState("verified");
-    } else {
-      setInnerState("blank");
-    }
-    props.onResponse(response);
+  const handleAccessibility = async () => {
+    await handleChallenge(async (powResult) => {
+      return await processAccessibility(props.params.sitekey, powResult);
+    })();
   };
 
   const interactions: Interaction[] = [];
@@ -73,8 +87,8 @@ export default function ImNotRobot(props: ImNotRobotProps) {
   });
 
   return (
-    <div class="bg-gray-100 p-6 rounded-lg shadow-md w-[304px] h-[78px]">
-      <div class="flex items-center space-x-4">
+    <div class="bg-gray-100 pl-6 pr-1 rounded-lg shadow-md w-[304px] h-[78px]">
+      <div class="flex justify-between items-center space-x-4 h-full">
         <div
           class={`w-6 aspect-square border-2 rounded cursor-pointer transition-all duration-200 relative ${
             checked() ? "bg-green-500 border-green-500" : "border-gray-300"
@@ -103,15 +117,33 @@ export default function ImNotRobot(props: ImNotRobotProps) {
             </Match>
           </Switch>
         </div>
-        <span class="text-gray-700">I'm not a robot</span>
+        <span class="text-gray-700 flex-grow">I'm not a robot</span>
+        <span
+          onClick={handleAccessibility}
+          class="text-purple-500 text-xs self-end hover:underline cursor-pointer"
+        >
+          Accessibility
+        </span>
       </div>
     </div>
   );
 }
 
+type PowResult = { challenge: string; solution: number };
+
+async function solveProofOfWork(siteKey: string): Promise<PowResult | null> {
+  const powChallenge = await getProofOfWorkChallenge(siteKey);
+  if (!powChallenge) {
+    return null;
+  }
+  const claims: PowChallenge = jose.decodeJwt(powChallenge.token);
+  const solution = await ProofOfWork.solve(claims);
+  return { challenge: powChallenge.token, solution };
+}
+
 async function processPreAnalysis(
   site_key: string,
-  proofOfWork: { challenge: string; solution: number },
+  proofOfWork: PowResult,
   interactions: Interaction[],
 ): Promise<AnalysisResponse | null> {
   try {
@@ -141,13 +173,43 @@ async function processPreAnalysis(
   }
 }
 
-async function getProofOfWorkChallenge(
+async function processAccessibility(
   site_key: string,
+  proofOfWork: { challenge: string; solution: number },
+): Promise<AnalysisResponse | null> {
+  try {
+    const origin = new URL(import.meta.url).origin;
+    const url = new URL(`${origin}/api/challenge/process-accessibility`);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        site_key,
+        hostname: window.location.hostname,
+        proof_of_work: proofOfWork,
+      }),
+    });
+    if (response.status !== 200)
+      throw new Error(
+        `processAccessibility returned status code ${response.status}`,
+      );
+
+    return await response.json();
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+}
+
+async function getProofOfWorkChallenge(
+  siteKey: string,
 ): Promise<ProofOfWorkChallenge | null> {
   try {
     const origin = new URL(import.meta.url).origin;
     const response = await fetch(
-      `${origin}/api/challenge/proof-of-work?site_key=${site_key}`,
+      `${origin}/api/challenge/proof-of-work?site_key=${siteKey}`,
     );
     if (response.status !== 200)
       throw new Error(
