@@ -1,13 +1,13 @@
 use gotcha_server::{
+    HTTP_CLIENT,
     routes::challenge::{
         AccessibilityRequest, ChallengeResponse, ChallengeResults, GetChallenge, PowResponse,
         PreAnalysisRequest, ProofOfWork,
     },
     tokens::{
-        response::{ResponseClaims, JWT_RESPONSE_ALGORITHM},
         TimeClaims,
+        response::{JWT_RESPONSE_ALGORITHM, ResponseClaims},
     },
-    HTTP_CLIENT,
 };
 use gotcha_server_macros::integration_test;
 use jsonwebtoken::{DecodingKey, Validation};

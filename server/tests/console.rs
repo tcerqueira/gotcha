@@ -1,11 +1,12 @@
 use gotcha_server::{
+    HTTP_CLIENT,
     crypto::KEY_SIZE,
     db::{self, RowsAffected},
     routes::console::{
         ApiKeyResponse, ConsoleResponse, CreateConsoleRequest, UpdateApiKeyRequest,
         UpdateConsoleRequest,
     },
-    test_helpers, HTTP_CLIENT,
+    test_helpers,
 };
 use gotcha_server_macros::integration_test;
 use rand::distr::{Alphanumeric, SampleString};

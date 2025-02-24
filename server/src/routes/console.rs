@@ -2,18 +2,18 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::{
-    extract::{Path, State},
     Json,
+    extract::{Path, State},
 };
 use serde::{Deserialize, Serialize};
-use tracing::{instrument, Level};
+use tracing::{Level, instrument};
 use uuid::Uuid;
 
 use super::{errors::ConsoleError, extractors::User};
 use crate::{
+    AppState,
     crypto::{self, KEY_SIZE},
     db::{self, DbApiKey, DbConsole, DbUpdateApiKey, DbUpdateConsole, RowsAffected},
-    AppState,
 };
 
 #[derive(Debug, Serialize, Deserialize)]

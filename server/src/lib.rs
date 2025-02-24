@@ -1,7 +1,7 @@
 use std::sync::{Arc, LazyLock};
 
 use axum::{Extension, Router};
-use configuration::{server_dir, ApplicationConfig};
+use configuration::{ApplicationConfig, server_dir};
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -18,7 +18,7 @@ mod aws_lambda {
 #[cfg(feature = "aws-lambda")]
 use aws_lambda::*;
 
-pub use configuration::{get_configuration, Config};
+pub use configuration::{Config, get_configuration};
 
 pub mod analysis;
 pub mod configuration;

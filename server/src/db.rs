@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use secrecy::ExposeSecret;
 use sqlx::{
+    PgExecutor, PgPool,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     prelude::*,
-    PgExecutor, PgPool,
 };
 use uuid::Uuid;
 

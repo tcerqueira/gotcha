@@ -8,17 +8,17 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::{
-    headers::{authorization::Bearer, Authorization, UserAgent},
     TypedHeader,
+    headers::{Authorization, UserAgent, authorization::Bearer},
 };
 use isbot::Bots;
-use jsonwebtoken::{jwk::JwkSet, DecodingKey};
+use jsonwebtoken::{DecodingKey, jwk::JwkSet};
 use serde::Deserialize;
 use thiserror::Error;
-use tracing::{field, instrument, Level, Span};
+use tracing::{Level, Span, field, instrument};
 use uuid::Uuid;
 
-use crate::{db, routes::extractors::User, tokens, AppState, HTTP_CACHE_CLIENT};
+use crate::{AppState, HTTP_CACHE_CLIENT, db, routes::extractors::User, tokens};
 
 use super::errors::ConsoleError;
 

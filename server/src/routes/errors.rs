@@ -1,8 +1,8 @@
 use axum::{
+    Json,
     extract::rejection::FormRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use axum_extra::typed_header::TypedHeaderRejection;
 use sqlx::postgres::PgDatabaseError;

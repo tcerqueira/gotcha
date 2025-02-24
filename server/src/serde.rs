@@ -107,7 +107,7 @@ pub mod option_host_as_str {
 }
 
 pub mod single_or_sequence {
-    use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de::DeserializeOwned};
 
     pub fn serialize<S, T>(entries: &[T], serializer: S) -> Result<S::Ok, S::Error>
     where

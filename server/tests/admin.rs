@@ -1,6 +1,7 @@
 use gotcha_server::{
+    HTTP_CLIENT,
     routes::admin::{AddChallenge, DeleteChallenge},
-    test_helpers, HTTP_CLIENT,
+    test_helpers,
 };
 use gotcha_server_macros::integration_test;
 use reqwest::StatusCode;

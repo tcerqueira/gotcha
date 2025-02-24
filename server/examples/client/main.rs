@@ -1,9 +1,9 @@
-use axum::{extract::ConnectInfo, http::StatusCode, routing::post, Form, Json, Router};
+use axum::{Form, Json, Router, extract::ConnectInfo, http::StatusCode, routing::post};
 use gotcha_server::routes::verification::VerificationResponse;
 use reqwest::Client;
 use std::{collections::HashMap, net::SocketAddr, sync::LazyLock};
 use tower_http::{services::ServeDir, trace::TraceLayer};
-use tracing::{instrument, Level};
+use tracing::{Level, instrument};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]

@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use admin::{add_challenge, remove_challenge};
 use axum::{
-    routing::{delete, get, patch, post},
     Router,
+    routing::{delete, get, patch, post},
 };
 use challenge::{
     get_challenge, get_proof_of_work_challenge, process_accessibility_challenge, process_challenge,

@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::extract::{ConnectInfo, Query};
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
-use tracing::{instrument, Level, Span};
+use tracing::{Level, Span, instrument};
 use url::{Host, Url};
 
 use super::errors::ChallengeError;
@@ -14,10 +14,9 @@ use crate::analysis::interaction::{Interaction, Score};
 use crate::analysis::proof_of_work::PowChallenge;
 use crate::tokens::{self, pow_challenge};
 use crate::{
-    analysis,
+    AppState, analysis,
     db::{self, DbChallenge},
     tokens::response::{self, ResponseClaims},
-    AppState,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -210,7 +209,7 @@ pub async fn process_pre_analysis(
         _ => {
             return Err(ChallengeError::Unexpected(anyhow::anyhow!(
                 "score not in range [0.0 .. 1.0]"
-            )))
+            )));
         }
     };
 

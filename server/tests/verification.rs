@@ -2,9 +2,9 @@ mod verify_site {
     use std::net::IpAddr;
 
     use gotcha_server::{
+        HTTP_CLIENT,
         routes::verification::{ErrorCodes, VerificationResponse},
         tokens::response::{self, ResponseClaims},
-        HTTP_CLIENT,
     };
     use gotcha_server_macros::integration_test;
     use reqwest::StatusCode;
@@ -155,10 +155,12 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::MissingInputSecret));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::MissingInputSecret)
+        );
 
         Ok(())
     }
@@ -177,10 +179,12 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::MissingInputResponse));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::MissingInputResponse)
+        );
 
         Ok(())
     }
@@ -198,16 +202,20 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .as_ref()
-            .expect("must have error codes")
-            .contains(&ErrorCodes::MissingInputSecret));
-        assert!(verification
-            .error_codes
-            .as_ref()
-            .expect("must have error codes")
-            .contains(&ErrorCodes::MissingInputResponse));
+        assert!(
+            verification
+                .error_codes
+                .as_ref()
+                .expect("must have error codes")
+                .contains(&ErrorCodes::MissingInputSecret)
+        );
+        assert!(
+            verification
+                .error_codes
+                .as_ref()
+                .expect("must have error codes")
+                .contains(&ErrorCodes::MissingInputResponse)
+        );
 
         Ok(())
     }
@@ -236,10 +244,12 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::InvalidInputSecret));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::InvalidInputSecret)
+        );
 
         Ok(())
     }
@@ -278,10 +288,12 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::BadRequest));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::BadRequest)
+        );
 
         Ok(())
     }
@@ -300,10 +312,12 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::BadRequest));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::BadRequest)
+        );
 
         Ok(())
     }
@@ -351,10 +365,12 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::TimeoutOrDuplicate));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::TimeoutOrDuplicate)
+            );
 
             Ok(())
         }
@@ -381,10 +397,12 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::InvalidInputResponse));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::InvalidInputResponse)
+            );
 
             Ok(())
         }
@@ -415,10 +433,12 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::InvalidInputResponse));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::InvalidInputResponse)
+            );
 
             Ok(())
         }
@@ -448,10 +468,12 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::InvalidInputResponse));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::InvalidInputResponse)
+            );
 
             Ok(())
         }
@@ -472,10 +494,12 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::InvalidInputResponse));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::InvalidInputResponse)
+            );
 
             Ok(())
         }

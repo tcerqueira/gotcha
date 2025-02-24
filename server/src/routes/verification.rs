@@ -1,18 +1,18 @@
 use std::{collections::HashMap, fmt::Display, net::IpAddr, str::FromStr, sync::Arc};
 
 use anyhow::Context;
-use axum::{extract::State, Form, Json};
+use axum::{Form, Json, extract::State};
 use axum_extra::extract::WithRejection;
 use jsonwebtoken::errors::ErrorKind;
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use time::OffsetDateTime;
-use tracing::{instrument, Level};
+use tracing::{Level, instrument};
 use url::Host;
 
 use super::errors::VerificationError;
-use crate::{db, tokens::response, AppState};
+use crate::{AppState, db, tokens::response};
 
 #[derive(Debug)]
 pub struct VerificationRequest {
