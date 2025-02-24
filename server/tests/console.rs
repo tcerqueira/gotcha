@@ -8,12 +8,12 @@ use gotcha_server::{
     test_helpers, HTTP_CLIENT,
 };
 use gotcha_server_macros::integration_test;
-use rand::distributions::{Alphanumeric, DistString};
+use rand::distr::{Alphanumeric, SampleString};
 use reqwest::StatusCode;
 use uuid::Uuid;
 
 async fn post_console(port: u16) -> anyhow::Result<ConsoleResponse> {
-    let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
+    let label = Alphanumeric.sample_string(&mut rand::rng(), 7);
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console"))
         .bearer_auth(test_helpers::auth_jwt().await)
@@ -48,7 +48,7 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let pool = server.pool();
 
-    let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
+    let label = Alphanumeric.sample_string(&mut rand::rng(), 7);
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console"))
         .bearer_auth(test_helpers::auth_jwt().await)
@@ -337,7 +337,7 @@ async fn remove_origin(_server: TestContext) -> anyhow::Result<()> {
 
 async fn create_api_key_on_another_console(port: u16) -> anyhow::Result<(Uuid, String)> {
     // create console
-    let label = Alphanumeric.sample_string(&mut rand::thread_rng(), 7);
+    let label = Alphanumeric.sample_string(&mut rand::rng(), 7);
     let ConsoleResponse { id: console_id, .. } = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/console"))
         .bearer_auth(test_helpers::auth_jwt().await)

@@ -66,7 +66,7 @@ pub async fn get_proof_of_work_challenge(
         .encoding_key;
 
     Ok(Json(PowResponse {
-        token: pow_challenge::encode(PowChallenge::gen(4), &enc_key)
+        token: pow_challenge::encode(PowChallenge::random(4), &enc_key)
             .context("failed encoding jwt response")?,
     }))
 }

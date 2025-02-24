@@ -3,14 +3,14 @@ use std::{future::Future, net::SocketAddr, sync::Arc};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use tokio::sync::{oneshot::Sender, OnceCell};
+use tokio::sync::{OnceCell, oneshot::Sender};
 use uuid::Uuid;
 
 use crate::{
-    app, configuration,
+    HTTP_CLIENT, app, configuration,
     crypto::{self, KEY_SIZE},
     db::{self, DbChallenge},
-    get_configuration, HTTP_CLIENT,
+    get_configuration,
 };
 
 const DEMO_CONSOLE_LABEL_PREFIX: &str = "console_for_integration_tests";
@@ -34,7 +34,8 @@ where
     F: FnOnce(TestContext) -> Fut,
     Fut: Future<Output = R>,
 {
-    std::env::set_var("SERVER_DIR", "../");
+    // FIXME: https://doc.rust-lang.org/std/env/fn.set_var.html#safety
+    unsafe { std::env::set_var("SERVER_DIR", "../") };
     let ctx = TestContext::setup()
         .await
         .expect("failed to setup test environment");

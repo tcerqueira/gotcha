@@ -11,9 +11,9 @@ pub struct PowChallenge {
 }
 
 impl PowChallenge {
-    pub fn gen(difficulty: u16) -> Self {
+    pub fn random(difficulty: u16) -> Self {
         Self {
-            nonce: rand::thread_rng().gen::<u32>(),
+            nonce: rand::rng().random::<u32>(),
             difficulty,
             timestamp: OffsetDateTime::now_utc().unix_timestamp(),
         }
@@ -60,7 +60,7 @@ mod tests {
 
     #[test]
     fn successful_verify_solution() {
-        let challenge = PowChallenge::gen(4);
+        let challenge = PowChallenge::random(4);
 
         let solution = challenge.solve();
 
@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn failed_verify_solution() {
-        let challenge = PowChallenge::gen(4);
+        let challenge = PowChallenge::random(4);
 
         let solution = challenge.solve() - 1;
 
