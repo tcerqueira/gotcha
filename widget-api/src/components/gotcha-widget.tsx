@@ -106,27 +106,31 @@ export function GotchaWidget(props: GotchaWidgetProps) {
           state={notRobotState()}
           onResponse={handlePreChallengeResponse}
         />
-        <div class="flex justify-between p-1 bg-gray-200">
-          <p class="text-left">
+        <div class="flex justify-between py-1 px-2 bg-gray-200">
+          <a href="https://www.gotcha.land" target="_blank">
+            <span class="text-purple-500 text-left hover:underline ">
+              About us
+            </span>
+          </a>
+          <p class="text-sm text-right">
             <Switch>
               <Match when={state() === "verified"}>
-                <span class="text-green-400">Verified!</span>
+                <span class="text-green-500">Verified!</span>
               </Match>
               <Match when={state() === "verifying"}>
                 <span class="text-gray-500">Verifiying...</span>
               </Match>
               <Match when={state() === "failed"}>
-                <span class="text-red-400">Verification failed.</span>
+                <span class="text-red-500">Verification failed.</span>
               </Match>
               <Match when={state() === "error"}>
-                <span class="text-red-400">Oops! Something went wrong...</span>
+                <span class="text-red-500">Oops! Something went wrong...</span>
               </Match>
               <Match when={props.liveState() === "expired"}>
-                <span class="text-red-400">Verification expired.</span>
+                <span class="text-red-500">Verification expired.</span>
               </Match>
             </Switch>
           </p>
-          <p class="text-right">Gotcha</p>
         </div>
 
         <Show when={showChallenge()}>
