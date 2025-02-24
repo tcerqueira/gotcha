@@ -71,7 +71,7 @@ pub async fn site_verify(
 
     let solver_check = verification
         .remoteip
-        .map_or(true, |solver| solver == claims.other.addr);
+        .is_none_or(|solver| solver == claims.other.addr);
 
     Ok(Json(VerificationResponse {
         success: claims.other.score >= 0.5 && solver_check,
