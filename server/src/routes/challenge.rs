@@ -60,7 +60,7 @@ pub async fn get_proof_of_work_challenge(
 ) -> Result<Json<PowResponse>, ChallengeError> {
     let enc_key = db::fetch_api_key_by_site_key(&state.pool, &query.site_key)
         .await
-        .context("failed to fecth encoding key by api secret while processing challenge")?
+        .context("failed to fetch encoding key by api secret while processing challenge")?
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
@@ -116,7 +116,7 @@ pub async fn process_challenge(
             ResponseClaims { score, addr: addr.ip(), host: results.hostname },
             &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                 .await
-                .context("failed to fecth encoding key by api secret while processing challenge")?
+                .context("failed to fetch encoding key by api secret while processing challenge")?
                 .ok_or(ChallengeError::InvalidKey)?
                 .encoding_key,
         )
@@ -177,7 +177,7 @@ pub async fn process_pre_analysis(
     // TODO: look at cookies and other fingerprints
     let dec_key = db::fetch_api_key_by_site_key(&state.pool, &request.site_key)
         .await
-        .context("failed to fecth encoding key by api secret while processing challenge")?
+        .context("failed to fetch encoding key by api secret while processing challenge")?
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
@@ -241,7 +241,7 @@ pub async fn process_accessibility_challenge(
     // TODO: look at cookies and other fingerprints
     let crypt_key = db::fetch_api_key_by_site_key(&state.pool, &request.site_key)
         .await
-        .context("failed to fecth encoding key by api secret while processing challenge")?
+        .context("failed to fetch encoding key by api secret while processing challenge")?
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
