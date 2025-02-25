@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use axum::extract::FromRequestParts;
 #[cfg(feature = "aws-lambda")]
 use axum::http::Request;
-use axum::http::StatusCode;
-use axum::http::request::Parts;
+use axum::{
+    extract::FromRequestParts,
+    http::{StatusCode, request::Parts},
+};
 
 #[cfg(feature = "aws-lambda")]
 pub fn extract_lambda_source_ip<B>(mut request: Request<B>) -> Request<B> {

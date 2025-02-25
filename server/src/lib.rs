@@ -18,8 +18,6 @@ mod aws_lambda {
 #[cfg(feature = "aws-lambda")]
 use aws_lambda::*;
 
-pub use configuration::{Config, get_configuration};
-
 pub mod analysis;
 pub mod configuration;
 pub mod crypto;
@@ -28,6 +26,8 @@ pub mod routes;
 mod serde;
 pub mod test_helpers;
 pub mod tokens;
+
+pub use configuration::{Config, get_configuration};
 
 fn build_client() -> Client {
     const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);

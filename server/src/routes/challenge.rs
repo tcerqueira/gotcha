@@ -1,22 +1,27 @@
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
-use axum::extract::{ConnectInfo, Query};
-use axum::{Json, extract::State};
+use axum::{
+    Json,
+    extract::{ConnectInfo, Query, State},
+};
 use serde::{Deserialize, Serialize};
 use tracing::{Level, Span, instrument};
 use url::{Host, Url};
 
-use super::errors::ChallengeError;
-use super::extractors::ThisOrigin;
-use crate::analysis::interaction::{Interaction, Score};
-use crate::analysis::proof_of_work::PowChallenge;
-use crate::tokens::{self, pow_challenge};
+use super::{errors::ChallengeError, extractors::ThisOrigin};
 use crate::{
-    AppState, analysis,
+    AppState,
+    analysis::{
+        self,
+        interaction::{Interaction, Score},
+        proof_of_work::PowChallenge,
+    },
     db::{self, DbChallenge},
-    tokens::response::{self, ResponseClaims},
+    tokens::{
+        self, pow_challenge,
+        response::{self, ResponseClaims},
+    },
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,10 +93,11 @@ pub struct ChallengeResponse {
 
 #[instrument(skip(state, results), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
+        ?addr,
         success = results.success,
         site_key = results.site_key,
-        hostname = results.hostname.to_string(),
-        challenge = results.challenge.to_string(),
+        ?hostname = results.hostname,
+        %challenge = results.challenge,
         interaction_score,
     )
 )]
@@ -162,7 +168,7 @@ pub enum PreAnalysisResponse {
 #[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
         site_key = request.site_key,
-        hostname = request.hostname.to_string(),
+        ?hostname = request.hostname,
         pow_jwt,
         pow_decoded,
         pow_solution = request.proof_of_work.solution,
@@ -226,8 +232,9 @@ pub struct AccessibilityRequest {
 
 #[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
+        ?addr,
         site_key = request.site_key,
-        hostname = request.hostname.to_string(),
+        ?hostname = request.hostname,
         pow_jwt,
         pow_decoded,
         solution = request.proof_of_work.solution,

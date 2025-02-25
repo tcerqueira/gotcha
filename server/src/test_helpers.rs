@@ -134,7 +134,7 @@ impl TestContext {
     }
 }
 
-async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> sqlx::Result<()> {
+async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> db::Result<()> {
     let mut txn = pool.begin().await?;
 
     let console_id = db::insert_console(
@@ -156,7 +156,7 @@ async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> sqlx::Result<()> {
     Ok(())
 }
 
-async fn rollback_demo(pool: &PgPool, test_id: &Uuid) -> sqlx::Result<()> {
+async fn rollback_demo(pool: &PgPool, test_id: &Uuid) -> db::Result<()> {
     let mut txn = pool.begin().await?;
     let id =
         db::fetch_console_by_label(&mut *txn, &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"))

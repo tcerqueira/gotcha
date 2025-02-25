@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
-use super::TimeClaims;
-
 use crate::analysis::proof_of_work::PowChallenge;
+
+use super::TimeClaims;
 
 pub static JWT_POW_ALGORITHM: Algorithm = Algorithm::HS256;
 

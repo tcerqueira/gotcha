@@ -11,8 +11,9 @@ use time::OffsetDateTime;
 use tracing::{Level, instrument};
 use url::Host;
 
-use super::errors::VerificationError;
 use crate::{AppState, db, tokens::response};
+
+use super::errors::VerificationError;
 
 #[derive(Debug)]
 pub struct VerificationRequest {
