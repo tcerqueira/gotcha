@@ -77,7 +77,7 @@ jobs:
       - name: Build lambda function
         env:
           SQLX_OFFLINE: true
-        run: cargo build-lambda
+        run: cargo lambda build --arm64 --features aws-lambda
 
   fmt:
     name: Rustfmt

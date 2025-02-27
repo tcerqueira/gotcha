@@ -19,6 +19,7 @@ class GotchaServerStack extends cdk.Stack {
     super(scope, id, props);
     const stageName = Stage.of(this)?.stageName.toLowerCase() ?? "oops";
 
+    // TODO: Move cargo-lambda from CI to here
     const lambdaFunction = lambda.Function.fromFunctionArn(
       this,
       "GotchaServer",
