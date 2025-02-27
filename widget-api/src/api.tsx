@@ -8,7 +8,7 @@ loadCss()
     // Expose the API globally
     (window as any).grecaptcha = new GreCaptcha();
     const { onload } = getJsParams();
-    onload && onload();
+    onload?.();
   })
   .catch((error) => {
     console.error("Error initializing Gotcha:", error);

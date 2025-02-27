@@ -1,122 +1,71 @@
 import { Interaction } from "@gotcha-widget/lib";
-import {
-  createMemo,
-  createSignal,
-  Match,
-  onCleanup,
-  onMount,
-  Switch,
-} from "solid-js";
 import * as jose from "jose";
+import { createEffect } from "solid-js";
 import { RenderParams } from "../grecaptcha";
-import { ChallengeResponse } from "./gotcha-widget";
 import { PowChallenge, ProofOfWork } from "../proof-of-work";
+import { CheckboxWithStatus } from "./checkbox-with-status";
+import { ChallengeState } from "./types";
 
-type State = "blank" | "verified" | "verifying" | "failed";
-
-export type AnalysisResponse =
+export type PreAnalysisResponse =
   | { result: "failure" }
-  | { result: "success"; response: ChallengeResponse };
-export type ProofOfWorkChallenge = {
-  token: string;
-};
+  | { result: "success"; response: { token: string } };
 
 type ImNotRobotProps = {
   params: RenderParams;
-  state: State;
-  onResponse: (res: AnalysisResponse) => void;
+  state: ChallengeState;
+  onStateChange: (state: ChallengeState) => void;
+  onVerificationComplete: (response: PreAnalysisResponse) => void;
+  onError: () => void;
 };
 
 export default function ImNotRobot(props: ImNotRobotProps) {
-  const [innerState, setInnerState] = createSignal<State>("blank");
-  const checked = createMemo(
-    () => innerState() === "verified" || props.state === "verified",
-  );
-  const verifying = createMemo(
-    () => innerState() === "verifying" || props.state === "verifying",
-  );
+  const interactions: Interaction[] = [];
 
-  const handleChallenge = (
-    challengeFn: (r: PowResult) => Promise<AnalysisResponse | null>,
-  ): (() => Promise<void>) => {
-    return async () => {
-      if (checked()) return;
+  createEffect(() => {
+    const cleanup = captureInteractions(interactions);
+    return cleanup;
+  });
 
-      setInnerState("verifying");
+  const handleVerification = async (
+    verificationFn: (pow: PowResult) => Promise<PreAnalysisResponse | null>,
+  ) => {
+    if (props.state === "verified") return;
+
+    props.onStateChange("verifying");
+
+    try {
       const powResult = await solveProofOfWork(props.params.sitekey);
       if (!powResult) {
-        setInnerState("blank");
+        props.onStateChange("error");
+        props.onError();
         return;
       }
 
-      const response = await challengeFn(powResult);
+      const response = await verificationFn(powResult);
       if (!response) {
-        setInnerState("blank");
+        props.onStateChange("error");
+        props.onError();
         return;
       }
 
-      if (response.result === "success") {
-        setInnerState("verified");
-      } else {
-        setInnerState("blank");
-      }
-      props.onResponse(response);
-    };
+      props.onVerificationComplete(response);
+    } catch (e) {
+      props.onStateChange("error");
+      props.onError();
+    }
   };
-
-  const handleCheck = async () => {
-    await handleChallenge(async (powResult) => {
-      return await processPreAnalysis(
-        props.params.sitekey,
-        powResult,
-        interactions,
-      );
-    })();
-  };
-
-  const handleAccessibility = async () => {
-    await handleChallenge(async (powResult) => {
-      return await processAccessibility(props.params.sitekey, powResult);
-    })();
-  };
-
-  const interactions: Interaction[] = [];
-  onMount(() => {
-    const cleanup = captureInteractions(interactions);
-    onCleanup(cleanup);
-  });
 
   return (
     <div class="bg-gray-100 pl-6 pr-1 rounded-lg shadow-md w-[304px] h-[78px]">
       <div class="flex justify-between items-center space-x-4 h-full">
-        <div
-          class={`w-6 aspect-square border-2 rounded cursor-pointer transition-all duration-200 relative ${
-            checked() ? "bg-green-500 border-green-500" : "border-gray-300"
-          } ${verifying() ? "bg-transparent border-transparent" : ""}`}
-          onClick={handleCheck}
-        >
-          <Switch>
-            <Match when={verifying()}>
-              <div class="absolute inset-0">
-                <div class="animate-spin w-6 h-6 border-2 border-gray-300 border-t-purple-500 rounded-full" />
-              </div>
-            </Match>
-            <Match when={checked()}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5 text-white"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </Match>
-          </Switch>
-        </div>
+        <CheckboxWithStatus
+          state={props.state}
+          onClick={() =>
+            handleVerification((pow) =>
+              processPreAnalysis(props.params.sitekey, pow, interactions),
+            )
+          }
+        />
         <span class="text-gray-700 flex-grow">I'm not a robot</span>
         <div class="flex flex-col justify-evenly items-center self-stretch max-w-[35%] pr-2">
           <img
@@ -124,7 +73,11 @@ export default function ImNotRobot(props: ImNotRobotProps) {
             alt="Gotcha logo"
           />
           <span
-            onClick={handleAccessibility}
+            onClick={() =>
+              handleVerification((pow) =>
+                processAccessibility(props.params.sitekey, pow),
+              )
+            }
             class="text-purple-500 text-xs self-end hover:underline cursor-pointer"
           >
             Accessibility
@@ -151,7 +104,7 @@ async function processPreAnalysis(
   site_key: string,
   proofOfWork: PowResult,
   interactions: Interaction[],
-): Promise<AnalysisResponse | null> {
+): Promise<PreAnalysisResponse | null> {
   try {
     const origin = new URL(import.meta.url).origin;
     const url = new URL(`${origin}/api/challenge/process-pre-analysis`);
@@ -182,7 +135,7 @@ async function processPreAnalysis(
 async function processAccessibility(
   site_key: string,
   proofOfWork: { challenge: string; solution: number },
-): Promise<AnalysisResponse | null> {
+): Promise<PreAnalysisResponse | null> {
   try {
     const origin = new URL(import.meta.url).origin;
     const url = new URL(`${origin}/api/challenge/process-accessibility`);
@@ -208,6 +161,10 @@ async function processAccessibility(
     return null;
   }
 }
+
+type ProofOfWorkChallenge = {
+  token: string;
+};
 
 async function getProofOfWorkChallenge(
   siteKey: string,

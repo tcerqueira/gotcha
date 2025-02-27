@@ -181,13 +181,13 @@ pub async fn process_pre_analysis(
     Json(request): Json<PreAnalysisRequest>,
 ) -> Result<Json<PreAnalysisResponse>, ChallengeError> {
     // TODO: look at cookies and other fingerprints
-    let dec_key = db::fetch_api_key_by_site_key(&state.pool, &request.site_key)
+    let crypt_key = db::fetch_api_key_by_site_key(&state.pool, &request.site_key)
         .await
         .context("failed to fetch encoding key by api secret while processing challenge")?
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
-    let verified = request.proof_of_work.verify(&dec_key)?;
+    let verified = request.proof_of_work.verify(&crypt_key)?;
     if !verified {
         return Err(ChallengeError::FailedProofOfWork);
     }
@@ -206,7 +206,7 @@ pub async fn process_pre_analysis(
             response: ChallengeResponse {
                 token: response::encode(
                     ResponseClaims { score, addr: addr.ip(), host: request.hostname },
-                    &dec_key,
+                    &crypt_key,
                 )
                 .context("failed encoding jwt response")?,
             },
