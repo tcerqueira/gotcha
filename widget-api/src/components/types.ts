@@ -8,7 +8,8 @@ export type ChallengeState =
   | "challenging"
   | "verified"
   | "failed"
-  | "error";
+  | "error"
+  | "expired";
 
 export type GotchaWidgetProps = RenderParams & {
   liveState: Accessor<LiveState>;

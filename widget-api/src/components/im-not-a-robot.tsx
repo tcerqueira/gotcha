@@ -3,7 +3,6 @@ import * as jose from "jose";
 import { createEffect } from "solid-js";
 import { RenderParams } from "../grecaptcha";
 import { PowChallenge, ProofOfWork } from "../proof-of-work";
-import { CheckboxWithStatus } from "./checkbox-with-status";
 import { ChallengeState } from "./types";
 
 export type PreAnalysisResponse =
@@ -29,7 +28,12 @@ export default function ImNotRobot(props: ImNotRobotProps) {
   const handleVerification = async (
     verificationFn: (pow: PowResult) => Promise<PreAnalysisResponse | null>,
   ) => {
-    if (props.state === "verified") return;
+    if (
+      props.state === "verified" ||
+      props.state === "verifying" ||
+      props.state === "challenging"
+    )
+      return;
 
     props.onStateChange("verifying");
 
@@ -56,22 +60,27 @@ export default function ImNotRobot(props: ImNotRobotProps) {
   };
 
   return (
-    <div class="bg-gray-100 pl-6 pr-1 rounded-lg shadow-md w-[304px] h-[78px]">
-      <div class="flex justify-between items-center space-x-4 h-full">
-        <CheckboxWithStatus
-          state={props.state}
+    <div class="rounded-lg w-[304px] h-[68px]">
+      <div class="flex justify-between items-stretch space-x-4 h-full">
+        <div
+          class="pl-6 flex-grow cursor-pointer flex items-center"
           onClick={() =>
             handleVerification((pow) =>
               processPreAnalysis(props.params.sitekey, pow, interactions),
             )
           }
-        />
-        <span class="text-gray-700 flex-grow">I'm not a robot</span>
-        <div class="flex flex-col justify-evenly items-center self-stretch max-w-[35%] pr-2">
-          <img
-            src="https://static.wixstatic.com/media/a56dc4_951625a6990f42b6a80975c7beabee2a~mv2.png/v1/fill/w_171,h_38,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/HL_1.png"
-            alt="Gotcha logo"
-          />
+        >
+          <span class={`${getTextClass(props.state)}`}>
+            {getText(props.state)}
+          </span>
+        </div>
+        <div class="pr-3 flex flex-col justify-evenly items-center max-w-[35%]">
+          <a href="https://www.gotcha.land" target="_blank">
+            <img
+              src="https://static.wixstatic.com/media/a56dc4_951625a6990f42b6a80975c7beabee2a~mv2.png/v1/fill/w_171,h_38,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/HL_1.png"
+              alt="Gotcha logo"
+            />
+          </a>
           <span
             onClick={() =>
               handleVerification((pow) =>
@@ -183,6 +192,41 @@ async function getProofOfWorkChallenge(
   } catch (e) {
     console.error(e);
     return null;
+  }
+}
+
+function getText(state: ChallengeState): string {
+  switch (state) {
+    case "verified":
+      return "Verified!";
+    case "failed":
+      return "Try again...";
+    case "expired":
+      return "Expired, verify again.";
+    case "error":
+      return "Something went wrong.";
+    case "verifying":
+    case "challenging":
+      return "Verifying...";
+    default:
+      return "I'm not a robot";
+  }
+}
+
+function getTextClass(state: ChallengeState): string {
+  switch (state) {
+    case "verified":
+      return "text-lg text-green-700";
+    case "failed":
+    case "expired":
+      return "text-md text-red-700";
+    case "error":
+      return "text-md text-yellow-700";
+    case "verifying":
+    case "challenging":
+      return "text-lg text-purple-700";
+    default:
+      return "text-lg text-gray-700";
   }
 }
 

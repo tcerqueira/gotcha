@@ -1,19 +1,23 @@
-import { createSignal, createResource, Show } from "solid-js";
+import { createSignal, createResource, Show, createEffect } from "solid-js";
 import { ChallengeState, GotchaWidgetProps, Challenge } from "./types";
 import ImNotRobot, { PreAnalysisResponse } from "./im-not-a-robot";
-import StatusBar from "./status-bar";
 import ChallengeModal from "./challenge-modal";
 
 export function GotchaWidget(props: GotchaWidgetProps) {
   const [state, setState] = createSignal<ChallengeState>("blank");
   const [challenge] = createResource(props.sitekey, fetchChallenge);
 
+  createEffect(() => {
+    if (props.liveState() === "expired") {
+      setState("expired");
+    }
+  });
+
   const handlePreVerificationComplete = (response: PreAnalysisResponse) => {
     if (response.result === "success") {
       setState("verified");
       props.callback?.(response.response.token);
     } else {
-      // Start challenge flow when pre-verification fails
       setState("challenging");
     }
   };
@@ -30,7 +34,9 @@ export function GotchaWidget(props: GotchaWidgetProps) {
 
   return (
     <div class="gotcha-widget inline-block">
-      <div class="border-2 border-purple-200 rounded box-content bg-gray-50">
+      <div
+        class={`border-2 border-gray-300 border-b-4 ${getBorderClass(state())} rounded box-content transition-colors duration-400 ${getBackgroundClass(state())}`}
+      >
         <ImNotRobot
           params={props}
           state={state()}
@@ -38,8 +44,6 @@ export function GotchaWidget(props: GotchaWidgetProps) {
           onVerificationComplete={handlePreVerificationComplete}
           onError={handleError}
         />
-
-        <StatusBar state={state()} liveState={props.liveState()} />
 
         <Show when={state() === "challenging"}>
           <ChallengeModal
@@ -67,4 +71,40 @@ async function fetchChallenge(): Promise<Challenge> {
 
   const response = await fetch(url);
   return (await response.json()) as Challenge;
+}
+
+function getBackgroundClass(state: ChallengeState) {
+  switch (state) {
+    case "verified":
+      return "bg-gradient-to-t from-green-200 to-transparent";
+    case "failed":
+      return "bg-gradient-to-t from-red-200 to-transparent";
+    case "expired":
+      return "bg-gradient-to-t from-red-100 to-transparent";
+    case "error":
+      return "bg-gradient-to-t from-yellow-200 to-transparent";
+    case "verifying":
+    case "challenging":
+      return "bg-gradient-to-t from-purple-200 to-transparent animate-pulse";
+    default:
+      return "bg-gray-50";
+  }
+}
+
+function getBorderClass(state: ChallengeState) {
+  switch (state) {
+    case "verified":
+      return "border-b-green-400";
+    case "failed":
+      return "border-b-red-400";
+    case "expired":
+      return "border-b-red-300";
+    case "error":
+      return "border-b-yellow-400";
+    case "verifying":
+    case "challenging":
+      return "border-b-purple-400";
+    default:
+      return "border-b-gray-300";
+  }
 }
