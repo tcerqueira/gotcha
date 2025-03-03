@@ -63,6 +63,7 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
         run: |
           cargo lambda deploy --binary-name gotcha-server gotcha-server-${{ vars.ENV_TAG }} \
+            --include config/ --include dist/ \
             --tag environment=${{ vars.ENV_TAG }} \
             --env-var APP_DATABASE__HOST=${{ secrets.SUPABASE_HOST }} \
             --env-var APP_DATABASE__USERNAME=${{ secrets.SUPABASE_USER }} \
