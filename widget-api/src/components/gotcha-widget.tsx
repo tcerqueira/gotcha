@@ -35,7 +35,7 @@ export function GotchaWidget(props: GotchaWidgetProps) {
   return (
     <div class="gotcha-widget inline-block">
       <div
-        class={`border-2 border-gray-300 border-b-4 ${getBorderClass(state())} rounded box-content transition-colors duration-400 ${getBackgroundClass(state())}`}
+        class={`box-content transition-colors duration-400 ${getBorderClass(state())} ${getBackgroundClass(state())}`}
       >
         <ImNotRobot
           params={props}
@@ -85,26 +85,30 @@ function getBackgroundClass(state: ChallengeState) {
       return "bg-gradient-to-t from-yellow-200 to-transparent";
     case "verifying":
     case "challenging":
-      return "bg-gradient-to-t from-purple-200 to-transparent animate-pulse";
+      return "bg-gradient-to-t from-purple-200 via-purple-200/30 to-purple-200/30 bg-[size:100%_200%] animate-pulse-gradient";
     default:
       return "bg-gray-50";
   }
 }
 
 function getBorderClass(state: ChallengeState) {
-  switch (state) {
-    case "verified":
-      return "border-b-green-400";
-    case "failed":
-      return "border-b-red-400";
-    case "expired":
-      return "border-b-red-300";
-    case "error":
-      return "border-b-yellow-400";
-    case "verifying":
-    case "challenging":
-      return "border-b-purple-400";
-    default:
-      return "border-b-gray-300";
-  }
+  const bColor = (() => {
+    switch (state) {
+      case "verified":
+        return "border-b-green-400";
+      case "failed":
+        return "border-b-red-400";
+      case "expired":
+        return "border-b-red-300";
+      case "error":
+        return "border-b-yellow-400";
+      case "verifying":
+      case "challenging":
+        return "border-b-purple-400";
+      default:
+        return "border-b-gray-300";
+    }
+  })();
+
+  return `border-2 border-gray-300 border-b-4 ${bColor} rounded`;
 }
