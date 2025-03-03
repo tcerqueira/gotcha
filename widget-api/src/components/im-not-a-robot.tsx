@@ -216,17 +216,17 @@ function getText(state: ChallengeState): string {
 function getTextClass(state: ChallengeState): string {
   switch (state) {
     case "verified":
-      return "text-lg text-green-700";
+      return "text-lg text-green-700 dark:text-green-300";
     case "failed":
     case "expired":
-      return "text-md text-red-700";
+      return "text-md text-red-700 dark:text-red-300";
     case "error":
-      return "text-md text-yellow-700";
+      return "text-md text-yellow-700 dark:text-yellow-300";
     case "verifying":
     case "challenging":
-      return "text-lg text-purple-700";
+      return "text-lg text-purple-700 dark:text-purple-300";
     default:
-      return "text-lg text-gray-700";
+      return "text-lg text-gray-700 dark:text-gray-300";
   }
 }
 
