@@ -4,6 +4,7 @@ import { createEffect } from "solid-js";
 import { RenderParams } from "../grecaptcha";
 import { PowChallenge, ProofOfWork } from "../proof-of-work";
 import { ChallengeState } from "./types";
+import Logo from "./logo";
 
 export type PreAnalysisResponse =
   | { result: "failure" }
@@ -75,12 +76,7 @@ export default function ImNotRobot(props: ImNotRobotProps) {
           </span>
         </div>
         <div class="pr-3 flex flex-col justify-evenly items-center max-w-[35%]">
-          <a href="https://www.gotcha.land" target="_blank">
-            <img
-              src="https://static.wixstatic.com/media/a56dc4_951625a6990f42b6a80975c7beabee2a~mv2.png/v1/fill/w_171,h_38,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/HL_1.png"
-              alt="Gotcha logo"
-            />
-          </a>
+          <Logo />
           <span
             onClick={() =>
               handleVerification((pow) =>

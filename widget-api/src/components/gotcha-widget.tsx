@@ -1,11 +1,10 @@
-import { createSignal, createResource, Show, createEffect } from "solid-js";
-import { ChallengeState, GotchaWidgetProps, Challenge } from "./types";
+import { createSignal, Show, createEffect } from "solid-js";
+import { ChallengeState, GotchaWidgetProps } from "./types";
 import ImNotRobot, { PreAnalysisResponse } from "./im-not-a-robot";
-import ChallengeModal from "./challenge-modal";
+import ChallengeFrame from "./challenge-frame";
 
 export function GotchaWidget(props: GotchaWidgetProps) {
   const [state, setState] = createSignal<ChallengeState>("blank");
-  const [challenge] = createResource(props.sitekey, fetchChallenge);
 
   createEffect(() => {
     if (props.liveState() === "expired") {
@@ -34,10 +33,10 @@ export function GotchaWidget(props: GotchaWidgetProps) {
 
   return (
     <div class="gotcha-widget" data-theme={props.theme}>
-      <div class="inline-block bg-gray-50 dark:bg-gray-700">
-        <div
-          class={`box-content transition-colors duration-400 ${getBorderClass(state())} ${getBackgroundClass(state())}`}
-        >
+      <div
+        class={`inline-block bg-gray-50 dark:bg-gray-700 transition-colors duration-400 ${getBorderClass(state())}`}
+      >
+        <div class={`${getBackgroundClass(state())}`}>
           <ImNotRobot
             params={props}
             state={state()}
@@ -47,8 +46,7 @@ export function GotchaWidget(props: GotchaWidgetProps) {
           />
 
           <Show when={state() === "challenging"}>
-            <ChallengeModal
-              challenge={challenge()!}
+            <ChallengeFrame
               params={{
                 k: props.sitekey,
                 theme: props.theme,
@@ -65,14 +63,6 @@ export function GotchaWidget(props: GotchaWidgetProps) {
       </div>
     </div>
   );
-}
-
-async function fetchChallenge(): Promise<Challenge> {
-  const origin = new URL(import.meta.url).origin;
-  const url = new URL(`${origin}/api/challenge`);
-
-  const response = await fetch(url);
-  return (await response.json()) as Challenge;
 }
 
 function getBackgroundClass(state: ChallengeState) {
