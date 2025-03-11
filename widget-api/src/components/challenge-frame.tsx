@@ -1,4 +1,11 @@
-import { createEffect, createResource, Show } from "solid-js";
+import {
+  createEffect,
+  createResource,
+  createSignal,
+  Match,
+  Show,
+  Switch,
+} from "solid-js";
 import { Challenge } from "./types";
 import Modal from "./modal";
 import { Interaction, SearchParams } from "@gotcha-widget/lib";
@@ -14,7 +21,11 @@ type ChallengeFrameProps = {
 };
 
 export default function ChallengeFrame(props: ChallengeFrameProps) {
-  let iframeElement: HTMLIFrameElement | null = null;
+  const [iframeRef, setIframeRef] = createSignal<HTMLIFrameElement>();
+  createEffect(() => {
+    iframeRef()?.focus();
+  });
+
   const [challengeRes, challengeActions] = createResource(
     props.params.k,
     fetchChallenge,
@@ -25,7 +36,7 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
     if (
       !challenge ||
       event.origin !== new URL(challenge.url).origin ||
-      event.source !== iframeElement?.contentWindow
+      event.source !== iframeRef()?.contentWindow
     ) {
       return;
     }
@@ -60,26 +71,32 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
     <Modal open={true} onClose={props.onClose}>
       <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 shadow-lg">
         <div class="text-gray-700 dark:text-gray-50 text-xl text-center mb-4">
-          Complete the challenge
+          Solve the challenge
         </div>
 
-        <Show when={!challengeRes.loading} fallback={"Loading..."}>
-          <div class={`w-[${challengeRes()!.width}px]`}>
-            <iframe
-              ref={(el) => (iframeElement = el)}
-              src={buildChallengeUrl(challengeRes()!.url, props.params)}
-              width={challengeRes()!.width}
-              height={challengeRes()!.height}
-              sandbox="allow-forms allow-scripts allow-same-origin"
-            />
-          </div>
-        </Show>
+        <div
+          class={`w-[${challengeRes.latest?.width ?? 304}px] h-[${challengeRes.latest?.height ?? 68}px]`}
+        >
+          <Switch>
+            <Match when={challengeRes.loading}>Loading...</Match>
+            <Match when={challengeRes.error}>Something went wrong...</Match>
+            <Match when={challengeRes()}>
+              <iframe
+                ref={setIframeRef}
+                src={buildChallengeUrl(challengeRes()!.url, props.params)}
+                width={challengeRes()!.width}
+                height={challengeRes()!.height}
+                sandbox="allow-forms allow-scripts allow-same-origin"
+              />
+            </Match>
+          </Switch>
+        </div>
 
         <div class="flex items-center justify-between mt-4">
           <div class="flex gap-4">
             <button
               type="button"
-              class="text-gray-400 hover:text-gray-50"
+              class="text-gray-400 hover:text-purple-700 dark:hover:text-purple-400"
               onClick={props.onClose}
             >
               <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
@@ -88,7 +105,7 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
             </button>
             <button
               type="button"
-              class="text-gray-400 hover:text-gray-50"
+              class="text-gray-400 hover:text-purple-700 dark:hover:text-purple-400"
               onClick={async () => {
                 await challengeActions.refetch();
                 props.onReroll?.();

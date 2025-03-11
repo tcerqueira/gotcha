@@ -77,7 +77,8 @@ export default function ImNotRobot(props: ImNotRobotProps) {
         </div>
         <div class="pr-3 flex flex-col justify-evenly items-center max-w-[35%]">
           <Logo />
-          <span
+          <button
+            type="button"
             onClick={() =>
               handleVerification((pow) =>
                 processAccessibility(props.params.sitekey, pow),
@@ -86,7 +87,7 @@ export default function ImNotRobot(props: ImNotRobotProps) {
             class="text-purple-500 text-xs self-end hover:underline cursor-pointer"
           >
             Accessibility
-          </span>
+          </button>
         </div>
       </div>
     </div>
