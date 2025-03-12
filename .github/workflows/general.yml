@@ -47,6 +47,8 @@ jobs:
         run: sqlx migrate run
       - name: Run sqlx check
         run: cargo sqlx prepare --check --workspace -- --all-targets --all-features
+      - name: Create dummy /dist directory
+        run: mkdir dist
       - name: Run tests
         env:
           TEST_AUTH_CLIENT_ID: ${{ secrets.TEST_AUTH_CLIENT_ID }}

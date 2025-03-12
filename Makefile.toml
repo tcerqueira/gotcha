@@ -24,6 +24,14 @@ run_task = { name = [
     "watch-tango",
 ], fork = true, parallel = true }
 
+[tasks.bundle]
+description = "Bundle for deployment"
+run_task = { name = [
+    "server-bundle",
+    "widget-api-build",
+    "widgets-im_not_a_robot-build",
+], fork = true, parallel = true }
+
 ###################
 # Server Tasks
 ###################
@@ -44,6 +52,11 @@ description = "Watch and run the client"
 command = "cargo"
 args = ["run", "-q", "--example", "client"]
 watch = { watch = ["./server/examples"] }
+
+[tasks.server-bundle]
+description = "Bundle server for aws lambda"
+command = "cargo"
+args = ["lambda", "build", "--release", "--arm64", "--features", "aws-lambda"]
 
 ###################
 # Widget Tasks
@@ -80,6 +93,18 @@ cwd = "./widgets/tango"
 command = "cargo"
 args = ["run", "-q", "-p", "tango"]
 watch = { watch = ["./widgets/tango"] }
+
+[tasks.widgets-rust-bundle]
+description = "Bundle rust widgets to /dist"
+cwd = "./widgets"
+command = "cargo"
+args = [
+    "build",
+    "--profile",
+    "wasm-release",
+    "--target",
+    "wasm32-unknown-unknown",
+]
 
 [tasks.widgets-build]
 description = "Build widgets"

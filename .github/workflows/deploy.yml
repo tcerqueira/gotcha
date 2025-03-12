@@ -40,11 +40,15 @@ jobs:
         uses: baptiste0928/cargo-install@v3
         with:
           crate: sqlx-cli
+      - name: Install cargo-make
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-make
 
-      - name: Build lambda function
+      - name: Bundle lambda and widgets
         env:
           SQLX_OFFLINE: true
-        run: cargo lambda build --release --arm64 --features aws-lambda
+        run: cargo make bundle
 
       - uses: actions/cache@v3
         with:
@@ -55,6 +59,11 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Migrations
+        env:
+          DATABASE_URL: postgresql://${{ secrets.SUPABASE_USER }}:${{ secrets.SUPABASE_PASSWORD }}@${{ secrets.SUPABASE_HOST }}:${{ secrets.SUPABASE_PORT }}/${{ secrets.SUPABASE_DB_NAME }}
+        run: sqlx migrate run
 
       - name: Deploy lambda Function
         env:
@@ -82,8 +91,3 @@ jobs:
           stage=${{ vars.ENV_TAG }}
           stage=$(tr '[:lower:]' '[:upper:]' <<< ${stage:0:1})${stage:1}
           npm run cdk deploy $(echo $stage)/GotchaServerStack -- --require-approval never
-
-      - name: Run Migrations
-        env:
-          DATABASE_URL: postgresql://${{ secrets.SUPABASE_USER }}:${{ secrets.SUPABASE_PASSWORD }}@${{ secrets.SUPABASE_HOST }}:${{ secrets.SUPABASE_PORT }}/${{ secrets.SUPABASE_DB_NAME }}
-        run: sqlx migrate run
