@@ -1,0 +1,139 @@
+[config]
+default_to_workspace = false
+
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+###################
+# Main Tasks
+###################
+
+[tasks.default]
+alias = "build"
+
+[tasks.build]
+description = "Build server and widgets"
+dependencies = ["server-build", "widget-api-build", "widgets-build"]
+
+[tasks.dev]
+description = "Build server and widgets"
+run_task = { name = [
+    "watch-server",
+    "watch-widget_api",
+    "watch-im_not_a_robot",
+    "watch-tango",
+], fork = true, parallel = true }
+
+###################
+# Server Tasks
+###################
+
+[tasks.server-build]
+description = "Build server"
+command = "cargo"
+args = ["build", "${@}"]
+
+[tasks.watch-server]
+description = "Watch and run the server"
+command = "cargo"
+args = ["run", "-q", "-p", "gotcha-server"]
+watch = { ignore_pattern = "server/examples/*", watch = ["./server"] }
+
+[tasks.watch-client]
+description = "Watch and run the client"
+command = "cargo"
+args = ["run", "-q", "--example", "client"]
+watch = { watch = ["./server/examples"] }
+
+###################
+# Widget Tasks
+###################
+
+[tasks.widget-api-build]
+description = "Build npm-based widgets"
+cwd = "./widget-api"
+script_runner = "@shell"
+script = '''
+#!/usr/bin/env bash
+
+npm install --prefer-offline
+npm run build
+'''
+
+[tasks.watch-widget_api]
+description = "Watch and bundle widget-api"
+cwd = "./widget-api"
+command = "npm"
+args = ["run", "build"]
+watch = { watch = ["./widget-api"] }
+
+[tasks.watch-im_not_a_robot]
+description = "Watch build 'im-not-a-robot' widget"
+cwd = "./widgets/im-not-a-robot"
+command = "npm"
+args = ["run", "build"]
+watch = { watch = ["./widgets/im-not-a-robot"] }
+
+[tasks.watch-tango]
+description = "Watch build 'tango' widget"
+cwd = "./widgets/tango"
+command = "cargo"
+args = ["run", "-q", "-p", "tango"]
+watch = { watch = ["./widgets/tango"] }
+
+[tasks.widgets-build]
+description = "Build widgets"
+dependencies = ["widgets-rust-build", "widgets-im_not_a_robot-build"]
+
+[tasks.widgets-rust-build]
+description = "Build rust widgets"
+cwd = "./widgets"
+command = "cargo"
+args = ["build", "${@}"]
+
+[tasks.widgets-im_not_a_robot-build]
+description = "Build npm-based widgets"
+cwd = "./widgets/im-not-a-robot"
+script_runner = "@shell"
+script = '''
+#!/usr/bin/env bash
+
+npm install --prefer-offline
+npm run build
+'''
+
+###################
+# Database Tasks
+###################
+
+[tasks.db-up]
+description = "Start the database using Docker Compose"
+command = "docker-compose"
+args = ["up", "-d"]
+
+[tasks.db-stop]
+description = "Stop the database"
+command = "docker-compose"
+args = ["stop"]
+
+[tasks.db-down]
+description = "Stop and remove the database containers"
+command = "docker-compose"
+args = ["down"]
+
+[tasks.db-migrate]
+description = "Run database migrations"
+command = "cargo"
+args = ["sqlx", "migrate", "run"]
+
+[tasks.db-prepare]
+description = "Run database migrations"
+command = "cargo"
+args = [
+    "sqlx",
+    "prepare",
+    "--workspace",
+    "--",
+    "--all-targets",
+    "--all-features",
+]
