@@ -18,6 +18,13 @@ fn main() {
             .filter(|entry| entry.metadata().unwrap().is_dir())
             .for_each(|dir| {
                 let path = dir.path();
+                let is_npm_project = std::fs::read_dir(path.clone())
+                    .unwrap()
+                    .any(|f| f.unwrap().file_name().as_os_str() == "package.json");
+                if !is_npm_project {
+                    return;
+                }
+
                 println!("cargo::rerun-if-changed={}/src/", path.display());
                 println!("cargo::rerun-if-changed={}/package.json", path.display());
                 s.spawn(move || npm_run_build(path));
