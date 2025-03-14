@@ -3,6 +3,7 @@ default_to_workspace = false
 
 [env]
 CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+RUST_LOG = "info,gotcha_server=debug,client=debug"
 
 ###################
 # Main Tasks
@@ -91,7 +92,7 @@ watch = { watch = ["./widgets/im-not-a-robot"] }
 description = "Watch build 'tango' widget"
 cwd = "./widgets/tango"
 command = "cargo"
-args = ["run", "-q", "-p", "tango"]
+args = ["build", "-q", "-p", "tango", "--profile", "wasm-release"]
 watch = { watch = ["./widgets/tango"] }
 
 [tasks.widgets-rust-bundle]

@@ -1,10 +1,14 @@
 [package]
-name = "tango"
+name = "cup-stack"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 bevy = { version = "0.15", features = ["dynamic_linking"] }
+bevy_rapier3d = { version = "0.29", features = [
+    "simd-stable",
+    "debug-render-3d",
+] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 bevy = { version = "0.15" }
