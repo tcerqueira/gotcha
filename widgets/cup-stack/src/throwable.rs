@@ -47,6 +47,7 @@ struct ThrowableBundle {
     restitution: Restitution,
     mass: ColliderMassProperties,
     read_mass: ReadMassProperties,
+    read_velocity: Velocity,
     damping: Damping,
     _throwable: Throwable,
     _ball: Ball,
@@ -69,6 +70,7 @@ impl Default for ThrowableBundle {
             restitution: Restitution::coefficient(0.7),
             mass: ColliderMassProperties::Density(THROW_MASS_DENSITY),
             read_mass: ReadMassProperties::default(),
+            read_velocity: Velocity::default(),
             damping: Damping { linear_damping: THROW_DAMPING, angular_damping: THROW_DAMPING },
             _throwable: Throwable,
             _ball: Ball,
@@ -151,19 +153,21 @@ const GRAVITY: Vec3 = Vec3::new(0.0, -9.81, 0.0);
 #[allow(clippy::type_complexity)]
 fn draw_trajectory_prediction(
     camera: Single<&Transform, With<Camera3d>>,
-    throwable: Option<Single<(&Transform, &ReadMassProperties, &Damping), With<Throwable>>>,
+    throwable: Option<
+        Single<(&Transform, &Velocity, &ReadMassProperties, &Damping), With<Throwable>>,
+    >,
     mut gizmos: Gizmos,
 ) {
     let Some(throwable) = throwable else {
         return;
     };
-    let (transform, mass, damping) = *throwable;
+    let (transform, velocity, mass, damping) = *throwable;
 
     let start_pos = transform.translation;
     let throw_direction = throw_dir3(&camera.forward(), &camera.right());
 
     let throw_strength = IMPULSE_MAGNITUDE / mass.mass;
-    let velocity = throw_direction * throw_strength;
+    let velocity = (throw_direction * throw_strength) + velocity.linvel;
 
     let mut points = Vec::with_capacity(TRAJECTORY_STEPS + 1);
     points.push(start_pos);
