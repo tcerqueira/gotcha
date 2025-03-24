@@ -14,9 +14,10 @@ impl Plugin for ThrowablePlugin {
         app.add_systems(
             Update,
             (
-                throw_object,
                 follow_camera.after(move_camera),
                 draw_trajectory_prediction.after(follow_camera),
+                throw_object.after(follow_camera),
+                spawn_throwable_with_timer,
             ),
         );
         // app.add_systems(Update, debug_throwables);
@@ -65,7 +66,7 @@ impl Default for ThrowableBundle {
             transform: default(),
             rigid_body: RigidBody::KinematicPositionBased,
             collider: Collider::ball(THROW_RADIUS),
-            impulse: ExternalImpulse { impulse: Vec3::new(0., 0., 1.), ..default() },
+            impulse: ExternalImpulse { impulse: Vec3::new(0., 0., 0.), ..default() },
             ccd: Ccd::enabled(),
             restitution: Restitution::coefficient(0.7),
             mass: ColliderMassProperties::Density(THROW_MASS_DENSITY),
@@ -95,13 +96,17 @@ fn spawn_throwable(
     commands.insert_resource(ThrowableHandles { mesh, material });
 }
 
+fn throwable_to_cam_transform(camera: &Transform) -> Transform {
+    Transform::from_rotation(camera.rotation)
+        .with_translation(camera.translation + camera.forward() * 1. + camera.down() * 0.2)
+}
+
 fn follow_camera(
     throwable: Option<Single<&mut Transform, With<Throwable>>>,
     camera: Single<&Transform, (With<Camera3d>, Without<Throwable>)>,
 ) {
     if let Some(mut throwable) = throwable {
-        throwable.translation = camera.translation + camera.forward() * 1. + camera.down() * 0.2;
-        throwable.rotation = camera.rotation;
+        **throwable = throwable_to_cam_transform(&camera);
     }
 }
 
@@ -110,7 +115,6 @@ fn throw_object(
     mut event_r: EventReader<ThrowAction>,
     throwable: Option<Single<(Entity, &mut ExternalImpulse), With<Throwable>>>,
     camera: Single<&Transform, With<Camera3d>>,
-    throwable_handles: Res<ThrowableHandles>,
 ) {
     let Some(mut throwable) = throwable else {
         return;
@@ -130,11 +134,35 @@ fn throw_object(
         let throw_direction = throw_dir3(&camera.forward(), &camera.right());
         external_impulse.impulse = throw_direction * *impulse;
 
+        commands.insert_resource(ThrowableSpawnTimer(Timer::from_seconds(
+            0.5,
+            TimerMode::Once,
+        )));
+    }
+}
+
+#[derive(Resource)]
+struct ThrowableSpawnTimer(Timer);
+
+fn spawn_throwable_with_timer(
+    mut commands: Commands,
+    camera: Single<&Transform, With<Camera3d>>,
+    timer: Option<ResMut<ThrowableSpawnTimer>>,
+    time: Res<Time>,
+    throwable_handles: Res<ThrowableHandles>,
+) {
+    let Some(mut timer) = timer else {
+        return;
+    };
+
+    if timer.0.tick(time.delta()).just_finished() {
         commands.spawn(ThrowableBundle {
             mesh: Mesh3d(throwable_handles.mesh.clone()),
             material: MeshMaterial3d(throwable_handles.material.clone()),
+            transform: throwable_to_cam_transform(&camera),
             ..default()
         });
+        commands.remove_resource::<ThrowableSpawnTimer>();
     }
 }
 
