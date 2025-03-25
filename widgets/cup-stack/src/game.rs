@@ -4,14 +4,27 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 
-use crate::cup::*;
+use crate::{GameResult, cup::*, throwable::ThrowablesLeftCount};
 
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.insert_state(AppState::Welcome);
+        app.insert_resource(AttemptCount(1));
         app.add_systems(Startup, (setup_lighting, setup_entities));
+        app.add_systems(PreUpdate, check_game_over);
+        app.add_systems(
+            OnEnter(AppState::Gameplay),
+            (
+                setup_entities.run_if(not(is_first_attempt)),
+                setup_throwables_left,
+            ),
+        );
+        app.add_systems(
+            OnExit(AppState::GameOver),
+            (despawn_entities, increment_attempt_count),
+        );
     }
 }
 
@@ -21,6 +34,44 @@ pub enum AppState {
     Welcome,
     Gameplay,
     GameOver,
+}
+
+fn check_game_over(
+    targets_left: Res<TargetsLeft>,
+    throwables_left: Res<ThrowablesLeftCount>,
+    attempts: Res<AttemptCount>,
+    mut next_state: ResMut<NextState<AppState>>,
+    mut event_w: EventWriter<GameResult>,
+) {
+    if targets_left.0 == 0 {
+        event_w.send(GameResult::Success);
+        return;
+    }
+    if throwables_left.0 == 0 {
+        match attempts.0 {
+            3.. => {
+                event_w.send(GameResult::Failure);
+            }
+            _ => {
+                next_state.set(AppState::GameOver);
+            }
+        };
+    }
+}
+
+#[derive(Resource)]
+pub struct AttemptCount(u8);
+
+pub fn is_first_attempt(attempts: Res<AttemptCount>) -> bool {
+    attempts.0 == 1
+}
+
+fn increment_attempt_count(mut attempts: ResMut<AttemptCount>) {
+    attempts.0 += 1;
+}
+
+fn setup_throwables_left(mut throwables_left: ResMut<ThrowablesLeftCount>) {
+    throwables_left.0 = 3;
 }
 
 fn setup_lighting(mut commands: Commands, _asset_server: Res<AssetServer>) {
@@ -45,7 +96,7 @@ fn setup_lighting(mut commands: Commands, _asset_server: Res<AssetServer>) {
 const GROUND_DIM: Vec3 = Vec3::new(200., 0.2, 200.);
 pub const WALL_DIM: Vec3 = Vec3::new(5., 5., 0.5);
 pub const TABLE_POS: Vec3 = Vec3::new(0., 1.5, 0.5);
-pub const TABLE_DIM: Vec3 = Vec3::new(WALL_DIM.x, 0.1, 0.2);
+pub const TABLE_DIM: Vec3 = Vec3::new(WALL_DIM.x, 0.1, 0.1);
 
 fn setup_entities(
     mut commands: Commands,
@@ -103,5 +154,11 @@ fn setup_entities(
             // shift everything left to center
             commands.spawn(cup_builder(x - (GAP * 3. / 2.), y, TABLE_POS.z));
         }
+    }
+}
+
+fn despawn_entities(mut commands: Commands, rigid_bodies: Query<Entity, With<RigidBody>>) {
+    for entity in &rigid_bodies {
+        commands.entity(entity).despawn_recursive();
     }
 }

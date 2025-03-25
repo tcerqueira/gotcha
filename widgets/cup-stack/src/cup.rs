@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-use crate::game::TABLE_DIM;
+use crate::game::{AppState, TABLE_POS};
 
 pub struct CupsPlugin;
 
@@ -14,7 +14,8 @@ impl Plugin for CupsPlugin {
                 update_targets_left.after(PhysicsSet::Writeback),
                 // debug_targets_left,
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(AppState::Gameplay)),
         );
     }
 }
@@ -58,7 +59,7 @@ impl Default for CupBundle {
 fn update_targets_left(cups: Query<&Transform, With<Cup>>, mut targets_left: ResMut<TargetsLeft>) {
     let above_table_count = cups
         .iter()
-        .filter(|cup| cup.translation.y > TABLE_DIM.y)
+        .filter(|cup| cup.translation.y > TABLE_POS.y)
         .count() as u8;
     if above_table_count != targets_left.0 {
         targets_left.0 = above_table_count;

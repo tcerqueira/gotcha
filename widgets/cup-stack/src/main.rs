@@ -30,5 +30,23 @@ fn main() {
             ThrowInputPlugin,
             ThrowablePlugin,
         ))
+        .add_event::<GameResult>()
+        .add_systems(PostUpdate, check_game_result)
         .run();
+}
+
+#[derive(Event)]
+enum GameResult {
+    Success,
+    Failure,
+}
+
+fn check_game_result(mut event_r: EventReader<GameResult>, mut event_w: EventWriter<AppExit>) {
+    for res in event_r.read() {
+        match res {
+            GameResult::Success => info!("success"),
+            GameResult::Failure => info!("failure"),
+        }
+        event_w.send(AppExit::Success);
+    }
 }

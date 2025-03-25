@@ -3,6 +3,7 @@ use bevy_rapier3d::prelude::*;
 
 use crate::{
     camera::move_camera,
+    game::{AppState, is_first_attempt},
     input::{IMPULSE_MAGNITUDE, ThrowAction},
 };
 
@@ -10,6 +11,8 @@ pub struct ThrowablePlugin;
 
 impl Plugin for ThrowablePlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(ThrowablesLeftCount(3));
+        app.add_event::<ThrownEvent>();
         app.add_systems(Startup, spawn_throwable);
         app.add_systems(
             Update,
@@ -17,10 +20,14 @@ impl Plugin for ThrowablePlugin {
                 follow_camera.after(move_camera),
                 draw_trajectory_prediction.after(follow_camera),
                 throw_object.after(follow_camera),
-                spawn_throwable_with_timer,
+                handle_throw,
             ),
         );
-        // app.add_systems(Update, debug_throwables);
+        app.add_systems(
+            OnEnter(AppState::Gameplay),
+            spawn_throwable.run_if(not(is_first_attempt)),
+        );
+        // app.add_systems(Update, debug_throwables_left);
     }
 }
 
@@ -86,8 +93,7 @@ fn spawn_throwable(
 ) {
     const THROW_DIM: f32 = 0.05;
     let mesh = meshes.add(Sphere::new(THROW_DIM));
-    let material =
-        materials.add(StandardMaterial { base_color: PURPLE.into(), ..Default::default() });
+    let material = materials.add(StandardMaterial { base_color: PURPLE.into(), ..default() });
     commands.spawn(ThrowableBundle {
         mesh: Mesh3d(mesh.clone()),
         material: MeshMaterial3d(material.clone()),
@@ -113,6 +119,7 @@ fn follow_camera(
 fn throw_object(
     mut commands: Commands,
     mut event_r: EventReader<ThrowAction>,
+    mut throw_w: EventWriter<ThrownEvent>,
     throwable: Option<Single<(Entity, &mut ExternalImpulse), With<Throwable>>>,
     camera: Single<&Transform, With<Camera3d>>,
 ) {
@@ -134,43 +141,65 @@ fn throw_object(
         let throw_direction = throw_dir3(&camera.forward(), &camera.right());
         external_impulse.impulse = throw_direction * *impulse;
 
-        commands.insert_resource(ThrowableSpawnTimer(Timer::from_seconds(
-            0.5,
-            TimerMode::Once,
-        )));
+        throw_w.send(ThrownEvent);
     }
 }
 
 #[derive(Resource)]
-struct ThrowableSpawnTimer(Timer);
+pub struct ThrowablesLeftCount(pub u8);
 
-fn spawn_throwable_with_timer(
+#[derive(Event)]
+struct ThrownEvent;
+
+#[derive(Default)]
+struct ThrowableTimers {
+    spawn: Vec<Timer>,
+    decrement: Vec<Timer>,
+}
+
+fn handle_throw(
     mut commands: Commands,
     camera: Single<&Transform, With<Camera3d>>,
-    timer: Option<ResMut<ThrowableSpawnTimer>>,
-    time: Res<Time>,
+    mut throw_r: EventReader<ThrownEvent>,
     throwable_handles: Res<ThrowableHandles>,
+    mut throwable_timers: Local<ThrowableTimers>,
+    time: Res<Time>,
+    mut throwables_left: ResMut<ThrowablesLeftCount>,
 ) {
-    let Some(mut timer) = timer else {
-        return;
-    };
+    let ThrowableTimers { spawn: spawn_timer, decrement: decrement_timer } = &mut *throwable_timers;
+    spawn_timer.retain(|t| !t.finished());
+    decrement_timer.retain(|t| !t.finished());
 
-    if timer.0.tick(time.delta()).just_finished() {
-        commands.spawn(ThrowableBundle {
-            mesh: Mesh3d(throwable_handles.mesh.clone()),
-            material: MeshMaterial3d(throwable_handles.material.clone()),
-            transform: throwable_to_cam_transform(&camera),
-            ..default()
-        });
-        commands.remove_resource::<ThrowableSpawnTimer>();
+    for spawn in spawn_timer {
+        if spawn.tick(time.delta()).just_finished() {
+            commands.spawn(ThrowableBundle {
+                mesh: Mesh3d(throwable_handles.mesh.clone()),
+                material: MeshMaterial3d(throwable_handles.material.clone()),
+                transform: throwable_to_cam_transform(&camera),
+                ..default()
+            });
+        }
+    }
+    for decrement in decrement_timer {
+        if decrement.tick(time.delta()).just_finished() {
+            throwables_left.0 -= 1;
+        }
+    }
+
+    for _ in throw_r.read() {
+        throwable_timers
+            .spawn
+            .push(Timer::from_seconds(1.5, TimerMode::Once));
+        throwable_timers
+            .decrement
+            .push(Timer::from_seconds(1.5, TimerMode::Once));
     }
 }
 
 #[expect(dead_code)]
-#[allow(clippy::type_complexity)]
-fn debug_throwables(balls: Query<(Entity, &Transform), (With<Ball>, Changed<Transform>)>) {
-    for (ent, transform) in &balls {
-        debug!("{ent} at {:?}", transform.translation);
+fn debug_throwables_left(throwables_left: Res<ThrowablesLeftCount>) {
+    if throwables_left.is_changed() {
+        debug!("throwables left: {}", throwables_left.0);
     }
 }
 
