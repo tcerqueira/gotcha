@@ -103,8 +103,9 @@ fn spawn_throwable(
 }
 
 fn throwable_to_cam_transform(camera: &Transform) -> Transform {
-    Transform::from_rotation(camera.rotation)
-        .with_translation(camera.translation + camera.forward() * 1. + camera.down() * 0.2)
+    Transform::from_rotation(camera.rotation).with_translation(
+        camera.translation + camera.forward() * 1. + camera.down() * 0.2 + camera.right() * 0.1,
+    )
 }
 
 fn follow_camera(

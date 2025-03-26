@@ -35,18 +35,17 @@ fn main() {
         .run();
 }
 
-#[derive(Event)]
+#[derive(Debug, Event, Clone, PartialEq, Eq, Hash)]
 enum GameResult {
     Success,
     Failure,
 }
 
-fn check_game_result(mut event_r: EventReader<GameResult>, mut event_w: EventWriter<AppExit>) {
+fn check_game_result(mut event_r: EventReader<GameResult>) {
     for res in event_r.read() {
         match res {
             GameResult::Success => info!("success"),
             GameResult::Failure => info!("failure"),
         }
-        event_w.send(AppExit::Success);
     }
 }

@@ -13,7 +13,11 @@ impl Plugin for GamePlugin {
         app.insert_state(AppState::Welcome);
         app.insert_resource(AttemptCount(1));
         app.add_systems(Startup, (setup_lighting, setup_entities));
-        app.add_systems(PreUpdate, check_game_over);
+        app.add_systems(
+            PreUpdate,
+            check_game_over.run_if(not(in_state(AppState::GameOver(GameResult::Failure))
+                .or(in_state(AppState::GameOver(GameResult::Success))))),
+        );
         app.add_systems(
             OnEnter(AppState::Gameplay),
             (
@@ -22,7 +26,7 @@ impl Plugin for GamePlugin {
             ),
         );
         app.add_systems(
-            OnExit(AppState::GameOver),
+            OnExit(AppState::GameOver(GameResult::Failure)),
             (despawn_entities, increment_attempt_count),
         );
     }
@@ -33,7 +37,7 @@ pub enum AppState {
     #[default]
     Welcome,
     Gameplay,
-    GameOver,
+    GameOver(GameResult),
 }
 
 fn check_game_over(
@@ -45,22 +49,19 @@ fn check_game_over(
 ) {
     if targets_left.0 == 0 {
         event_w.send(GameResult::Success);
+        next_state.set(AppState::GameOver(GameResult::Success));
         return;
     }
     if throwables_left.0 == 0 {
-        match attempts.0 {
-            3.. => {
-                event_w.send(GameResult::Failure);
-            }
-            _ => {
-                next_state.set(AppState::GameOver);
-            }
+        if let 3.. = attempts.0 {
+            event_w.send(GameResult::Failure);
         };
+        next_state.set(AppState::GameOver(GameResult::Failure));
     }
 }
 
 #[derive(Resource)]
-pub struct AttemptCount(u8);
+pub struct AttemptCount(pub u8);
 
 pub fn is_first_attempt(attempts: Res<AttemptCount>) -> bool {
     attempts.0 == 1
