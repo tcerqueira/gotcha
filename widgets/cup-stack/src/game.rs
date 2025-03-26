@@ -95,7 +95,7 @@ fn setup_lighting(mut commands: Commands, _asset_server: Res<AssetServer>) {
 }
 
 const GROUND_DIM: Vec3 = Vec3::new(200., 0.2, 200.);
-pub const WALL_DIM: Vec3 = Vec3::new(5., 5., 0.5);
+pub const WALL_DIM: Vec3 = Vec3::new(20., 5., 0.5);
 pub const TABLE_POS: Vec3 = Vec3::new(0., 1.5, 0.5);
 pub const TABLE_DIM: Vec3 = Vec3::new(WALL_DIM.x, 0.1, 0.1);
 

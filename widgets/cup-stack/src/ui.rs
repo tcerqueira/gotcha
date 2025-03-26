@@ -193,7 +193,7 @@ fn destroy_gameover_ui(mut commands: Commands, query: Query<Entity, With<GameOve
     }
 }
 
-fn setup_success_ui(mut commands: Commands) {
+fn setup_success_ui(mut commands: Commands, attempts: Res<AttemptCount>) {
     commands
         .spawn((
             GameOverUi,
@@ -223,7 +223,12 @@ fn setup_success_ui(mut commands: Commands) {
                 ))
                 .with_children(|parent| {
                     parent.spawn((
-                        Text::new("Good job!"),
+                        Text::new(match attempts.0 {
+                            1 => "Perfect! 🚀",
+                            2 => "Good job. 👍",
+                            3 => "Close enough... 👏",
+                            _ => "Hmmm 🤨",
+                        }),
                         TextFont { font_size: 40., ..default() },
                         TextColor(Color::WHITE),
                     ));
