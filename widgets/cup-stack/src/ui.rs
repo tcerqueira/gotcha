@@ -15,6 +15,7 @@ impl Plugin for UiPlugin {
         app.add_systems(PreUpdate, try_again_button.after(UiSystem::Focus));
         app.add_systems(Update, (update_targets_text, update_throwables_text));
         app.add_systems(OnEnter(AppState::Welcome), setup_welcome_ui);
+        app.add_systems(OnExit(AppState::Welcome), destroy_welcome_ui);
         app.add_systems(OnEnter(AppState::Gameplay), setup_gameplay_ui);
         app.add_systems(
             OnEnter(AppState::GameOver(GameResult::Failure)),
@@ -52,6 +53,7 @@ fn setup_ui(mut commands: Commands) {
         .with_children(|parent| {
             parent.spawn((
                 Text::new("Knock over all the targets!"),
+                TextFont::from_font_size(20.),
                 Node { margin: UiRect::horizontal(Val::Auto), ..default() },
             ));
         });
@@ -107,7 +109,37 @@ fn update_throwables_text(
     }
 }
 
-fn setup_welcome_ui() {}
+#[derive(Component)]
+struct WelcomeUi;
+
+fn setup_welcome_ui(mut commands: Commands) {
+    commands
+        .spawn((
+            WelcomeUi,
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                ..default()
+            },
+            BackgroundColor(Color::BLACK.with_alpha(0.5)),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new("Click to start!"),
+                TextFont { font_size: 30., ..default() },
+                TextColor(Color::WHITE),
+                Node { margin: UiRect::all(Val::Auto), ..default() },
+            ));
+        });
+}
+
+fn destroy_welcome_ui(mut commands: Commands, query: Query<Entity, With<WelcomeUi>>) {
+    for entity in &query {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
 fn setup_gameplay_ui() {}
 
 #[derive(Component)]
@@ -210,7 +242,6 @@ fn setup_success_ui(mut commands: Commands, attempts: Res<AttemptCount>) {
                 .spawn((
                     Node {
                         margin: UiRect::horizontal(Val::Auto),
-                        width: Val::Px(300.),
                         padding: UiRect::all(Val::Px(20.)),
                         flex_direction: FlexDirection::Column,
                         align_items: AlignItems::Center,
@@ -224,9 +255,9 @@ fn setup_success_ui(mut commands: Commands, attempts: Res<AttemptCount>) {
                 .with_children(|parent| {
                     parent.spawn((
                         Text::new(match attempts.0 {
-                            1 => "Perfect! 🚀",
-                            2 => "Good job. 👍",
-                            3 => "Close enough... 👏",
+                            1 => "Perfect!",
+                            2 => "Good job.",
+                            3 => "Close enough...",
                             _ => "Hmmm 🤨",
                         }),
                         TextFont { font_size: 40., ..default() },

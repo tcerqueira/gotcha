@@ -11,14 +11,23 @@ use ui::*;
 mod camera;
 mod cup;
 mod game;
+#[cfg(target_arch = "wasm32")]
+mod gotcha_lib;
 mod input;
 mod throwable;
 mod ui;
 
 fn main() {
+    #[cfg(target_arch = "wasm32")]
+    let _ = gotcha_lib::init();
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window { resolution: (600., 600.).into(), ..default() }),
+            primary_window: Some(Window {
+                resolution: (360., 500.).into(),
+                prevent_default_event_handling: false,
+                fit_canvas_to_parent: true,
+                ..default()
+            }),
             ..default()
         }))
         .add_plugins((
@@ -45,10 +54,25 @@ enum GameResult {
 }
 
 fn check_game_result(mut event_r: EventReader<GameResult>) {
+    #[cfg(target_arch = "wasm32")]
+    use bevy::tasks::AsyncComputeTaskPool;
+
     for res in event_r.read() {
         match res {
-            GameResult::Success => info!("success"),
-            GameResult::Failure => info!("failure"),
+            GameResult::Success => {
+                info!("success");
+                #[cfg(target_arch = "wasm32")]
+                AsyncComputeTaskPool::get().spawn(async {
+                    gotcha_lib::send_challenge_result(true).await;
+                });
+            }
+            GameResult::Failure => {
+                info!("failure");
+                #[cfg(target_arch = "wasm32")]
+                AsyncComputeTaskPool::get().spawn(async {
+                    gotcha_lib::send_challenge_result(false).await;
+                });
+            }
         }
     }
 }

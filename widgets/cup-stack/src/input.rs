@@ -27,7 +27,7 @@ pub enum ThrowAction {
     Throw { impulse: f32, angle: f32 },
 }
 
-pub const IMPULSE_MAGNITUDE: f32 = 0.05;
+pub const IMPULSE_MAGNITUDE: f32 = 0.03;
 
 fn map_gameplay_input(input: Res<ButtonInput<KeyCode>>, mut event_w: EventWriter<ThrowAction>) {
     if input.just_pressed(KeyCode::KeyF) {

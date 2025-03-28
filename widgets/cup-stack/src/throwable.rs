@@ -256,6 +256,6 @@ fn draw_trajectory_prediction(
 
 fn throw_dir3(forward: &Dir3, right: &Dir3) -> Dir3 {
     Dir3::new_unchecked(
-        Quat::from_axis_angle(right.as_vec3(), 20.0f32.to_radians()) * forward.as_vec3(),
+        Quat::from_axis_angle(right.as_vec3(), 30.0f32.to_radians()) * forward.as_vec3(),
     )
 }
