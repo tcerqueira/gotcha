@@ -1,5 +1,6 @@
 import {
   createEffect,
+  createMemo,
   createResource,
   createSignal,
   Match,
@@ -13,8 +14,10 @@ import { defaultRenderParams } from "../grecaptcha";
 import Logo from "./logo";
 
 type ChallengeFrameProps = {
+  open: boolean;
   params: SearchParams;
   onComplete: (response: string) => void;
+  onFail: () => void;
   onError: () => void;
   onClose: () => void;
   onReroll?: () => void;
@@ -44,6 +47,11 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
     const message = event.data;
     switch (message.type) {
       case "response-callback":
+        if (!message.success) {
+          props.onFail();
+          return;
+        }
+        console.debug(message.interactions);
         const response = await processChallenge(
           props.params.k,
           message.success,
@@ -62,13 +70,18 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
     }
   };
 
+  const onClose = async () => {
+    props.onClose();
+    await challengeActions.refetch();
+  };
+
   createEffect(() => {
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   });
 
   return (
-    <Modal open={true} onClose={props.onClose}>
+    <Modal open={props.open} onClose={onClose}>
       <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 shadow-lg">
         <div class="text-gray-700 dark:text-gray-50 text-xl text-center mb-4">
           Solve the challenge
@@ -97,7 +110,7 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
             <button
               type="button"
               class="text-gray-400 hover:text-purple-700 dark:hover:text-purple-400"
-              onClick={props.onClose}
+              onClick={onClose}
             >
               <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />

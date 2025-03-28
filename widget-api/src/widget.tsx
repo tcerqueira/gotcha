@@ -44,6 +44,8 @@ export function createWidget(): Widget {
     render: renderWidget,
     reset: () => {
       setState("live");
+      clearTimeout(timeout);
+
       if (!containerElem) return;
       containerElem.getElementsByClassName("gotcha-widget")[0]?.remove();
       renderWidget(containerElem, params!);

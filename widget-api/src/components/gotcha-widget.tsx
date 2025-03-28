@@ -26,6 +26,10 @@ export function GotchaWidget(props: GotchaWidgetProps) {
     props.callback?.(token);
   };
 
+  const handleFail = () => {
+    setState("failed");
+  };
+
   const handleError = () => {
     setState("error");
     props["error-callback"]?.();
@@ -45,20 +49,26 @@ export function GotchaWidget(props: GotchaWidgetProps) {
             onError={handleError}
           />
 
-          <Show when={state() === "challenging"}>
-            <ChallengeFrame
-              params={{
-                k: props.sitekey,
-                theme: props.theme,
-                size: props.size,
-                badge: props.badge,
-                sv: window.location.origin,
-              }}
-              onComplete={handleChallengeComplete}
-              onError={handleError}
-              onClose={() => setState("failed")}
-            />
-          </Show>
+          {/* <Show when={state() === "challenging"}> */}
+          <ChallengeFrame
+            open={state() === "challenging"}
+            params={{
+              k: props.sitekey,
+              theme: props.theme,
+              size: props.size,
+              badge: props.badge,
+              sv: window.location.origin,
+            }}
+            onComplete={handleChallengeComplete}
+            onFail={handleFail}
+            onError={handleError}
+            onClose={() => {
+              if (state() != "verified" && state() != "error") {
+                setState("failed");
+              }
+            }}
+          />
+          {/* </Show> */}
         </div>
       </div>
     </div>
