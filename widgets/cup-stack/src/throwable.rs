@@ -1,9 +1,10 @@
 use bevy::{color::palettes::css::PURPLE, prelude::*};
 use bevy_rapier3d::prelude::*;
+use gotcha_plugin::GotchaState;
 
 use crate::{
     camera::move_camera,
-    game::{AppState, is_first_attempt},
+    game::is_first_attempt,
     input::{IMPULSE_MAGNITUDE, ThrowAction},
 };
 
@@ -24,7 +25,7 @@ impl Plugin for ThrowablePlugin {
             ),
         );
         app.add_systems(
-            OnEnter(AppState::Gameplay),
+            OnEnter(GotchaState::Gameplay),
             spawn_throwable.run_if(not(is_first_attempt)),
         );
         // app.add_systems(Update, debug_throwables_left);

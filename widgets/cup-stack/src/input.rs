@@ -1,8 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::{input::InputSystem, prelude::*};
-
-use crate::game::AppState;
+use gotcha_plugin::GotchaState;
 
 pub struct ThrowInputPlugin;
 
@@ -11,10 +10,8 @@ impl Plugin for ThrowInputPlugin {
         app.add_event::<ThrowAction>();
         app.add_systems(
             PreUpdate,
-            (
-                map_gameplay_input.run_if(in_state(AppState::Gameplay)),
-                map_welcome_input.run_if(in_state(AppState::Welcome)),
-            )
+            map_gameplay_input
+                .run_if(in_state(GotchaState::Gameplay))
                 .after(InputSystem),
         );
     }
@@ -32,14 +29,5 @@ pub const IMPULSE_MAGNITUDE: f32 = 0.03;
 fn map_gameplay_input(input: Res<ButtonInput<KeyCode>>, mut event_w: EventWriter<ThrowAction>) {
     if input.just_pressed(KeyCode::KeyF) {
         event_w.send(ThrowAction::Throw { impulse: IMPULSE_MAGNITUDE, angle: PI / 6. });
-    }
-}
-
-fn map_welcome_input(
-    input: Res<ButtonInput<MouseButton>>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    if input.just_pressed(MouseButton::Left) {
-        next_state.set(AppState::Gameplay);
     }
 }

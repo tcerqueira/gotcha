@@ -3,72 +3,48 @@ use bevy::{
     prelude::*,
 };
 use bevy_rapier3d::prelude::*;
+use gotcha_plugin::{AttemptCount, GameplayAttempt, GotchaState};
 
-use crate::{GameResult, cup::*, throwable::ThrowablesLeftCount};
+use crate::{cup::*, throwable::ThrowablesLeftCount};
 
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_state(AppState::Welcome);
-        app.insert_resource(AttemptCount(1));
+        app.insert_state(GotchaState::Welcome);
         app.add_systems(Startup, (setup_lighting, setup_entities));
         app.add_systems(
             PreUpdate,
-            check_game_over.run_if(not(in_state(AppState::GameOver(GameResult::Failure))
-                .or(in_state(AppState::GameOver(GameResult::Success))))),
+            check_game_over.run_if(not(
+                in_state(GotchaState::TryAgain).or(in_state(GotchaState::GameOver))
+            )),
         );
         app.add_systems(
-            OnEnter(AppState::Gameplay),
+            OnEnter(GotchaState::Gameplay),
             (
                 setup_entities.run_if(not(is_first_attempt)),
                 setup_throwables_left,
             ),
         );
-        app.add_systems(
-            OnExit(AppState::GameOver(GameResult::Failure)),
-            (despawn_entities, increment_attempt_count),
-        );
+        app.add_systems(OnExit(GotchaState::TryAgain), despawn_entities);
     }
-}
-
-#[derive(States, Debug, Clone, PartialEq, Eq, Default, Hash)]
-pub enum AppState {
-    #[default]
-    Welcome,
-    Gameplay,
-    GameOver(GameResult),
 }
 
 fn check_game_over(
     targets_left: Res<TargetsLeft>,
     throwables_left: Res<ThrowablesLeftCount>,
-    attempts: Res<AttemptCount>,
-    mut next_state: ResMut<NextState<AppState>>,
-    mut event_w: EventWriter<GameResult>,
+    mut event_w: EventWriter<GameplayAttempt>,
 ) {
     if targets_left.0 == 0 {
-        event_w.send(GameResult::Success);
-        next_state.set(AppState::GameOver(GameResult::Success));
-        return;
+        event_w.send(GameplayAttempt::Success);
     }
     if throwables_left.0 == 0 {
-        if let 3.. = attempts.0 {
-            event_w.send(GameResult::Failure);
-        };
-        next_state.set(AppState::GameOver(GameResult::Failure));
+        event_w.send(GameplayAttempt::Failure);
     }
 }
 
-#[derive(Resource)]
-pub struct AttemptCount(pub u8);
-
 pub fn is_first_attempt(attempts: Res<AttemptCount>) -> bool {
-    attempts.0 == 1
-}
-
-fn increment_attempt_count(mut attempts: ResMut<AttemptCount>) {
-    attempts.0 += 1;
+    attempts.0 == 0
 }
 
 fn setup_throwables_left(mut throwables_left: ResMut<ThrowablesLeftCount>) {

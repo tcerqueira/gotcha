@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use gotcha_plugin::GotchaState;
 
-use crate::game::{AppState, TABLE_POS};
+use crate::game::TABLE_POS;
 
 pub struct CupsPlugin;
 
@@ -15,7 +16,7 @@ impl Plugin for CupsPlugin {
                 // debug_targets_left,
             )
                 .chain()
-                .run_if(in_state(AppState::Gameplay)),
+                .run_if(in_state(GotchaState::Gameplay)),
         );
     }
 }
