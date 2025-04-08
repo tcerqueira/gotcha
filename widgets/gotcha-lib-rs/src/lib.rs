@@ -3,13 +3,13 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "GotchaWidgetLib"])]
-    pub async fn setup();
+    async fn setup();
 
     #[wasm_bindgen(js_namespace = ["window", "GotchaWidgetLib"])]
-    pub async fn onChallengeResponse(success: bool);
+    async fn onChallengeResponse(success: bool);
 
     #[wasm_bindgen(js_namespace = ["window", "GotchaWidgetLib"])]
-    pub async fn onChallengeError();
+    async fn onChallengeError();
 }
 
 #[wasm_bindgen]
