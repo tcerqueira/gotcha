@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::{color::palettes::css::PURPLE, prelude::*};
 use bevy_rapier3d::prelude::*;
 use gotcha_plugin::GotchaState;
@@ -5,7 +7,7 @@ use gotcha_plugin::GotchaState;
 use crate::{
     camera::move_camera,
     game::is_first_attempt,
-    input::{IMPULSE_MAGNITUDE, ThrowAction},
+    input::{IMPULSE_MAGNITUDE, ThrowAction, ThrowParams},
 };
 
 pub struct ThrowablePlugin;
@@ -13,6 +15,7 @@ pub struct ThrowablePlugin;
 impl Plugin for ThrowablePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ThrowablesLeftCount(3));
+        app.init_resource::<Aiming>();
         app.add_event::<ThrownEvent>();
         app.add_systems(Startup, spawn_throwable);
         app.add_systems(
@@ -124,6 +127,7 @@ fn throw_object(
     mut throw_w: EventWriter<ThrownEvent>,
     throwable: Option<Single<(Entity, &mut ExternalImpulse), With<Throwable>>>,
     camera: Single<&Transform, With<Camera3d>>,
+    mut aiming: ResMut<Aiming>,
 ) {
     let Some(mut throwable) = throwable else {
         return;
@@ -131,19 +135,23 @@ fn throw_object(
     let (entity, ref mut external_impulse) = *throwable;
 
     for action in event_r.read() {
-        let ThrowAction::Throw { impulse, angle: _ } = action else {
-            continue;
-        };
-        commands
-            .entity(entity)
-            .remove::<Throwable>()
-            .remove::<RigidBody>()
-            .insert(RigidBody::Dynamic);
+        match action {
+            ThrowAction::Throw(ThrowParams { impulse, dir }) => {
+                commands
+                    .entity(entity)
+                    .remove::<Throwable>()
+                    .remove::<RigidBody>()
+                    .insert(RigidBody::Dynamic);
 
-        let throw_direction = throw_dir3(&camera.forward(), &camera.right());
-        external_impulse.impulse = throw_direction * *impulse;
+                let throw_direction = throw_dir3(&camera.forward(), &camera.right(), *dir);
+                external_impulse.impulse = throw_direction * *impulse;
 
-        throw_w.send(ThrownEvent);
+                throw_w.send(ThrownEvent);
+            }
+            ThrowAction::Holding(throw_params) => {
+                aiming.0 = *throw_params;
+            }
+        }
     }
 }
 
@@ -209,12 +217,22 @@ const TRAJECTORY_STEPS: usize = 50;
 const TRAJECTORY_TIME_STEP: f32 = 0.025;
 const GRAVITY: Vec3 = Vec3::new(0.0, -9.81, 0.0);
 
+#[derive(Resource)]
+struct Aiming(ThrowParams);
+
+impl Default for Aiming {
+    fn default() -> Self {
+        Self(ThrowParams { impulse: IMPULSE_MAGNITUDE, dir: Dir2::Y })
+    }
+}
+
 #[allow(clippy::type_complexity)]
 fn draw_trajectory_prediction(
     camera: Single<&Transform, With<Camera3d>>,
     throwable: Option<
         Single<(&Transform, &Velocity, &ReadMassProperties, &Damping), With<Throwable>>,
     >,
+    aiming: Res<Aiming>,
     mut gizmos: Gizmos,
 ) {
     let Some(throwable) = throwable else {
@@ -223,9 +241,9 @@ fn draw_trajectory_prediction(
     let (transform, velocity, mass, damping) = *throwable;
 
     let start_pos = transform.translation;
-    let throw_direction = throw_dir3(&camera.forward(), &camera.right());
+    let throw_direction = throw_dir3(&camera.forward(), &camera.right(), aiming.0.dir);
 
-    let throw_strength = IMPULSE_MAGNITUDE / mass.mass;
+    let throw_strength = aiming.0.impulse / mass.mass;
     let velocity = (throw_direction * throw_strength) + velocity.linvel;
 
     let mut points = Vec::with_capacity(TRAJECTORY_STEPS + 1);
@@ -255,8 +273,8 @@ fn draw_trajectory_prediction(
     }
 }
 
-fn throw_dir3(forward: &Dir3, right: &Dir3) -> Dir3 {
-    Dir3::new_unchecked(
-        Quat::from_axis_angle(right.as_vec3(), 30.0f32.to_radians()) * forward.as_vec3(),
-    )
+fn throw_dir3(forward: &Dir3, right: &Dir3, dir: Dir2) -> Dir3 {
+    let tilt = Quat::from_axis_angle(right.as_vec3(), 30.0f32.to_radians());
+    let yaw = Quat::from_axis_angle(Dir3::Y.as_vec3(), -dir.to_angle() + PI / 2.);
+    Dir3::new_unchecked(yaw * tilt * forward.as_vec3())
 }

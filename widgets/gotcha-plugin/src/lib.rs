@@ -11,6 +11,7 @@ pub struct GotchaPlugin;
 impl Plugin for GotchaPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GotchaState>();
+        app.add_sub_state::<GameOverState>();
         app.insert_resource(AttemptCount(0));
         app.add_event::<GameplayAttempt>();
         app.add_plugins(UiPlugin);
@@ -38,6 +39,14 @@ pub enum GotchaState {
     GameOver,
 }
 
+#[derive(SubStates, Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[source(GotchaState = GotchaState::GameOver)]
+enum GameOverState {
+    #[default]
+    Success,
+    Fail,
+}
+
 #[derive(
     Resource, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Deref, DerefMut,
 )]
@@ -46,8 +55,8 @@ pub struct AttemptCount(pub u8);
 impl AttemptCount {
     pub fn as_result(&self) -> Result<u8, u8> {
         match **self {
-            count @ 0..3 => Ok(count),
-            count @ 3.. => Err(count),
+            count @ 0..=3 => Ok(count),
+            count => Err(count),
         }
     }
 }
@@ -76,34 +85,39 @@ fn handle_gameplay_attempt_event(
     mut attempt_count: ResMut<AttemptCount>,
     mut event_r: EventReader<GameplayAttempt>,
     mut next_state: ResMut<NextState<GotchaState>>,
+    mut game_over_state: ResMut<NextState<GameOverState>>,
 ) {
     for evt in event_r.read() {
         **attempt_count += 1;
         match evt {
             GameplayAttempt::Success => {
                 next_state.set(GotchaState::GameOver);
+                game_over_state.set(GameOverState::Success);
             }
-            GameplayAttempt::Failure => match attempt_count.as_result() {
-                Ok(_) => next_state.set(GotchaState::TryAgain),
-                Err(_) => next_state.set(GotchaState::GameOver),
+            GameplayAttempt::Failure => match **attempt_count {
+                0..3 => next_state.set(GotchaState::TryAgain),
+                _ => {
+                    next_state.set(GotchaState::GameOver);
+                    game_over_state.set(GameOverState::Fail);
+                }
             },
         };
     }
 }
 
-fn handle_gameover(attempt_count: Res<AttemptCount>) {
+fn handle_gameover(game_over_state: Res<State<GameOverState>>) {
     #[cfg(target_arch = "wasm32")]
     use bevy::tasks::AsyncComputeTaskPool;
 
-    match attempt_count.as_result() {
-        Ok(_) => {
+    match game_over_state.get() {
+        GameOverState::Success => {
             info!("success");
             #[cfg(target_arch = "wasm32")]
             AsyncComputeTaskPool::get().spawn(async {
                 gotcha_lib::send_challenge_result(true).await;
             });
         }
-        Err(_) => {
+        GameOverState::Fail => {
             info!("failure");
             #[cfg(target_arch = "wasm32")]
             AsyncComputeTaskPool::get().spawn(async {

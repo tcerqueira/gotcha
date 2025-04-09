@@ -1,15 +1,15 @@
 use bevy::prelude::*;
-use gotcha_plugin::GotchaState;
+// use gotcha_plugin::GotchaState;
 
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_camera);
-        app.add_systems(
-            Update,
-            (move_camera, rotate_camera).run_if(in_state(GotchaState::Gameplay)),
-        );
+        // app.add_systems(
+        //     Update,
+        //     (move_camera, rotate_camera).run_if(in_state(GotchaState::Gameplay)),
+        // );
     }
 }
 
@@ -51,20 +51,20 @@ pub fn move_camera(
     }
 }
 
-fn rotate_camera(
-    mut camera: Single<&mut Transform, With<Camera3d>>,
-    input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
-) {
-    let mut angle = 0.;
-    if input.pressed(KeyCode::KeyQ) {
-        angle += 1.;
-    }
-    if input.pressed(KeyCode::KeyE) {
-        angle += -1.;
-    }
+// fn rotate_camera(
+//     mut camera: Single<&mut Transform, With<Camera3d>>,
+//     input: Res<ButtonInput<KeyCode>>,
+//     time: Res<Time>,
+// ) {
+//     let mut angle = 0.;
+//     if input.pressed(KeyCode::KeyQ) {
+//         angle += 1.;
+//     }
+//     if input.pressed(KeyCode::KeyE) {
+//         angle += -1.;
+//     }
 
-    if angle != 0. {
-        camera.rotate_y(angle * 2.5 * time.delta_secs());
-    }
-}
+//     if angle != 0. {
+//         camera.rotate_y(angle * 2.5 * time.delta_secs());
+//     }
+// }

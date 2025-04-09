@@ -135,10 +135,14 @@ fn destroy_try_again_ui(mut commands: Commands, query: Query<Entity, With<TryAga
 #[derive(Component)]
 struct GameOverUi;
 
-fn setup_gameover_ui(mut commands: Commands, attempt_count: Res<AttemptCount>) {
-    let bg_color = match attempt_count.as_result() {
-        Ok(_) => Color::srgba(0., 0.8, 0., 0.3),
-        Err(_) => Color::srgba(0.8, 0., 0., 0.3),
+fn setup_gameover_ui(
+    mut commands: Commands,
+    game_over_state: Res<State<GameOverState>>,
+    attempt_count: Res<AttemptCount>,
+) {
+    let bg_color = match game_over_state.get() {
+        GameOverState::Success => Color::srgba(0., 0.8, 0., 0.3),
+        GameOverState::Fail => Color::srgba(0.8, 0., 0., 0.3),
     };
     commands
         .spawn((
@@ -151,9 +155,9 @@ fn setup_gameover_ui(mut commands: Commands, attempt_count: Res<AttemptCount>) {
             },
             BackgroundColor(bg_color),
         ))
-        .with_children(|parent| match attempt_count.as_result() {
-            Ok(_) => setup_gameover_success_ui(parent, *attempt_count),
-            Err(_) => setup_gameover_failure_ui(parent),
+        .with_children(|parent| match game_over_state.get() {
+            GameOverState::Success => setup_gameover_success_ui(parent, *attempt_count),
+            GameOverState::Fail => setup_gameover_failure_ui(parent),
         });
 }
 
