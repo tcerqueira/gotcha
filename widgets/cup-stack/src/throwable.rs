@@ -15,15 +15,19 @@ pub struct ThrowablePlugin;
 impl Plugin for ThrowablePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ThrowablesLeftCount(3));
-        app.init_resource::<Aiming>();
         app.add_event::<ThrownEvent>();
         app.add_systems(Startup, spawn_throwable);
         app.add_systems(
             Update,
             (
-                follow_camera.after(move_camera),
-                draw_trajectory_prediction.after(follow_camera),
-                throw_object.after(follow_camera),
+                (
+                    follow_camera.after(move_camera),
+                    draw_trajectory_prediction
+                        .after(follow_camera)
+                        .run_if(resource_exists::<Aiming>),
+                    throwing_object.after(follow_camera),
+                )
+                    .run_if(any_with_component::<Throwable>),
                 handle_throw,
             ),
         );
@@ -113,25 +117,20 @@ fn throwable_to_cam_transform(camera: &Transform) -> Transform {
 }
 
 fn follow_camera(
-    throwable: Option<Single<&mut Transform, With<Throwable>>>,
+    mut throwable: Single<&mut Transform, With<Throwable>>,
     camera: Single<&Transform, (With<Camera3d>, Without<Throwable>)>,
 ) {
-    if let Some(mut throwable) = throwable {
-        **throwable = throwable_to_cam_transform(&camera);
-    }
+    **throwable = throwable_to_cam_transform(&camera);
 }
 
-fn throw_object(
+fn throwing_object(
     mut commands: Commands,
     mut event_r: EventReader<ThrowAction>,
     mut throw_w: EventWriter<ThrownEvent>,
-    throwable: Option<Single<(Entity, &mut ExternalImpulse), With<Throwable>>>,
+    mut throwable: Single<(Entity, &mut ExternalImpulse), With<Throwable>>,
     camera: Single<&Transform, With<Camera3d>>,
-    mut aiming: ResMut<Aiming>,
+    mut aiming: Option<ResMut<Aiming>>,
 ) {
-    let Some(mut throwable) = throwable else {
-        return;
-    };
     let (entity, ref mut external_impulse) = *throwable;
 
     for action in event_r.read() {
@@ -147,10 +146,12 @@ fn throw_object(
                 external_impulse.impulse = throw_direction * *impulse;
 
                 throw_w.send(ThrownEvent);
+                commands.remove_resource::<Aiming>();
             }
-            ThrowAction::Holding(throw_params) => {
-                aiming.0 = *throw_params;
-            }
+            ThrowAction::Holding(throw_params) => match aiming {
+                Some(ref mut aiming) => aiming.0 = *throw_params,
+                None => commands.insert_resource(Aiming(*throw_params)),
+            },
         }
     }
 }
@@ -229,15 +230,10 @@ impl Default for Aiming {
 #[allow(clippy::type_complexity)]
 fn draw_trajectory_prediction(
     camera: Single<&Transform, With<Camera3d>>,
-    throwable: Option<
-        Single<(&Transform, &Velocity, &ReadMassProperties, &Damping), With<Throwable>>,
-    >,
+    throwable: Single<(&Transform, &Velocity, &ReadMassProperties, &Damping), With<Throwable>>,
     aiming: Res<Aiming>,
     mut gizmos: Gizmos,
 ) {
-    let Some(throwable) = throwable else {
-        return;
-    };
     let (transform, velocity, mass, damping) = *throwable;
 
     let start_pos = transform.translation;
