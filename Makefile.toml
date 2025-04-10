@@ -14,15 +14,14 @@ alias = "build"
 
 [tasks.build]
 description = "Build server and widgets"
-dependencies = ["server-build", "widget-api-build", "widgets-build"]
+dependencies = ["server-build", "widget-api-build", "bundle-widgets"]
 
 [tasks.dev]
 description = "Build server and widgets"
 run_task = { name = [
     "watch-server",
     "watch-widget_api",
-    "watch-im_not_a_robot",
-    "watch-tango",
+    "bundle-widgets",
 ], fork = true, parallel = true }
 
 [tasks.bundle]
@@ -30,7 +29,7 @@ description = "Bundle for deployment"
 run_task = { name = [
     "server-bundle",
     "widget-api-build",
-    "widgets-im_not_a_robot-build",
+    "bundle-widgets",
 ], fork = true, parallel = true }
 
 ###################
@@ -67,12 +66,7 @@ args = ["lambda", "build", "--release", "--arm64", "--features", "aws-lambda"]
 description = "Build npm-based widgets"
 cwd = "./widget-api"
 script_runner = "@shell"
-script = '''
-#!/usr/bin/env bash
-
-npm install --prefer-offline
-npm run build
-'''
+script = ["npm install --prefer-offline", "npm run build"]
 
 [tasks.watch-widget_api]
 description = "Watch and bundle widget-api"
@@ -88,45 +82,24 @@ command = "npm"
 args = ["run", "build"]
 watch = { watch = ["./widgets/im-not-a-robot"] }
 
-[tasks.watch-tango]
-description = "Watch build 'tango' widget"
-cwd = "./widgets/tango"
-command = "cargo"
-args = ["build", "-q", "-p", "tango", "--profile", "wasm-release"]
-watch = { watch = ["./widgets/tango"] }
 
-[tasks.widgets-rust-bundle]
-description = "Bundle rust widgets to /dist"
+[tasks.bundle-cup_stack]
+description = "Bundle cup-stack to /dist"
 cwd = "./widgets"
-command = "cargo"
-args = [
-    "build",
-    "--profile",
-    "wasm-release",
-    "--target",
-    "wasm32-unknown-unknown",
+script = [
+    "bevy build --yes --bin=cup-stack --profile=wasm-release web --bundle",
+    "cp -R target/bevy_web/wasm-release/cup-stack ../dist",
 ]
 
-[tasks.widgets-build]
+[tasks.bundle-widgets]
 description = "Build widgets"
-dependencies = ["widgets-rust-build", "widgets-im_not_a_robot-build"]
+dependencies = ["bundle-cup_stack", "bundle-im_not_a_robot"]
 
-[tasks.widgets-rust-build]
-description = "Build rust widgets"
-cwd = "./widgets"
-command = "cargo"
-args = ["build", "${@}"]
-
-[tasks.widgets-im_not_a_robot-build]
+[tasks.bundle-im_not_a_robot]
 description = "Build npm-based widgets"
 cwd = "./widgets/im-not-a-robot"
 script_runner = "@shell"
-script = '''
-#!/usr/bin/env bash
-
-npm install --prefer-offline
-npm run build
-'''
+script = ["npm install --prefer-offline", "npm run build"]
 
 ###################
 # Database Tasks

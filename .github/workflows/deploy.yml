@@ -20,7 +20,7 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/master' && 'production' || 'preview' }}
     permissions:
       id-token: write
-      contents: read
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +44,11 @@ jobs:
         uses: baptiste0928/cargo-install@v3
         with:
           crate: cargo-make
+      - name: Install bevy_cli
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: bevy_cli
+          git: https://github.com/TheBevyFlock/bevy_cli
 
       - name: Bundle lambda and widgets
         env:
@@ -58,7 +63,13 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
+            widgets/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Deploy /dist to Github Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist/
 
       - name: Run Migrations
         env:
