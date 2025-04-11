@@ -104,8 +104,10 @@ fn setup_try_again_ui(mut commands: Commands) {
 
 #[allow(clippy::type_complexity)]
 fn try_again_button(
-    mut button: Option<Single<(&Interaction, &mut TextColor), With<TryAgainButton>>>,
-    // mut touches: EventReader<TouchInput>,
+    mut button: Option<
+        // Single<(&Interaction, &mut TextColor), (With<TryAgainButton>, Changed<Interaction>)>,
+        Single<(&Interaction, &mut TextColor), With<TryAgainButton>>,
+    >,
     mut next_state: ResMut<NextState<GotchaState>>,
 ) {
     let Some((interaction, text_color)) = button.as_deref_mut() else {
@@ -123,11 +125,6 @@ fn try_again_button(
             text_color.0 = Color::WHITE;
         }
     };
-    // for touch in touches.read() {
-    //     if matches!(touch.phase, TouchPhase::Ended) {
-    //         next_state.set(GotchaState::Gameplay);
-    //     }
-    // }
 }
 
 fn destroy_try_again_ui(mut commands: Commands, query: Query<Entity, With<TryAgainUi>>) {
