@@ -1,4 +1,7 @@
-use bevy::{input::InputSystem, prelude::*};
+use bevy::{
+    input::{InputSystem, touch::TouchPhase},
+    prelude::*,
+};
 
 use ui::*;
 
@@ -73,11 +76,19 @@ fn set_up_gotcha() {
 }
 
 fn start_gameplay(
-    input: Res<ButtonInput<MouseButton>>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
+    mut touch_events: EventReader<TouchInput>,
     mut next_state: ResMut<NextState<GotchaState>>,
 ) {
-    if input.just_pressed(MouseButton::Left) {
+    if mouse_input.just_pressed(MouseButton::Left) {
         next_state.set(GotchaState::Gameplay);
+        return;
+    }
+    for touch in touch_events.read() {
+        if matches!(touch, TouchInput { phase: TouchPhase::Ended, .. }) {
+            next_state.set(GotchaState::Gameplay);
+            return;
+        }
     }
 }
 

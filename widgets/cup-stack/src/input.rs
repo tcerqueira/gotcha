@@ -1,4 +1,5 @@
-use bevy::{input::InputSystem, prelude::*};
+use bevy::input::touch::TouchPhase;
+use bevy::{input::InputSystem, prelude::*, window::PrimaryWindow};
 use gotcha_plugin::GotchaState;
 
 pub struct ThrowInputPlugin;
@@ -9,7 +10,7 @@ impl Plugin for ThrowInputPlugin {
         app.init_resource::<DragState>();
         app.add_systems(
             PreUpdate,
-            (throw_input_system)
+            (throw_input_system, touch_input_system)
                 .run_if(in_state(GotchaState::Gameplay))
                 .after(InputSystem),
         );
@@ -34,15 +35,26 @@ pub const IMPULSE_MAGNITUDE: f32 = 0.03;
 struct DragState {
     start_position: Option<Vec2>,
     current_position: Option<Vec2>,
+    active_pointer: Option<PointerId>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PointerId {
+    Mouse,
+    Touch(u64),
 }
 
 fn throw_input_system(
     mut drag_state: ResMut<DragState>,
     mut throw_events: EventWriter<ThrowAction>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    windows: Query<&Window>,
+    window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    let window = windows.single();
+    // Skip if touch is active
+    if matches!(drag_state.active_pointer, Some(PointerId::Touch(_))) {
+        return;
+    }
+
     // Get current mouse position
     let current_mouse_position = if let Some(position) = window.cursor_position() {
         position
@@ -54,11 +66,14 @@ fn throw_input_system(
     if mouse_button_input.just_pressed(MouseButton::Left) {
         drag_state.start_position = Some(current_mouse_position);
         drag_state.current_position = Some(current_mouse_position);
+        drag_state.active_pointer = Some(PointerId::Mouse);
         return;
     }
 
     // Update drag
-    if mouse_button_input.pressed(MouseButton::Left) {
+    if mouse_button_input.pressed(MouseButton::Left)
+        && matches!(drag_state.active_pointer, Some(PointerId::Mouse))
+    {
         if let Some(start_pos) = drag_state.start_position {
             drag_state.current_position = Some(current_mouse_position);
             // Calculate drag vector
@@ -70,7 +85,9 @@ fn throw_input_system(
     }
 
     // Release throw
-    if mouse_button_input.just_released(MouseButton::Left) {
+    if mouse_button_input.just_released(MouseButton::Left)
+        && matches!(drag_state.active_pointer, Some(PointerId::Mouse))
+    {
         if let (Some(start_pos), Some(end_pos)) =
             (drag_state.start_position, drag_state.current_position)
         {
@@ -83,11 +100,67 @@ fn throw_input_system(
         // Reset drag state
         drag_state.start_position = None;
         drag_state.current_position = None;
+        drag_state.active_pointer = None;
+    }
+}
+
+fn touch_input_system(
+    mut drag_state: ResMut<DragState>,
+    mut touch_events: EventReader<TouchInput>,
+    mut throw_events: EventWriter<ThrowAction>,
+) {
+    for touch in touch_events.read() {
+        let position = touch.position;
+
+        match touch.phase {
+            TouchPhase::Started => {
+                // Only handle first touch
+                if drag_state.active_pointer.is_none() {
+                    drag_state.start_position = Some(position);
+                    drag_state.current_position = Some(position);
+                    drag_state.active_pointer = Some(PointerId::Touch(touch.id));
+                }
+            }
+            TouchPhase::Moved => {
+                // Update only if this is the active touch
+                if matches!(drag_state.active_pointer, Some(PointerId::Touch(id)) if id == touch.id)
+                {
+                    if let Some(start_pos) = drag_state.start_position {
+                        drag_state.current_position = Some(position);
+                        let drag_vector = start_pos - position;
+                        let throw_params = compute_throw_params(drag_vector);
+                        throw_events.send(ThrowAction::Holding(throw_params));
+                    }
+                }
+            }
+            TouchPhase::Ended => {
+                // Handle touch release only for active touch
+                if matches!(drag_state.active_pointer, Some(PointerId::Touch(id)) if id == touch.id)
+                {
+                    if let (Some(start_pos), Some(end_pos)) =
+                        (drag_state.start_position, drag_state.current_position)
+                    {
+                        let drag_vector = start_pos - end_pos;
+                        let throw_params = compute_throw_params(drag_vector);
+                        throw_events.send(ThrowAction::Throw(throw_params));
+                    }
+                    // Reset drag state
+                    drag_state.start_position = None;
+                    drag_state.current_position = None;
+                    drag_state.active_pointer = None;
+                }
+            }
+            TouchPhase::Canceled => {
+                drag_state.start_position = None;
+                drag_state.current_position = None;
+                drag_state.active_pointer = None;
+            }
+        }
     }
 }
 
 // Constants for throw mechanics
-const MAX_DRAG_DISTANCE: f32 = 200.0; // Maximum drag distance for full power
+const MAX_DRAG_DISTANCE: f32 = 300.0; // Maximum drag distance for full power
 const MAX_IMPULSE: f32 = 0.05; // Maximum throw force
 const MIN_IMPULSE: f32 = 0.02; // Minimum throw force
 

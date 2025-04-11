@@ -11,7 +11,6 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_state(GotchaState::Welcome);
         app.add_systems(Startup, (setup_lighting, setup_entities));
         app.add_systems(
             PreUpdate,
