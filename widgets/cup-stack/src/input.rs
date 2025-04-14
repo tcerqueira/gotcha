@@ -8,11 +8,16 @@ impl Plugin for ThrowInputPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<ThrowAction>();
         app.init_resource::<DragState>();
+        app.add_systems(OnEnter(GotchaState::Gameplay), start_debounce_timer);
         app.add_systems(
             PreUpdate,
             (throw_input_system, touch_input_system)
-                .run_if(in_state(GotchaState::Gameplay))
+                .run_if(in_state(GotchaState::Gameplay).and(check_debounce_timer))
                 .after(InputSystem),
+        );
+        app.add_systems(
+            Update,
+            tick_debounce_timer.run_if(in_state(GotchaState::Gameplay)),
         );
     }
 }
@@ -42,6 +47,21 @@ struct DragState {
 enum PointerId {
     Mouse,
     Touch(u64),
+}
+
+#[derive(Resource)]
+struct DebounceTimer(Timer);
+
+fn start_debounce_timer(mut commands: Commands) {
+    commands.insert_resource(DebounceTimer(Timer::from_seconds(0.2, TimerMode::Once)));
+}
+
+fn tick_debounce_timer(mut timer: ResMut<DebounceTimer>, time: Res<Time>) {
+    timer.0.tick(time.delta());
+}
+
+fn check_debounce_timer(timer: Res<DebounceTimer>) -> bool {
+    timer.0.finished()
 }
 
 fn throw_input_system(
@@ -171,6 +191,5 @@ fn compute_throw_params(drag_vec: Vec2) -> ThrowParams {
     let impulse = (drag_distance / MAX_DRAG_DISTANCE) * (MAX_IMPULSE - MIN_IMPULSE) + MIN_IMPULSE;
     // Calculate angle (in radians)
     let dir = Dir2::new(-drag_vec).unwrap_or(Dir2::Y);
-    debug!("{:?}", dir);
     ThrowParams { impulse, dir }
 }
