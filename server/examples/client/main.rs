@@ -9,7 +9,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 #[tokio::main]
 async fn main() {
     init_tracing();
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8001));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8001));
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
 
     tracing::info!("listening on {}", listener.local_addr().unwrap());

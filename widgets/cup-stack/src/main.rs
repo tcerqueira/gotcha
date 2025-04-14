@@ -20,9 +20,8 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                resolution: (720., 1000.).into(),
-                // prevent_default_event_handling: true,
-                // fit_canvas_to_parent: true,
+                // resolution: (720., 1000.).into(),
+                fit_canvas_to_parent: true,
                 ..default()
             }),
             ..default()
