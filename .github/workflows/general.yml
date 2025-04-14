@@ -44,6 +44,8 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://username:password@localhost:5432/gotcha
         run: sqlx migrate run
       - name: Run sqlx check
         run: cargo sqlx prepare --check --workspace -- --all-targets --all-features
