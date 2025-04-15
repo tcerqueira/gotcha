@@ -271,6 +271,6 @@ fn draw_trajectory_prediction(
 
 fn throw_dir3(forward: &Dir3, right: &Dir3, dir: Dir2) -> Dir3 {
     let tilt = Quat::from_axis_angle(right.as_vec3(), 30.0f32.to_radians());
-    let yaw = Quat::from_axis_angle(Dir3::Y.as_vec3(), -dir.to_angle() + PI / 2.);
+    let yaw = Quat::from_axis_angle(Dir3::Y.as_vec3(), -dir.to_angle() - PI / 2.);
     Dir3::new_unchecked(yaw * tilt * forward.as_vec3())
 }

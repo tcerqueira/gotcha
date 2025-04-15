@@ -41,6 +41,7 @@ export default function ImNotRobot(props: ImNotRobotProps) {
     try {
       const powResult = await solveProofOfWork(props.params.sitekey);
       if (!powResult) {
+        console.error(powResult);
         props.onStateChange("error");
         props.onError();
         return;
@@ -48,6 +49,7 @@ export default function ImNotRobot(props: ImNotRobotProps) {
 
       const response = await verificationFn(powResult);
       if (!response) {
+        console.error(response);
         props.onStateChange("error");
         props.onError();
         return;
@@ -55,6 +57,7 @@ export default function ImNotRobot(props: ImNotRobotProps) {
 
       props.onVerificationComplete(response);
     } catch (e) {
+      console.error(e);
       props.onStateChange("error");
       props.onError();
     }
