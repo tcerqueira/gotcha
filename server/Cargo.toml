@@ -49,6 +49,7 @@ lambda_http = { version = "0.13", optional = true }
 [dev-dependencies]
 gotcha-server-macros = { path = "../server-macros" }
 serde_json = "1"
+axum-server = { version = "0.7", features = ["tls-rustls"] }
 
 [package.metadata.lambda.deploy]
 env = { "APP_ENVIRONMENT" = "production", "AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH" = "true" }
