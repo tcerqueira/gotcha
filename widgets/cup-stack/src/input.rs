@@ -9,17 +9,17 @@ impl Plugin for ThrowInputPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<ThrowAction>();
         app.init_resource::<DragStateMachine>();
-        app.add_systems(OnEnter(GotchaState::Gameplay), start_debounce_timer);
+        // app.add_systems(OnEnter(GotchaState::Gameplay), start_debounce_timer);
         app.add_systems(
             PreUpdate,
             (mouse_input_system, touch_input_system)
-                .run_if(in_state(GotchaState::Gameplay).and(check_debounce_timer))
+                .run_if(in_state(GotchaState::Gameplay))
                 .after(InputSystem),
         );
-        app.add_systems(
-            Update,
-            tick_debounce_timer.run_if(in_state(GotchaState::Gameplay)),
-        );
+        // app.add_systems(
+        //     Update,
+        //     tick_debounce_timer.run_if(in_state(GotchaState::Gameplay)),
+        // );
     }
 }
 
@@ -35,25 +35,23 @@ pub struct ThrowParams {
     pub dir: Dir2,
 }
 
-pub const IMPULSE_MAGNITUDE: f32 = 0.03;
+// #[derive(Resource)]
+// struct DebounceTimer(Timer);
+
+// fn start_debounce_timer(mut commands: Commands) {
+//     commands.insert_resource(DebounceTimer(Timer::from_seconds(0.2, TimerMode::Once)));
+// }
+
+// fn tick_debounce_timer(mut timer: ResMut<DebounceTimer>, time: Res<Time>) {
+//     timer.0.tick(time.delta());
+// }
+
+// fn check_debounce_timer(timer: Res<DebounceTimer>) -> bool {
+//     timer.0.finished()
+// }
 
 #[derive(Resource, Debug, Default)]
 struct DragStateMachine(StateMachine<DragInputSystem>);
-
-#[derive(Resource)]
-struct DebounceTimer(Timer);
-
-fn start_debounce_timer(mut commands: Commands) {
-    commands.insert_resource(DebounceTimer(Timer::from_seconds(0.2, TimerMode::Once)));
-}
-
-fn tick_debounce_timer(mut timer: ResMut<DebounceTimer>, time: Res<Time>) {
-    timer.0.tick(time.delta());
-}
-
-fn check_debounce_timer(timer: Res<DebounceTimer>) -> bool {
-    timer.0.finished()
-}
 
 fn mouse_input_system(
     mut drag_sm: ResMut<DragStateMachine>,

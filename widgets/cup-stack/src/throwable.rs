@@ -7,7 +7,7 @@ use gotcha_plugin::GotchaState;
 use crate::{
     camera::move_camera,
     game::is_first_attempt,
-    input::{IMPULSE_MAGNITUDE, ThrowAction, ThrowParams},
+    input::{ThrowAction, ThrowParams},
 };
 
 pub struct ThrowablePlugin;
@@ -220,6 +220,8 @@ const GRAVITY: Vec3 = Vec3::new(0.0, -9.81, 0.0);
 
 #[derive(Resource)]
 struct Aiming(ThrowParams);
+
+pub const IMPULSE_MAGNITUDE: f32 = 0.03;
 
 impl Default for Aiming {
     fn default() -> Self {

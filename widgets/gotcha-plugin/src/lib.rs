@@ -29,6 +29,11 @@ impl Plugin for GotchaPlugin {
             PostUpdate,
             handle_gameplay_attempt_event.run_if(in_state(GotchaState::Gameplay)),
         );
+        app.add_systems(
+            Update,
+            tick_debounce_timer.run_if(resource_exists::<GameplayDebounceTimer>),
+        );
+        app.add_systems(OnEnter(GotchaState::Gameplay), remove_debounce_timer);
         app.add_systems(OnEnter(GotchaState::GameOver), handle_gameover);
     }
 }
@@ -70,23 +75,47 @@ pub enum GameplayAttempt {
     Failure,
 }
 
+#[derive(Resource)]
+struct GameplayDebounceTimer(Timer);
+
+fn start_gameplay_timer(mut commands: Commands) {
+    commands.insert_resource(GameplayDebounceTimer(Timer::from_seconds(
+        0.2,
+        TimerMode::Once,
+    )));
+}
+
+fn tick_debounce_timer(mut timer: ResMut<GameplayDebounceTimer>, time: Res<Time>) {
+    timer.0.tick(time.delta());
+}
+
+fn remove_debounce_timer(mut commands: Commands) {
+    commands.remove_resource::<GameplayDebounceTimer>();
+}
+
 fn set_up_gotcha() {
     #[cfg(target_arch = "wasm32")]
     let _ = gotcha_lib::init();
 }
 
 fn start_gameplay(
+    commands: Commands,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut touch_events: EventReader<TouchInput>,
-    mut next_state: ResMut<NextState<GotchaState>>,
+    debounce_gameplay_timer: Option<Res<GameplayDebounceTimer>>,
+    mut gotcha_state: ResMut<NextState<GotchaState>>,
 ) {
+    if debounce_gameplay_timer.is_some_and(|timer| timer.0.finished()) {
+        gotcha_state.set(GotchaState::Gameplay);
+    }
     if mouse_input.just_pressed(MouseButton::Left) {
-        next_state.set(GotchaState::Gameplay);
+        start_gameplay_timer(commands);
         return;
     }
     for touch in touch_events.read() {
         if matches!(touch, TouchInput { phase: TouchPhase::Ended, .. }) {
-            next_state.set(GotchaState::Gameplay);
+            // next_state.set(GotchaState::Gameplay);
+            start_gameplay_timer(commands);
             return;
         }
     }
@@ -95,20 +124,20 @@ fn start_gameplay(
 fn handle_gameplay_attempt_event(
     mut attempt_count: ResMut<AttemptCount>,
     mut event_r: EventReader<GameplayAttempt>,
-    mut next_state: ResMut<NextState<GotchaState>>,
+    mut gotcha_state: ResMut<NextState<GotchaState>>,
     mut game_over_state: ResMut<NextState<GameOverState>>,
 ) {
     for evt in event_r.read() {
         **attempt_count += 1;
         match evt {
             GameplayAttempt::Success => {
-                next_state.set(GotchaState::GameOver);
+                gotcha_state.set(GotchaState::GameOver);
                 game_over_state.set(GameOverState::Success);
             }
             GameplayAttempt::Failure => match **attempt_count {
-                0..3 => next_state.set(GotchaState::TryAgain),
+                0..3 => gotcha_state.set(GotchaState::TryAgain),
                 _ => {
-                    next_state.set(GotchaState::GameOver);
+                    gotcha_state.set(GotchaState::GameOver);
                     game_over_state.set(GameOverState::Fail);
                 }
             },

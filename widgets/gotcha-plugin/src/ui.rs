@@ -8,7 +8,7 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             PreUpdate,
-            try_again_button
+            try_again_action
                 .after(UiSystem::Focus)
                 .run_if(in_state(GotchaState::TryAgain)),
         );
@@ -103,21 +103,24 @@ fn setup_try_again_ui(mut commands: Commands) {
 }
 
 #[allow(clippy::type_complexity)]
-fn try_again_button(
+fn try_again_action(
+    commands: Commands,
     mut button: Option<
         Single<(&Interaction, &mut TextColor), (With<TryAgainButton>, Changed<Interaction>)>,
     >,
     mut gotcha_state: ResMut<NextState<GotchaState>>,
-    mut touch_events: EventReader<TouchInput>,
+    debounce_gameplay_timer: Option<Res<GameplayDebounceTimer>>,
 ) {
+    if debounce_gameplay_timer.is_some_and(|timer| timer.0.finished()) {
+        gotcha_state.set(GotchaState::Gameplay);
+    }
     let Some((interaction, text_color)) = button.as_deref_mut() else {
         return;
     };
 
     match interaction {
         Interaction::Pressed => {
-            for _ in touch_events.read() {}
-            gotcha_state.set(GotchaState::Gameplay);
+            start_gameplay_timer(commands);
         }
         Interaction::Hovered => {
             text_color.0 = Color::srgb(0., 0.8, 0.);
