@@ -31,7 +31,7 @@ fn setup_ui(mut commands: Commands) {
         ))
         .with_children(|parent| {
             parent.spawn((
-                Text::new("Pull to aim, release to throw"),
+                Text::new("Swipe to aim, release to throw"),
                 TextFont::from_font_size(20.),
                 Node { margin: UiRect::horizontal(Val::Auto), ..default() },
             ));
