@@ -35,7 +35,7 @@ pub mod none_as_empty_string {
         T: Display,
     {
         match value {
-            Some(ip) => serializer.serialize_str(&ip.to_string()),
+            Some(s) => serializer.serialize_str(&s.to_string()),
             None => serializer.serialize_str(""),
         }
     }
