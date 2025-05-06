@@ -1,5 +1,15 @@
 .gotcha-widget {
     @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
 }
-@tailwind components;
-@tailwind utilities;
+
+@keyframes gotcha-pulse-gradient {
+    0%,
+    100% {
+        background-position: 0 100%;
+    }
+    50% {
+        background-position: 0 50%;
+    }
+}

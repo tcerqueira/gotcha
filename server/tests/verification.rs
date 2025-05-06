@@ -2,20 +2,21 @@ mod verify_site {
     use std::net::IpAddr;
 
     use gotcha_server::{
-        response_token::{self, ResponseClaims},
-        routes::verification::{ErrorCodes, VerificationResponse},
         HTTP_CLIENT,
+        routes::verification::{ErrorCodes, VerificationResponse},
+        tokens::response::{self, ResponseClaims},
     };
+    use gotcha_server_macros::integration_test;
     use reqwest::StatusCode;
     use url::Host;
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn sucessful_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
@@ -38,14 +39,14 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn sucessful_challenge_with_remoteip(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
         let addr = [127, 0, 0, 1].into();
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims { score: 0.75, addr, host: Host::parse("gotcha-integration.test.com")? },
             &enc_key,
         )?;
@@ -68,13 +69,13 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn sucessful_challenge_with_remoteip_mismatch(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
@@ -102,13 +103,13 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn failed_challenge(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 0.3,
                 addr: [127, 0, 0, 1].into(),
@@ -131,12 +132,12 @@ mod verify_site {
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn missing_secret(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 1.,
                 addr: [127, 0, 0, 1].into(),
@@ -154,15 +155,17 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::MissingInputSecret));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::MissingInputSecret)
+        );
 
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn missing_response(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
@@ -176,15 +179,17 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::MissingInputResponse));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::MissingInputResponse)
+        );
 
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn missing_secret_and_response(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
 
@@ -197,26 +202,30 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .as_ref()
-            .expect("must have error codes")
-            .contains(&ErrorCodes::MissingInputSecret));
-        assert!(verification
-            .error_codes
-            .as_ref()
-            .expect("must have error codes")
-            .contains(&ErrorCodes::MissingInputResponse));
+        assert!(
+            verification
+                .error_codes
+                .as_ref()
+                .expect("must have error codes")
+                .contains(&ErrorCodes::MissingInputSecret)
+        );
+        assert!(
+            verification
+                .error_codes
+                .as_ref()
+                .expect("must have error codes")
+                .contains(&ErrorCodes::MissingInputResponse)
+        );
 
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn invalid_secret(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 1.,
                 addr: [127, 0, 0, 1].into(),
@@ -235,27 +244,29 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::InvalidInputSecret));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::InvalidInputSecret)
+        );
 
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn invalid_secret_but_exists(_server: TestContext) -> anyhow::Result<()> {
         // TODO
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn invalid_remoteip(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
         let secret = server.db_api_secret().await;
         let enc_key = server.db_enconding_key().await;
 
-        let token = response_token::encode(
+        let token = response::encode(
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
@@ -277,15 +288,17 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::BadRequest));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::BadRequest)
+        );
 
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn bad_request(server: TestContext) -> anyhow::Result<()> {
         let port = server.port();
 
@@ -299,43 +312,46 @@ mod verify_site {
 
         let verification: VerificationResponse = response.json().await?;
         assert!(!verification.success);
-        assert!(verification
-            .error_codes
-            .expect("must have error codes")
-            .contains(&ErrorCodes::BadRequest));
+        assert!(
+            verification
+                .error_codes
+                .expect("must have error codes")
+                .contains(&ErrorCodes::BadRequest)
+        );
 
         Ok(())
     }
 
-    #[gotcha_server_macros::integration_test]
+    #[integration_test]
     async fn duplicate(_server: TestContext) -> anyhow::Result<()> {
         // TODO
         Ok(())
     }
 
-    mod response {
+    mod response_token {
         use std::time::Duration;
 
+        use gotcha_server::tokens::TimeClaims;
         use jsonwebtoken::{EncodingKey, Header};
-        use response_token::{Claims, JWT_ALGORITHM};
+        use response::JWT_RESPONSE_ALGORITHM;
         use url::Host;
 
         use super::*;
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn expired_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
             let enc_key = server.db_enconding_key().await;
 
-            let token = response_token::encode_with_timeout(
-                Duration::from_secs(0),
+            let token = response::encode_with_timeout(
                 ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
                     host: Host::parse("gotcha-integration.test.com")?,
                 },
                 &enc_key,
+                Duration::from_secs(0),
             )?;
             // expired by 1 second
             tokio::time::sleep(Duration::from_secs(1)).await;
@@ -349,21 +365,23 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::TimeoutOrDuplicate));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::TimeoutOrDuplicate)
+            );
 
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn immature_signature(_server: TestContext) -> anyhow::Result<()> {
             // TODO
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn invalid_token(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
@@ -379,22 +397,24 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::InvalidInputResponse));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::InvalidInputResponse)
+            );
 
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn invalid_signature(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
 
             let token = jsonwebtoken::encode(
-                &Header::new(JWT_ALGORITHM),
-                &Claims::new(ResponseClaims {
+                &Header::new(JWT_RESPONSE_ALGORITHM),
+                &TimeClaims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
                     host: Host::parse("gotcha-integration.test.com")?,
@@ -413,15 +433,17 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::InvalidInputResponse));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::InvalidInputResponse)
+            );
 
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn invalid_algorithm(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
@@ -429,7 +451,7 @@ mod verify_site {
 
             let token = jsonwebtoken::encode(
                 &Header::new(jsonwebtoken::Algorithm::HS512), // wrong algorithm
-                &Claims::new(ResponseClaims {
+                &TimeClaims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
                     host: Host::parse("gotcha-integration.test.com")?,
@@ -446,15 +468,17 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::InvalidInputResponse));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::InvalidInputResponse)
+            );
 
             Ok(())
         }
 
-        #[gotcha_server_macros::integration_test]
+        #[integration_test]
         async fn invalid_base64(server: TestContext) -> anyhow::Result<()> {
             let port = server.port();
             let secret = server.db_api_secret().await;
@@ -470,10 +494,12 @@ mod verify_site {
 
             let verification: VerificationResponse = response.json().await?;
             assert!(!verification.success);
-            assert!(verification
-                .error_codes
-                .expect("must have error codes")
-                .contains(&ErrorCodes::InvalidInputResponse));
+            assert!(
+                verification
+                    .error_codes
+                    .expect("must have error codes")
+                    .contains(&ErrorCodes::InvalidInputResponse)
+            );
 
             Ok(())
         }

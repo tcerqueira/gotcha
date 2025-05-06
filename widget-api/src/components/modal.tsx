@@ -1,4 +1,4 @@
-import { createEffect, ParentProps } from "solid-js";
+import { createEffect, onMount, ParentProps } from "solid-js";
 
 type ModalProps = ParentProps & {
   open: boolean;
@@ -7,6 +7,12 @@ type ModalProps = ParentProps & {
 
 export default function Modal(props: ModalProps) {
   let dialogRef: HTMLDialogElement | null = null;
+
+  onMount(() => {
+    dialogRef?.addEventListener("close", () => {
+      props.onClose();
+    });
+  });
 
   createEffect(() => {
     if (props.open) {
@@ -24,7 +30,7 @@ export default function Modal(props: ModalProps) {
     <dialog
       class="m-auto"
       ref={(el) => (dialogRef = el)}
-      onClose={props.onClose}
+      // onClose={props.onClose}
     >
       {props.children}
     </dialog>

@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
-use tracing::{instrument, Level};
+use tracing::{Level, instrument};
 use url::Url;
 
 use crate::{
-    db::{self, RowsAffected},
     AppState,
+    db::{self, RowsAffected},
 };
 
 use super::errors::AdminError;

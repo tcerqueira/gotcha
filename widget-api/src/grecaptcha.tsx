@@ -62,7 +62,6 @@ export class GreCaptcha {
       },
       "expired-callback": () => {
         this.setResponseTextarea(null, widgetId);
-        widget.reset();
         parameters["expired-callback"]?.();
       },
       "error-callback": () => {
@@ -161,7 +160,7 @@ export type RenderParams = {
  */
 export const defaultRenderParams: RenderParams = {
   sitekey: "",
-  theme: "light",
+  theme: undefined,
   size: "normal",
   badge: "bottomright",
   tabindex: 0,

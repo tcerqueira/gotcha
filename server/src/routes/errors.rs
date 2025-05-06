@@ -1,21 +1,24 @@
 use axum::{
+    Json,
     extract::rejection::FormRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use axum_extra::typed_header::TypedHeaderRejection;
-use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
+
+use crate::db::{self, ConstraintKind};
 
 use super::verification::{ErrorCodes, VerificationResponse};
 
 #[derive(Debug, Error)]
 pub enum ChallengeError {
-    #[error("Invalid secret")]
-    InvalidSecret,
-    #[error(transparent)]
-    Sql(#[from] sqlx::Error),
+    #[error("Invalid key")]
+    InvalidKey,
+    #[error("Invalid proof of work challenge")]
+    InvalidProofOfWork(#[from] jsonwebtoken::errors::Error),
+    #[error("Failed proof of work challenge")]
+    FailedProofOfWork,
     #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
@@ -24,13 +27,30 @@ impl IntoResponse for ChallengeError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self, "ChallengeError");
         match self {
-            ChallengeError::Unexpected(_) | ChallengeError::Sql(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            // if a db::Error was wrapped in an anyhow error we try to unwrap it
+            ChallengeError::Unexpected(e) => e
+                .downcast::<db::Error>()
+                .ok()
+                .map(ChallengeError::from)
+                .and_then(|err| match err {
+                    ChallengeError::Unexpected(_) => None,
+                    other => Some(other.into_response()),
+                })
+                .unwrap_or_else(|| StatusCode::INTERNAL_SERVER_ERROR.into_response()),
+            ChallengeError::InvalidKey => (StatusCode::FORBIDDEN, self.to_string()).into_response(),
+            ChallengeError::InvalidProofOfWork(_) => {
+                (StatusCode::BAD_REQUEST, self.to_string()).into_response()
             }
-            ChallengeError::InvalidSecret => {
-                (StatusCode::FORBIDDEN, self.to_string()).into_response()
+            ChallengeError::FailedProofOfWork => {
+                (StatusCode::BAD_REQUEST, self.to_string()).into_response()
             }
         }
+    }
+}
+
+impl From<db::Error> for ChallengeError {
+    fn from(db_err: db::Error) -> Self {
+        Self::Unexpected(anyhow::Error::new(db_err).context("database error"))
     }
 }
 
@@ -43,8 +63,6 @@ pub enum ConsoleError {
     #[error("Duplicate")]
     Duplicate,
     #[error(transparent)]
-    Sql(sqlx::Error),
-    #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
 
@@ -52,9 +70,17 @@ impl IntoResponse for ConsoleError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self, "ConsoleError");
         match self {
-            ConsoleError::Unexpected(_) | ConsoleError::Sql(_) | ConsoleError::Duplicate => {
-                StatusCode::INTERNAL_SERVER_ERROR.into_response()
-            }
+            // if a db::Error was wrapped in an anyhow error we try to unwrap it
+            ConsoleError::Unexpected(e) => e
+                .downcast::<db::Error>()
+                .ok()
+                .map(ConsoleError::from)
+                .and_then(|err| match err {
+                    ConsoleError::Unexpected(_) => None,
+                    other => Some(other.into_response()),
+                })
+                .unwrap_or_else(|| StatusCode::INTERNAL_SERVER_ERROR.into_response()),
+            ConsoleError::Duplicate => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             ConsoleError::NotFound { what: _ } => {
                 (StatusCode::NOT_FOUND, self.to_string()).into_response()
             }
@@ -63,26 +89,24 @@ impl IntoResponse for ConsoleError {
     }
 }
 
-impl From<sqlx::Error> for ConsoleError {
-    fn from(db_err: sqlx::Error) -> Self {
+impl From<db::Error> for ConsoleError {
+    fn from(db_err: db::Error) -> Self {
         match db_err {
-            sqlx::Error::Database(err)
-                if err
-                    .downcast_ref::<PgDatabaseError>()
-                    .constraint()
-                    .is_some_and(|c| c == "api_key_console_id_fkey") =>
+            db::Error::Constraint { source, kind: ConstraintKind::ForeignKey }
+                if source.constraint().unwrap() == "api_key_console_id_fkey" =>
             {
                 ConsoleError::Forbidden
             }
-            sqlx::Error::Database(err)
-                if err
-                    .downcast_ref::<PgDatabaseError>()
-                    .constraint()
-                    .is_some_and(|c| c == "api_key_secret_unique" || c == "api_key_pkey") =>
+            db::Error::Constraint {
+                source,
+                kind: ConstraintKind::PrimaryKey | ConstraintKind::UniqueKey,
+            } if source
+                .constraint()
+                .is_some_and(|c| c == "api_key_secret_unique" || c == "api_key_pkey") =>
             {
                 ConsoleError::Duplicate
             }
-            err => ConsoleError::Sql(err),
+            err => Self::Unexpected(anyhow::Error::new(err).context("database error")),
         }
     }
 }
@@ -100,8 +124,6 @@ pub enum AdminError {
     #[error(transparent)]
     Unauthorized(#[from] TypedHeaderRejection),
     #[error(transparent)]
-    Sql(sqlx::Error),
-    #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
 
@@ -109,9 +131,16 @@ impl IntoResponse for AdminError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self, "AdminError");
         match self {
-            AdminError::Unexpected(_) | AdminError::Sql(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR.into_response()
-            }
+            // if a db::Error was wrapped in an anyhow error we try to unwrap it
+            AdminError::Unexpected(e) => e
+                .downcast::<db::Error>()
+                .ok()
+                .map(AdminError::from)
+                .and_then(|err| match err {
+                    AdminError::Unexpected(_) => None,
+                    other => Some(other.into_response()),
+                })
+                .unwrap_or_else(|| StatusCode::INTERNAL_SERVER_ERROR.into_response()),
             AdminError::NotUnique { what: _ } => {
                 (StatusCode::CONFLICT, self.to_string()).into_response()
             }
@@ -127,26 +156,18 @@ impl IntoResponse for AdminError {
     }
 }
 
-impl From<sqlx::Error> for AdminError {
-    fn from(err: sqlx::Error) -> Self {
-        match err {
-            sqlx::Error::Database(db_err)
-                if db_err
-                    .downcast_ref::<PgDatabaseError>()
-                    .constraint()
-                    .is_some_and(|c| c == "width_positive" || c == "height_positive") =>
-            {
+impl From<db::Error> for AdminError {
+    fn from(db_err: db::Error) -> Self {
+        match db_err {
+            db::Error::Constraint { kind: ConstraintKind::DimensionsPositive, .. } => {
                 AdminError::InvalidDimensions
             }
-            sqlx::Error::Database(db_err)
-                if db_err
-                    .downcast_ref::<PgDatabaseError>()
-                    .constraint()
-                    .is_some_and(|c| c == "challenge_pkey") =>
+            db::Error::Constraint { source, kind: ConstraintKind::PrimaryKey }
+                if source.constraint().unwrap() == "challenge_pkey" =>
             {
                 AdminError::NotUnique { what: "Challenge url".into() }
             }
-            other => AdminError::Sql(other),
+            err => Self::Unexpected(anyhow::Error::new(err).context("database error")),
         }
     }
 }
@@ -158,8 +179,6 @@ pub enum VerificationError {
     #[error(transparent)]
     BadRequest(#[from] FormRejection),
     #[error(transparent)]
-    Sql(#[from] sqlx::Error),
-    #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
 
@@ -167,13 +186,26 @@ impl IntoResponse for VerificationError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self, "VerificationError");
         match self {
-            VerificationError::Unexpected(_) | VerificationError::Sql(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR.into_response()
-            }
+            // if a db::Error was wrapped in an anyhow error we try to unwrap it
+            VerificationError::Unexpected(e) => e
+                .downcast::<db::Error>()
+                .ok()
+                .map(VerificationError::from)
+                .and_then(|err| match err {
+                    VerificationError::Unexpected(_) => None,
+                    other => Some(other.into_response()),
+                })
+                .unwrap_or_else(|| StatusCode::INTERNAL_SERVER_ERROR.into_response()),
             VerificationError::UserError(verification) => Json(verification).into_response(),
             VerificationError::BadRequest(_) => {
                 Json(VerificationResponse::failure(vec![ErrorCodes::BadRequest])).into_response()
             }
         }
+    }
+}
+
+impl From<db::Error> for VerificationError {
+    fn from(db_err: db::Error) -> Self {
+        Self::Unexpected(anyhow::Error::new(db_err).context("database error"))
     }
 }

@@ -1,17 +1,27 @@
 use gotcha_server::{
-    response_token::Claims,
-    routes::challenge::{ChallengeResponse, ChallengeResults, GetChallenge, PreAnalysisResponse},
     HTTP_CLIENT,
+    routes::challenge::{
+        AccessibilityRequest, ChallengeResponse, ChallengeResults, GetChallenge, PowResponse,
+        PreAnalysisRequest, ProofOfWork,
+    },
+    tokens::{
+        TimeClaims,
+        response::{JWT_RESPONSE_ALGORITHM, ResponseClaims},
+    },
 };
-use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
+use gotcha_server_macros::integration_test;
+use jsonwebtoken::{DecodingKey, Validation};
 use reqwest::StatusCode;
 use url::{Host, Url};
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
-    let response = reqwest::get(format!("http://localhost:{port}/api/challenge")).await?;
+    let response = HTTP_CLIENT
+        .get(format!("http://localhost:{port}/api/challenge"))
+        .send()
+        .await?;
     assert_eq!(response.status(), StatusCode::OK);
     let _challenge: GetChallenge = response.json().await?;
 
@@ -19,7 +29,7 @@ async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
 }
 
 // This test overtime gets more meaningless and untestable
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let site_key = server.db_api_site_key().await;
@@ -39,18 +49,19 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
     assert_eq!(response.status(), StatusCode::OK);
 
     let ChallengeResponse { token } = response.json().await?;
-    let token_data: TokenData<Claims> = jsonwebtoken::decode(
+    eprintln!("{token}");
+    let token_data = jsonwebtoken::decode::<TimeClaims<ResponseClaims>>(
         &token,
         &DecodingKey::from_base64_secret(&enc_key)?,
-        &Validation::new(Algorithm::HS256),
+        &Validation::new(JWT_RESPONSE_ALGORITHM),
     )?;
-    assert_eq!(token_data.header.alg, Algorithm::HS256);
+    assert_eq!(token_data.header.alg, JWT_RESPONSE_ALGORITHM);
     // assert!(token_data.claims.custom.score >= 0.5);
 
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
     let site_key = server.db_api_site_key().await;
@@ -70,18 +81,19 @@ async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     let ChallengeResponse { token } = response.json().await?;
-    let token_data = jsonwebtoken::decode::<Claims>(
+    eprintln!("{token}");
+    let token_data = jsonwebtoken::decode::<TimeClaims<ResponseClaims>>(
         &token,
         &DecodingKey::from_base64_secret(&enc_key)?,
-        &Validation::new(Algorithm::HS256),
+        &Validation::new(JWT_RESPONSE_ALGORITHM),
     )?;
-    assert_eq!(token_data.header.alg, Algorithm::HS256);
-    assert!(token_data.claims.custom.score == 0.);
+    assert_eq!(token_data.header.alg, JWT_RESPONSE_ALGORITHM);
+    assert!(token_data.claims.other.score == 0.);
 
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
+#[integration_test]
 async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
@@ -101,9 +113,10 @@ async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::R
     Ok(())
 }
 
-// This test overtime gets more meaningless and untestable
-#[gotcha_server_macros::integration_test]
-async fn process_pre_analysis_success(server: TestContext) -> anyhow::Result<()> {
+#[integration_test]
+async fn process_pre_analysis_fails_on_invalid_proof_of_work(
+    server: TestContext,
+) -> anyhow::Result<()> {
     let port = server.port();
     let site_key = server.db_api_site_key().await;
 
@@ -111,44 +124,137 @@ async fn process_pre_analysis_success(server: TestContext) -> anyhow::Result<()>
         .post(format!(
             "http://localhost:{port}/api/challenge/process-pre-analysis"
         ))
-        .json(&ChallengeResults {
-            success: true,
+        .json(&PreAnalysisRequest {
             site_key,
             hostname: Host::parse("website-integration.test.com")?,
-            challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
             interactions: vec![],
+            proof_of_work: ProofOfWork { challenge: "".into(), solution: 0 },
         })
         .send()
         .await?;
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let _: PreAnalysisResponse = response.json().await?;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
     Ok(())
 }
 
-#[gotcha_server_macros::integration_test]
-async fn process_pre_analysis_failure(server: TestContext) -> anyhow::Result<()> {
+#[integration_test]
+async fn process_pre_analysis_fails_on_proof_of_work_failed(
+    server: TestContext,
+) -> anyhow::Result<()> {
     let port = server.port();
     let site_key = server.db_api_site_key().await;
+
+    let pow: PowResponse = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/challenge/proof-of-work?site_key={site_key}"
+        ))
+        .send()
+        .await?
+        .json()
+        .await?;
 
     let response = HTTP_CLIENT
         .post(format!(
             "http://localhost:{port}/api/challenge/process-pre-analysis"
         ))
-        .json(&ChallengeResults {
-            success: true,
+        .json(&PreAnalysisRequest {
             site_key,
             hostname: Host::parse("website-integration.test.com")?,
-            challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
             interactions: vec![],
+            proof_of_work: ProofOfWork { challenge: pow.token, solution: 0 },
         })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    Ok(())
+}
+
+#[integration_test]
+async fn process_accessibility_fails_on_invalid_proof_of_work(
+    server: TestContext,
+) -> anyhow::Result<()> {
+    let port = server.port();
+    let site_key = server.db_api_site_key().await;
+
+    let response = HTTP_CLIENT
+        .post(format!(
+            "http://localhost:{port}/api/challenge/process-accessibility"
+        ))
+        .json(&AccessibilityRequest {
+            site_key,
+            hostname: Host::parse("website-integration.test.com")?,
+            proof_of_work: ProofOfWork { challenge: "".into(), solution: 0 },
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    Ok(())
+}
+
+#[integration_test]
+async fn process_accessibility_fails_on_proof_of_work_failed(
+    server: TestContext,
+) -> anyhow::Result<()> {
+    let port = server.port();
+    let site_key = server.db_api_site_key().await;
+
+    let pow: PowResponse = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/challenge/proof-of-work?site_key={site_key}"
+        ))
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let response = HTTP_CLIENT
+        .post(format!(
+            "http://localhost:{port}/api/challenge/process-accessibility"
+        ))
+        .json(&AccessibilityRequest {
+            site_key,
+            hostname: Host::parse("website-integration.test.com")?,
+            proof_of_work: ProofOfWork { challenge: pow.token, solution: 0 },
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    Ok(())
+}
+
+#[integration_test]
+async fn get_proof_of_work_challenge(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let site_key = server.db_api_site_key().await;
+
+    let response = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/challenge/proof-of-work?site_key={site_key}"
+        ))
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
 
-    let response: PreAnalysisResponse = response.json().await?;
-    assert!(matches!(response, PreAnalysisResponse::Failure));
+    let response: PowResponse = response.json().await?;
+    assert!(!response.token.is_empty());
+
+    Ok(())
+}
+
+#[integration_test]
+async fn get_proof_of_work_challenge_no_site_key(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+
+    let response = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/challenge/proof-of-work"
+        ))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
     Ok(())
 }

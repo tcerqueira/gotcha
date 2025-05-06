@@ -350,9 +350,9 @@
         <script>
             let captchaInitialized = false;
             const SITEKEY =
-                "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
+                "I7S_p0FdQeH9ZHbcWy3rKi6bpZnEDNJX6vd-SpxdI2OlkHlnTKSx9s678I1O-psM";
             const SECRET =
-                "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
+                "O+xY7MMEghWF645+FbOaiMSKk7uKEgunZumS63I9adJ4Mv9aZMvi71yA/qqe0Jw1";
 
             function showCaptcha() {
                 const modal = document.getElementById("captchaModal");
@@ -361,6 +361,7 @@
                 if (!captchaInitialized) {
                     grecaptcha.render("captcha-container", {
                         sitekey: SITEKEY,
+                        theme: "dark",
                         callback: onCaptchaResponse,
                         "expired-callback": onCaptchaExpired,
                         "error-callback": onCaptchaError,

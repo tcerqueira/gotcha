@@ -1,37 +1,46 @@
 use std::sync::{Arc, LazyLock};
 
 use axum::{Extension, Router};
-use configuration::{server_dir, ApplicationConfig};
-use extractors::ThisOrigin;
+use configuration::{ApplicationConfig, server_dir};
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use routes::extractors::ThisOrigin;
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[cfg(feature = "aws-lambda")]
 mod aws_lambda {
+    pub use super::routes::extractors;
     pub use tower::util::MapRequestLayer;
 }
 #[cfg(feature = "aws-lambda")]
 use aws_lambda::*;
 
-pub use configuration::{get_configuration, Config};
-
 pub mod analysis;
 pub mod configuration;
 pub mod crypto;
 pub mod db;
-pub mod extractors;
-pub mod response_token;
 pub mod routes;
 mod serde;
 pub mod test_helpers;
+pub mod tokens;
 
-pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+pub use configuration::{Config, get_configuration};
+
+fn build_client() -> Client {
+    const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+    Client::builder()
+        .user_agent(USER_AGENT)
+        .build()
+        .expect("error building HTTP_CLIENT")
+}
+
+pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(build_client);
 pub static HTTP_CACHE_CLIENT: LazyLock<ClientWithMiddleware> = LazyLock::new(|| {
-    ClientBuilder::new(Client::new())
+    let client = build_client();
+    ClientBuilder::new(client)
         .with(Cache(HttpCache {
             mode: CacheMode::Default,
             manager: CACacheManager { path: "/tmp/gotcha/".into() },
@@ -86,17 +95,32 @@ pub fn init_tracing() {
         .try_init();
 }
 
-pub async fn db_dev_populate(pool: &PgPool) -> sqlx::Result<()> {
-    let mut txn = pool.begin().await?;
-
+pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
     let _ = db::with_console_insert_api_key(
-        &mut *txn,
+        pool,
         "demo",
         "demo|user",
-        "4BdwFU84HLqceCQbE90+U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+        "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
         "dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m",
     )
-    .await;
+    .await
+    .inspect_err(|e| {
+        tracing::debug!(
+            err = tracing::field::debug(e),
+            "could not populate demo console and api_key"
+        )
+    });
 
-    txn.commit().await
+    // let _ = db::insert_challenge(
+    //     pool,
+    //     &db::DbChallenge { url: "http://127.0.0.1:1334/".into(), width: 308, height: 308 },
+    // )
+    // .await
+    // .inspect_err(|e| {
+    //     tracing::debug!(
+    //         err = tracing::field::debug(e),
+    //         "could not populate challenge"
+    //     )
+    // });
+    Ok(())
 }

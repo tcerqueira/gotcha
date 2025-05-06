@@ -1,7 +1,8 @@
 import { render } from "solid-js/web";
 import { createSignal } from "solid-js";
 import { RenderParams } from "./grecaptcha";
-import { GotchaWidget, GotchaWidgetProps } from "./components/gotcha-widget";
+import { GotchaWidget } from "./components/gotcha-widget";
+import { GotchaWidgetProps } from "./components/types";
 
 export interface Widget {
   render: (container: Element, parameters: RenderParams) => void;
@@ -42,6 +43,9 @@ export function createWidget(): Widget {
   return {
     render: renderWidget,
     reset: () => {
+      setState("live");
+      clearTimeout(timeout);
+
       if (!containerElem) return;
       containerElem.getElementsByClassName("gotcha-widget")[0]?.remove();
       renderWidget(containerElem, params!);

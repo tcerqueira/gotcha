@@ -35,7 +35,7 @@ pub mod none_as_empty_string {
         T: Display,
     {
         match value {
-            Some(ip) => serializer.serialize_str(&ip.to_string()),
+            Some(s) => serializer.serialize_str(&s.to_string()),
             None => serializer.serialize_str(""),
         }
     }
@@ -103,5 +103,38 @@ pub mod option_host_as_str {
             "" => Ok(None),
             s => Host::parse(s).map(Some).map_err(serde::de::Error::custom),
         }
+    }
+}
+
+pub mod single_or_sequence {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de::DeserializeOwned};
+
+    pub fn serialize<S, T>(entries: &[T], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: Serialize,
+    {
+        match entries {
+            [single] => single.serialize(serializer),
+            sequence => sequence.serialize(serializer),
+        }
+    }
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: DeserializeOwned,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum SingleOrSequence<T> {
+            Single(T),
+            Sequence(Vec<T>),
+        }
+
+        Ok(match SingleOrSequence::deserialize(deserializer)? {
+            SingleOrSequence::Single(single) => vec![single],
+            SingleOrSequence::Sequence(sequence) => sequence,
+        })
     }
 }

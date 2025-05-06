@@ -48,7 +48,6 @@ async fn lambda_main() -> anyhow::Result<()> {
 
     let pool = db::connect_database(db_conf);
 
-    std::env::set_var("AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH", "true");
     lambda_http::run(gotcha_server::app(app_conf, pool))
         .await
         .unwrap();

@@ -7,6 +7,7 @@ lto = true
 codegen-units = 1
 panic = "abort"
 opt-level = 3
+strip = true
 
 # Speed up compile time checks for sqlx queries
 [profile.dev.package.sqlx-macros]

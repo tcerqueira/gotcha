@@ -1,224 +1,116 @@
-import { SearchParams, WidgetMessage, Interaction } from "@gotcha-widget/lib";
-import {
-  Accessor,
-  createMemo,
-  createResource,
-  createSignal,
-  Match,
-  onCleanup,
-  onMount,
-  Show,
-  Switch,
-} from "solid-js";
-import { defaultRenderParams, RenderParams } from "../grecaptcha";
-import ImNotRobot, { AnalysisResponse } from "./im-not-a-robot";
-import Modal from "./modal";
-import { LiveState } from "../widget";
-
-type AdditionalParams = {
-  liveState: Accessor<LiveState>;
-};
-export type GotchaWidgetProps = RenderParams & AdditionalParams;
-
-type State = "live" | "verifying" | "verified" | "failed" | "error";
+import { createSignal, Show, createEffect } from "solid-js";
+import { ChallengeState, GotchaWidgetProps } from "./types";
+import ImNotRobot, { PreAnalysisResponse } from "./im-not-a-robot";
+import ChallengeFrame from "./challenge-frame";
 
 export function GotchaWidget(props: GotchaWidgetProps) {
-  let iframeElement: HTMLIFrameElement | null = null;
-  const [state, setState] = createSignal<State>("live");
-  const [challenge] = createResource(props.sitekey, fetchChallenge);
-  const showChallenge = createMemo(() => state() === "verifying");
+  const [state, setState] = createSignal<ChallengeState>("blank");
 
-  const handlePreChallengeResponse = (response: AnalysisResponse) => {
+  createEffect(() => {
+    if (props.liveState() === "expired") {
+      setState("expired");
+    }
+  });
+
+  const handlePreVerificationComplete = (response: PreAnalysisResponse) => {
     if (response.result === "success") {
       setState("verified");
       props.callback?.(response.response.token);
     } else {
-      setState("verifying");
+      setState("challenging");
     }
   };
 
-  const handleMessage = async (event: MessageEvent<WidgetMessage>) => {
-    const challengeData = challenge();
-    if (!challengeData) return;
-
-    if (
-      // Always check the origin of the message
-      event.origin !== new URL(challengeData.url).origin ||
-      // Only listen for events coming from this iframe and no other
-      event.source !== iframeElement?.contentWindow
-    )
-      return;
-
-    let message = event.data;
-    switch (message.type) {
-      case "response-callback":
-        let response = await processChallenge(
-          props.sitekey,
-          message.success,
-          challengeData.url,
-          message.interactions,
-        );
-        if (response !== null) {
-          setState(message.success ? "verified" : "failed");
-          props.callback?.(response);
-        } else {
-          setState("error");
-          props["error-callback"]?.();
-        }
-        break;
-      case "error-callback":
-        setState("error");
-        props["error-callback"]?.();
-        break;
-    }
-  };
-  onMount(() => {
-    window.addEventListener("message", handleMessage);
-  });
-  onCleanup(() => {
-    window.removeEventListener("message", handleMessage);
-  });
-
-  const params: SearchParams = {
-    k: props.sitekey,
-    theme: props.theme,
-    size: props.size,
-    badge: props.badge,
-    sv: window.location.origin,
+  const handleChallengeComplete = (token: string) => {
+    setState("verified");
+    props.callback?.(token);
   };
 
-  const notRobotState = createMemo(() => {
-    switch (state()) {
-      case "verified":
-        return "verified";
-      case "verifying":
-        return "verifying";
-      default:
-        return "blank";
-    }
-  });
+  const handleFail = () => {
+    setState("failed");
+  };
+
+  const handleError = () => {
+    setState("error");
+    props["error-callback"]?.();
+  };
 
   return (
-    <div class="gotcha-widget inline-block">
-      <div class={`border-2 border-purple-200 rounded box-content bg-gray-50`}>
-        <ImNotRobot
-          params={props}
-          state={notRobotState()}
-          onResponse={handlePreChallengeResponse}
-        />
-        <div class="flex justify-between p-1 bg-gray-200">
-          <p class="text-left">
-            <Switch>
-              <Match when={state() === "verified"}>
-                <span class="text-green-400">Verified!</span>
-              </Match>
-              <Match when={state() === "verifying"}>
-                <span class="text-gray-500">Verifiying...</span>
-              </Match>
-              <Match when={state() === "failed"}>
-                <span class="text-red-400">Verification failed.</span>
-              </Match>
-              <Match when={state() === "error"}>
-                <span class="text-red-400">Oops! Something went wrong...</span>
-              </Match>
-              <Match when={props.liveState() === "expired"}>
-                <span class="text-red-400">Verification expired.</span>
-              </Match>
-            </Switch>
-          </p>
-          <p class="text-right">Gotcha</p>
-        </div>
+    <div class="gotcha-widget" data-theme={props.theme}>
+      <div
+        class={`inline-block bg-gray-50 dark:bg-gray-700 transition-colors duration-400 ${getBorderClass(state())}`}
+      >
+        <div class={`${getBackgroundClass(state())}`}>
+          <ImNotRobot
+            params={props}
+            state={state()}
+            onStateChange={setState}
+            onVerificationComplete={handlePreVerificationComplete}
+            onError={handleError}
+          />
 
-        <Show when={showChallenge()}>
-          <Modal open={showChallenge()} onClose={() => setState("failed")}>
-            <Switch>
-              <Match when={challenge.loading}>
-                <p>Loading...</p>
-              </Match>
-              <Match when={challenge.error}>
-                <span>Error {challenge.error}</span>
-              </Match>
-              <Match when={challenge()}>
-                <div class={`w-[${challenge()!.width}px]`}>
-                  <iframe
-                    class="border-4 rounded border-purple-200 overflow-hidden m-0 p-0 focus-visible:outline-none"
-                    ref={(el) => (iframeElement = el)}
-                    src={buildChallengeUrl(challenge()!.url, params)}
-                    width={challenge()!.width}
-                    height={challenge()!.height}
-                    role="presentation"
-                    sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
-                  ></iframe>
-                </div>
-              </Match>
-            </Switch>
-          </Modal>
-        </Show>
+          {/* <Show when={state() === "challenging"}> */}
+          <ChallengeFrame
+            open={state() === "challenging"}
+            params={{
+              k: props.sitekey,
+              theme: props.theme,
+              size: props.size,
+              badge: props.badge,
+              sv: window.location.origin,
+            }}
+            onComplete={handleChallengeComplete}
+            onFail={handleFail}
+            onError={handleError}
+            onClose={() => {
+              if (state() != "verified" && state() != "error") {
+                setState("failed");
+              }
+            }}
+          />
+          {/* </Show> */}
+        </div>
       </div>
     </div>
   );
 }
 
-type Challenge = {
-  url: string;
-  width: number;
-  height: number;
-};
-
-async function fetchChallenge(): Promise<Challenge> {
-  const origin = new URL(import.meta.url).origin;
-  const url = new URL(`${origin}/api/challenge`);
-
-  const response = await fetch(url);
-  return (await response.json()) as Challenge;
-}
-
-export type ChallengeResponse = {
-  token: string;
-};
-
-async function processChallenge(
-  site_key: string,
-  success: boolean,
-  challengeUrl: string,
-  interactions: Interaction[],
-): Promise<string | null> {
-  try {
-    const origin = new URL(import.meta.url).origin;
-    const url = new URL(`${origin}/api/challenge/process`);
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        success,
-        site_key,
-        hostname: window.location.hostname,
-        challenge: challengeUrl,
-        interactions,
-      }),
-    });
-    if (response.status !== 200)
-      throw new Error(
-        `processChallenge returned status code ${response.status}`,
-      );
-    const { token }: ChallengeResponse = await response.json();
-
-    return token;
-  } catch (e) {
-    return null;
+function getBackgroundClass(state: ChallengeState) {
+  switch (state) {
+    case "verified":
+      return `bg-gradient-to-t from-green-300 to-transparent dark:from-green-900/50`;
+    case "failed":
+      return `bg-gradient-to-t from-red-300 to-transparent dark:from-red-900/50`;
+    case "expired":
+      return `bg-gradient-to-t from-red-200 to-transparent dark:from-red-900/40`;
+    case "error":
+      return `bg-gradient-to-t from-yellow-300 to-transparent dark:from-yellow-900/50`;
+    case "verifying":
+    case "challenging":
+      return "bg-gradient-to-t from-purple-300 via-transparent to-transparent dark:from-purple-900 dark:via-transparent dark:to-transparent bg-[size:100%_200%] animate-pulse-gradient";
+    default:
+      return `bg-transparent`;
   }
 }
 
-function buildChallengeUrl(baseUrl: string, params: SearchParams): string {
-  const url = new URL(baseUrl);
-  url.searchParams.append("k", params.k);
-  url.searchParams.append("hl", params.hl ?? navigator.language);
-  url.searchParams.append("theme", params.theme ?? defaultRenderParams.theme!);
-  url.searchParams.append("size", params.size ?? defaultRenderParams.size!);
-  url.searchParams.append("badge", params.badge ?? defaultRenderParams.badge!);
-  url.searchParams.append("sv", params.sv ?? window.location.origin);
+function getBorderClass(state: ChallengeState) {
+  const bColor = (() => {
+    switch (state) {
+      case "verified":
+        return "border-b-green-400 dark:border-b-green-600";
+      case "failed":
+        return "border-b-red-400 dark:border-b-red-600";
+      case "expired":
+        return "border-b-red-300 dark:border-b-red-700";
+      case "error":
+        return "border-b-yellow-400 dark:border-b-yellow-600";
+      case "verifying":
+      case "challenging":
+        return "border-b-purple-400 dark:border-b-purple-600";
+      default:
+        return "border-b-gray-300 dark:border-b-gray-500";
+    }
+  })();
 
-  return url.toString();
+  return `border-2 border-gray-300 dark:border-gray-500 border-b-4 ${bColor} rounded`;
 }

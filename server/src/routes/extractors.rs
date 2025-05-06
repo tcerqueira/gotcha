@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
-use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
 #[cfg(feature = "aws-lambda")]
 use axum::http::Request;
-use axum::http::StatusCode;
+use axum::{
+    extract::FromRequestParts,
+    http::{StatusCode, request::Parts},
+};
 
 #[cfg(feature = "aws-lambda")]
 pub fn extract_lambda_source_ip<B>(mut request: Request<B>) -> Request<B> {
     use axum::extract::ConnectInfo;
-    use lambda_http::{request::RequestContext, RequestExt};
+    use lambda_http::{RequestExt, request::RequestContext};
     use std::net::{IpAddr, SocketAddr};
 
     if request
@@ -44,7 +45,7 @@ pub fn extract_lambda_source_ip<B>(mut request: Request<B>) -> Request<B> {
 
 #[cfg(feature = "aws-lambda")]
 pub fn extract_lambda_origin<B>(mut request: Request<B>) -> Request<B> {
-    pub use lambda_http::{request::RequestContext, RequestExt};
+    pub use lambda_http::{RequestExt, request::RequestContext};
 
     let Some(RequestContext::ApiGatewayV2(cx)) = request.request_context_ref() else {
         tracing::error!("lambda context (ApiGatewayV2) not found in request");
