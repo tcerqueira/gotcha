@@ -18,6 +18,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.8",
     "solid-js": "^1.9.5",
-    "tailwindcss": "^4.1.8"
+    "tailwindcss": "^4.1.8",
+    "@gotcha-widget/lib": "github:tcerqueira/gotcha-widget-lib#master"
   }
 }
