@@ -12,7 +12,7 @@ const WinScreen: Component<WinScreenProps> = (props) => {
       onClick={props.onRestart}
     >
       <div class="text-center space-y-8">
-        <h1 class="text-6xl md:text-8xl font-bold text-yellow-400 mb-4">
+        <h1 class="text-5xl md:text-8xl font-bold text-yellow-400 mb-4">
           You Won!
         </h1>
         <p class="text-2xl md:text-3xl text-green-400 mb-4">

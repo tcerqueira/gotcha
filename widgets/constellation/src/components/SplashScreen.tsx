@@ -11,7 +11,7 @@ const SplashScreen: Component<SplashScreenProps> = (props) => {
       onClick={props.onStart}
     >
       <div class="text-center space-y-8">
-        <h1 class="text-6xl md:text-8xl font-bold text-white mb-4">
+        <h1 class="text-5xl md:text-8xl font-bold text-white mb-4">
           Hit the
           <span class="text-yellow-400">⭐</span>
           Stars!
