@@ -1,9 +1,12 @@
 import type { Component } from "solid-js";
 import { For } from "solid-js";
-import type { Star as StarType, FloatingFeedback as FloatingFeedbackType, Ripple } from "../types";
+import type {
+  Star as StarType,
+  FloatingFeedback as FloatingFeedbackType,
+  Ripple,
+} from "../types";
 import Star from "./Star";
 import FloatingFeedback from "./FloatingFeedback";
-import RippleEffect from "./RippleEffect";
 
 interface GameScreenProps {
   stars: StarType[];
@@ -30,7 +33,7 @@ const GameScreen: Component<GameScreenProps> = (props) => {
       <div class="absolute top-4 left-4 text-white text-2xl font-bold z-10">
         Score: {props.score}
       </div>
-      
+
       {/* Miss counter */}
       <div class="absolute top-4 right-4 text-white text-2xl font-bold z-10">
         Misses: {props.misses}/3
@@ -49,9 +52,6 @@ const GameScreen: Component<GameScreenProps> = (props) => {
 
       {/* Floating feedback texts */}
       <FloatingFeedback feedbacks={props.floatingFeedbacks} />
-
-      {/* Ripple effects */}
-      <RippleEffect ripples={props.ripples} />
     </>
   );
 };

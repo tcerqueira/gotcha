@@ -10,7 +10,7 @@ interface StarProps {
 const Star: Component<StarProps> = (props) => {
   return (
     <div
-      class="absolute cursor-pointer select-none w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 transition-all duration-300 ease-in-out"
+      class="absolute cursor-pointer active:animate-[ping_0.2s_cubic-bezier(0,0,0.2,1)_forwards] select-none w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 transition-all duration-300 ease-in-out"
       style={{ left: `${props.star.x}%`, top: `${props.star.y}%` }}
       onClick={(e) => props.onClick(props.star, e)}
     >

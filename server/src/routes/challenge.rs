@@ -5,6 +5,7 @@ use axum::{
     Json,
     extract::{ConnectInfo, Query, State},
 };
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use tracing::{Level, Span, instrument};
 use url::{Host, Url};
@@ -70,7 +71,7 @@ pub async fn get_proof_of_work_challenge(
         .encoding_key;
 
     Ok(Json(PowResponse {
-        token: pow_challenge::encode(PowChallenge::random(3), &enc_key)
+        token: pow_challenge::encode(PowChallenge::random(4), &enc_key)
             .context("failed encoding jwt response")?,
     }))
 }
@@ -270,8 +271,8 @@ pub async fn process_accessibility_challenge(
 fn choose_challenge(mut challenges: Vec<DbChallenge>) -> Option<DbChallenge> {
     match &challenges[..] {
         [] => None,
-        // _ => challenges.swap_remove(rand::thread_rng().gen_range(0..challenges.len())),
-        _ => Some(challenges.swap_remove(0)),
+        _ => Some(challenges.swap_remove(rand::rng().random_range(0..challenges.len()))),
+        // _ => Some(challenges.swap_remove(0)),
     }
 }
 

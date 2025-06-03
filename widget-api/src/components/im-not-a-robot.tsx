@@ -5,6 +5,7 @@ import { RenderParams } from "../grecaptcha";
 import { PowChallenge, ProofOfWork } from "../proof-of-work";
 import { ChallengeState } from "./types";
 import Logo from "./logo";
+import Checkbox, { CheckboxState } from "./checkbox";
 
 export type PreAnalysisResponse =
   | { result: "failure" }
@@ -65,15 +66,16 @@ export default function ImNotRobot(props: ImNotRobotProps) {
 
   return (
     <div class="rounded-lg w-[304px] h-[68px]">
-      <div class="flex justify-between items-stretch space-x-4 h-full">
-        <div
-          class="pl-6 flex-grow cursor-pointer flex items-center"
-          onClick={() =>
-            handleVerification((pow) =>
-              processPreAnalysis(props.params.sitekey, pow, interactions),
-            )
-          }
-        >
+      <div class="flex justify-between items-stretch h-full">
+        <div class="pl-5 flex gap-2 flex-grow items-center cursor-pointer">
+          <Checkbox
+            state={checkboxState(props.state)}
+            onClick={() =>
+              handleVerification((pow) =>
+                processPreAnalysis(props.params.sitekey, pow, interactions),
+              )
+            }
+          />
           <span class={`${getTextClass(props.state)}`}>
             {getText(props.state)}
           </span>
@@ -95,6 +97,18 @@ export default function ImNotRobot(props: ImNotRobotProps) {
       </div>
     </div>
   );
+}
+
+function checkboxState(state: ChallengeState): CheckboxState {
+  switch (state) {
+    case "verified":
+      return "checked";
+    case "verifying":
+    case "challenging":
+      return "checking";
+    default:
+      return "blank";
+  }
 }
 
 type PowResult = { challenge: string; solution: number };
