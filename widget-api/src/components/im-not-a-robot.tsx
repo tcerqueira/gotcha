@@ -67,7 +67,7 @@ export default function ImNotRobot(props: ImNotRobotProps) {
   return (
     <div class="rounded-lg w-[304px] h-[68px]">
       <div class="flex justify-between items-stretch h-full">
-        <div class="pl-5 flex gap-2 flex-grow items-center cursor-pointer">
+        <div class="pl-5 flex gap-2 flex-grow items-center">
           <Checkbox
             state={checkboxState(props.state)}
             onClick={() =>
