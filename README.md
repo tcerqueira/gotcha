@@ -26,11 +26,11 @@ Gotcha is a modular CAPTCHA system designed to be fully compatible with Google's
 │   Client Web    │    │  Gotcha Server  │    │   PostgreSQL    │
 │   Application   │◄──►│   (Rust/Axum)   │◄──►│    Database     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │
-         ▼                       ▼
+         │           /           
+         ▼         /              
 ┌─────────────────┐    ┌─────────────────┐
 │   Widget API    │    │    Challenge    │
-│ (TypeScript/    │    │     Widgets     │
+│ (TypeScript/    │◄──►│     Widgets     │
 │   SolidJS)      │    │   (Multiple)    │
 └─────────────────┘    └─────────────────┘
 ```
