@@ -75,14 +75,6 @@ command = "npm"
 args = ["run", "build"]
 watch = { watch = ["./widget-api"] }
 
-[tasks.watch-im_not_a_robot]
-description = "Watch build 'im-not-a-robot' widget"
-cwd = "./widgets/im-not-a-robot"
-command = "npm"
-args = ["run", "build"]
-watch = { watch = ["./widgets/im-not-a-robot"] }
-
-
 [tasks.bundle-cup_stack]
 description = "Bundle cup-stack to /dist"
 cwd = "./widgets"
@@ -92,12 +84,22 @@ script = [
 ]
 
 [tasks.bundle-widgets]
-description = "Build widgets"
-dependencies = ["bundle-cup_stack", "bundle-im_not_a_robot"]
+description = "Bundle npm-based widgets"
+dependencies = [
+    "bundle-cup_stack",
+    "bundle-im_not_a_robot",
+    "bundle-constellation",
+]
 
 [tasks.bundle-im_not_a_robot]
-description = "Build npm-based widgets"
+description = "Bundle im-not-a-robot widget"
 cwd = "./widgets/im-not-a-robot"
+script_runner = "@shell"
+script = ["npm install --prefer-offline", "npm run build"]
+
+[tasks.bundle-constellation]
+description = "Bundle constellation widget"
+cwd = "./widgets/constellation"
 script_runner = "@shell"
 script = ["npm install --prefer-offline", "npm run build"]
 
