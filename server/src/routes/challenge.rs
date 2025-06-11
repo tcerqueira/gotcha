@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{Level, Span, instrument};
 use url::{Host, Url};
 
-use super::{errors::ChallengeError, extractors::ThisOrigin};
+use super::errors::ChallengeError;
 use crate::{
     AppState,
     analysis::{
@@ -41,7 +41,6 @@ pub struct GetChallenge {
 pub async fn get_challenge(
     Query(query): Query<ChallengeParams>,
     State(state): State<Arc<AppState>>,
-    ThisOrigin(origin): ThisOrigin,
 ) -> Result<Json<GetChallenge>, ChallengeError> {
     let challenges = match query.site_key {
         Some(_) => unimplemented!(),

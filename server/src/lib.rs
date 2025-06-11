@@ -1,13 +1,12 @@
 use std::sync::{Arc, LazyLock};
 
-use axum::{Extension, Router};
-use configuration::{ApplicationConfig, server_dir};
+use axum::Router;
+use configuration::ApplicationConfig;
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use routes::extractors::ThisOrigin;
 use sqlx::PgPool;
-use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[cfg(feature = "aws-lambda")]
@@ -56,23 +55,27 @@ pub struct AppState {
 }
 
 pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
-    let serve_dir = server_dir().join(config.serve_dir).canonicalize().unwrap();
-    tracing::info!("Serving files from: {:?}", serve_dir);
-
     let state = AppState { pool, auth_origin: config.auth_origin };
-    let origin = format!("http://localhost:{}", config.port);
 
-    let router = Router::new()
-        .nest("/api", api(state))
-        .fallback_service(ServeDir::new(serve_dir))
-        .layer(TraceLayer::new_for_http());
+    let router = Router::new().nest("/api", api(state));
+
+    #[cfg(not(feature = "aws-lambda"))]
+    let router = {
+        use configuration::server_dir;
+        use tower_http::services::ServeDir;
+
+        let serve_dir = server_dir().join(config.serve_dir).canonicalize().unwrap();
+        tracing::info!("Serving files from: {:?}", serve_dir);
+
+        router.fallback_service(ServeDir::new(serve_dir))
+    };
+
+    let router = router.layer(TraceLayer::new_for_http());
 
     #[cfg(feature = "aws-lambda")]
-    let router = router
-        .layer(MapRequestLayer::new(extractors::extract_lambda_source_ip))
-        .layer(MapRequestLayer::new(extractors::extract_lambda_origin));
+    let router = router.layer(MapRequestLayer::new(extractors::extract_lambda_source_ip));
 
-    router.layer(Extension(ThisOrigin(origin)))
+    router
 }
 
 fn api(state: AppState) -> Router {
