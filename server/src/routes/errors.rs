@@ -19,6 +19,8 @@ pub enum ChallengeError {
     InvalidProofOfWork(#[from] jsonwebtoken::errors::Error),
     #[error("Failed proof of work challenge")]
     FailedProofOfWork,
+    #[error("No matching challenge")]
+    NoMatchingChallenge,
     #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
@@ -27,7 +29,6 @@ impl IntoResponse for ChallengeError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self, "ChallengeError");
         match self {
-            // if a db::Error was wrapped in an anyhow error we try to unwrap it
             ChallengeError::Unexpected(e) => e
                 .downcast::<db::Error>()
                 .ok()
@@ -43,6 +44,9 @@ impl IntoResponse for ChallengeError {
             }
             ChallengeError::FailedProofOfWork => {
                 (StatusCode::BAD_REQUEST, self.to_string()).into_response()
+            }
+            ChallengeError::NoMatchingChallenge => {
+                (StatusCode::NOT_FOUND, self.to_string()).into_response()
             }
         }
     }

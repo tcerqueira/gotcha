@@ -85,6 +85,8 @@ jobs:
           cargo lambda deploy --binary-name gotcha-server gotcha-server-${{ vars.ENV_TAG }} \
             --include config/ --include dist/ \
             --tag environment=${{ vars.ENV_TAG }} \
+            --env-var RUST_LOG=${{ vars.LOG_LEVEL }} \
+            --env-var AWS_LAMBDA_LOG_FORMAT=json \
             --env-var APP_DATABASE__HOST=${{ secrets.SUPABASE_HOST }} \
             --env-var APP_DATABASE__USERNAME=${{ secrets.SUPABASE_USER }} \
             --env-var APP_DATABASE__PASSWORD=${{ secrets.SUPABASE_PASSWORD }} \

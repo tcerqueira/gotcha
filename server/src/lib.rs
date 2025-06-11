@@ -106,21 +106,25 @@ pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
     .await
     .inspect_err(|e| {
         tracing::debug!(
-            err = tracing::field::debug(e),
+            err = ?e,
             "could not populate demo console and api_key"
         )
     });
 
-    // let _ = db::insert_challenge(
-    //     pool,
-    //     &db::DbChallenge { url: "http://127.0.0.1:1334/".into(), width: 308, height: 308 },
-    // )
-    // .await
-    // .inspect_err(|e| {
-    //     tracing::debug!(
-    //         err = tracing::field::debug(e),
-    //         "could not populate challenge"
-    //     )
-    // });
+    let _ = db::insert_challenge(
+        pool,
+        &db::DbChallenge {
+            url: "http://127.0.0.1:8080/constellation".into(),
+            width: 360,
+            height: 500,
+        },
+    )
+    .await
+    .inspect_err(|e| {
+        tracing::debug!(
+            err = ?e,
+            "could not populate challenge"
+        )
+    });
     Ok(())
 }

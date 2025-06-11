@@ -20,6 +20,7 @@ dependencies = ["server-build", "widget-api-build", "bundle-widgets"]
 description = "Build server and widgets"
 run_task = { name = [
     "watch-server",
+    "watch-client",
     "watch-widget_api",
     "bundle-widgets",
 ], fork = true, parallel = true }
