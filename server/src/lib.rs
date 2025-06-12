@@ -58,20 +58,20 @@ pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
     let state = AppState { pool, auth_origin: config.auth_origin };
 
     let router = Router::new().nest("/api", api(state));
-
     #[cfg(not(feature = "aws-lambda"))]
     let router = {
         use configuration::server_dir;
         use tower_http::services::ServeDir;
 
-        let serve_dir = server_dir().join(config.serve_dir).canonicalize().unwrap();
+        let serve_dir = server_dir()
+            .join(config.serve_dir)
+            .canonicalize()
+            .expect("serve dir not found");
         tracing::info!("Serving files from: {:?}", serve_dir);
 
         router.fallback_service(ServeDir::new(serve_dir))
     };
-
     let router = router.layer(TraceLayer::new_for_http());
-
     #[cfg(feature = "aws-lambda")]
     let router = router.layer(MapRequestLayer::new(extractors::extract_lambda_source_ip));
 

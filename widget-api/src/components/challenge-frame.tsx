@@ -138,12 +138,17 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
   );
 }
 
-async function fetchChallenge(): Promise<Challenge> {
-  const origin = new URL(import.meta.url).origin;
-  const url = new URL(`${origin}/api/challenge`);
+async function fetchChallenge(): Promise<Challenge | null> {
+  try {
+    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
+    const url = new URL(`${origin}/api/challenge`);
 
-  const response = await fetch(url);
-  return (await response.json()) as Challenge;
+    const response = await fetch(url);
+    return (await response.json()) as Challenge;
+  } catch (e) {
+    console.error("failed to fetch", e);
+    return null;
+  }
 }
 
 type ChallengeResponse = {
@@ -157,7 +162,7 @@ async function processChallenge(
   interactions: Interaction[],
 ): Promise<string | null> {
   try {
-    const origin = new URL(import.meta.url).origin;
+    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
     const url = new URL(`${origin}/api/challenge/process`);
     const response = await fetch(url, {
       method: "POST",
@@ -180,6 +185,7 @@ async function processChallenge(
 
     return token;
   } catch (e) {
+    console.error("failed to fetch", e);
     return null;
   }
 }

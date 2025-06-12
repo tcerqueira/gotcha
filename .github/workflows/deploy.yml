@@ -50,21 +50,32 @@ jobs:
           crate: bevy_cli
           git: https://github.com/TheBevyFlock/bevy_cli
 
-      - name: Bundle lambda and widgets
-        env:
-          SQLX_OFFLINE: true
-        run: cargo make bundle
-
       - uses: actions/cache@v3
+        name: Cache Cargo dependencies
         with:
           path: |
             ~/.cargo/bin/
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions/cache@v3
+        name: Cache Rust build artifacts
+        with:
+          path: |
             target/
             widgets/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('server/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('server/Cargo.toml') }}
+            ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Bundle lambda and widgets
+        env:
+          SQLX_OFFLINE: true
+          VITE_GOTCHA_SV_ORIGIN: ${{ vars.GOTCHA_SV_ORIGIN }}
+        run: cargo make bundle
 
       - name: Deploy /dist to Github Pages
         uses: JamesIves/github-pages-deploy-action@v4
