@@ -1,5 +1,5 @@
 application:
   host: 0.0.0.0
-  port: 0
+  port: 8080
   serve_dir: "./dist"
   auth_origin: "https://dev-gptk3ouno03gtjgs.us.auth0.com"

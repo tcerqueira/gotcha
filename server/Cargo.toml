@@ -54,4 +54,4 @@ axum-server = { version = "0.7", features = ["tls-rustls"] }
 [package.metadata.lambda.deploy]
 env = { "APP_ENVIRONMENT" = "production", "AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH" = "true" }
 tags = { "organization" = "gotcha" }
-include = ["dist/", "config/"]
+include = ["config/"]
