@@ -50,7 +50,7 @@ jobs:
           crate: bevy_cli
           git: https://github.com/TheBevyFlock/bevy_cli
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Cache Cargo dependencies
         with:
           path: |
@@ -60,7 +60,7 @@ jobs:
             ~/.cargo/git/db/
           key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Cache Rust build artifacts
         with:
           path: |
