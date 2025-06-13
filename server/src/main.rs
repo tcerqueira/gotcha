@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
 #[cfg(not(feature = "aws-lambda"))]
 async fn hosted_main() -> anyhow::Result<()> {
     gotcha_server::init_tracing();
-    tracing::info!("Running on hosted environment");
+    tracing::debug!("Running on hosted environment");
 
     let Config { application: app_conf, database: db_conf, .. } =
         gotcha_server::get_configuration()?;
@@ -41,7 +41,7 @@ async fn hosted_main() -> anyhow::Result<()> {
 #[cfg(feature = "aws-lambda")]
 async fn lambda_main() -> anyhow::Result<()> {
     lambda_http::tracing::init_default_subscriber();
-    tracing::info!("Running on AWS Lambda environment");
+    tracing::debug!("Running on AWS Lambda environment");
 
     let Config { application: app_conf, database: db_conf, .. } =
         gotcha_server::get_configuration()?;
