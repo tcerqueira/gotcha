@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{Level, Span, instrument};
 use url::{Host, Url};
 
-use super::{errors::ChallengeError, extractors::ThisOrigin};
+use super::errors::ChallengeError;
 use crate::{
     AppState,
     analysis::{
@@ -26,6 +26,11 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ChallengeParams {
+    pub site_key: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GetChallenge {
     pub url: Url,
     pub width: u16,
@@ -34,23 +39,21 @@ pub struct GetChallenge {
 
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn get_challenge(
+    Query(query): Query<ChallengeParams>,
     State(state): State<Arc<AppState>>,
-    ThisOrigin(origin): ThisOrigin,
 ) -> Result<Json<GetChallenge>, ChallengeError> {
-    let challenges = db::fetch_challenges(&state.pool)
-        .await
-        .context("failed to fetch challenges")?;
-    let challenge = choose_challenge(challenges).unwrap_or_else(|| DbChallenge {
-        url: format!("{origin}/im-not-a-robot/index.html"),
-        width: 304,
-        height: 78,
-    });
+    let challenges = match query.site_key {
+        Some(_) => unimplemented!(),
+        None => db::fetch_challenges(&state.pool).await,
+    }
+    .context("failed to fetch challenges")?;
+    let challenge = choose_challenge(challenges).ok_or(ChallengeError::NoMatchingChallenge)?;
 
     Ok(Json(challenge.try_into()?))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PowSiteKey {
+pub struct PowParams {
     pub site_key: String,
 }
 
@@ -61,7 +64,7 @@ pub struct PowResponse {
 
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn get_proof_of_work_challenge(
-    Query(query): Query<PowSiteKey>,
+    Query(query): Query<PowParams>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<PowResponse>, ChallengeError> {
     let enc_key = db::fetch_api_key_by_site_key(&state.pool, &query.site_key)

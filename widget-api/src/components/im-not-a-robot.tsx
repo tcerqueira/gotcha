@@ -129,7 +129,7 @@ async function processPreAnalysis(
   interactions: Interaction[],
 ): Promise<PreAnalysisResponse | null> {
   try {
-    const origin = new URL(import.meta.url).origin;
+    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
     const url = new URL(`${origin}/api/challenge/process-pre-analysis`);
     const response = await fetch(url, {
       method: "POST",
@@ -160,7 +160,7 @@ async function processAccessibility(
   proofOfWork: { challenge: string; solution: number },
 ): Promise<PreAnalysisResponse | null> {
   try {
-    const origin = new URL(import.meta.url).origin;
+    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
     const url = new URL(`${origin}/api/challenge/process-accessibility`);
     const response = await fetch(url, {
       method: "POST",
@@ -193,7 +193,7 @@ async function getProofOfWorkChallenge(
   siteKey: string,
 ): Promise<ProofOfWorkChallenge | null> {
   try {
-    const origin = new URL(import.meta.url).origin;
+    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
     const response = await fetch(
       `${origin}/api/challenge/proof-of-work?site_key=${siteKey}`,
     );

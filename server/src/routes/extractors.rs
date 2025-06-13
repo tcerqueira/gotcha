@@ -43,23 +43,23 @@ pub fn extract_lambda_source_ip<B>(mut request: Request<B>) -> Request<B> {
     request
 }
 
-#[cfg(feature = "aws-lambda")]
-pub fn extract_lambda_origin<B>(mut request: Request<B>) -> Request<B> {
-    pub use lambda_http::{RequestExt, request::RequestContext};
+// #[cfg(feature = "aws-lambda")]
+// pub fn extract_lambda_origin<B>(mut request: Request<B>) -> Request<B> {
+//     pub use lambda_http::{RequestExt, request::RequestContext};
 
-    let Some(RequestContext::ApiGatewayV2(cx)) = request.request_context_ref() else {
-        tracing::error!("lambda context (ApiGatewayV2) not found in request");
-        return request;
-    };
-    let Some(ref domain) = cx.domain_name else {
-        tracing::error!("domain name not found in request");
-        return request;
-    };
-    let origin = format!("https://{domain}");
+//     let Some(RequestContext::ApiGatewayV2(cx)) = request.request_context_ref() else {
+//         tracing::error!("lambda context (ApiGatewayV2) not found in request");
+//         return request;
+//     };
+//     let Some(ref domain) = cx.domain_name else {
+//         tracing::error!("domain name not found in request");
+//         return request;
+//     };
+//     let origin = format!("https://{domain}");
 
-    request.extensions_mut().insert(ThisOrigin(origin));
-    request
-}
+//     request.extensions_mut().insert(ThisOrigin(origin));
+//     request
+// }
 
 #[derive(Debug, Clone)]
 pub struct ThisOrigin(pub String);

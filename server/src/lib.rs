@@ -1,13 +1,12 @@
 use std::sync::{Arc, LazyLock};
 
-use axum::{Extension, Router};
-use configuration::{ApplicationConfig, server_dir};
+use axum::Router;
+use configuration::ApplicationConfig;
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use routes::extractors::ThisOrigin;
 use sqlx::PgPool;
-use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[cfg(feature = "aws-lambda")]
@@ -56,23 +55,27 @@ pub struct AppState {
 }
 
 pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
-    let serve_dir = server_dir().join(config.serve_dir).canonicalize().unwrap();
-    tracing::info!("Serving files from: {:?}", serve_dir);
-
     let state = AppState { pool, auth_origin: config.auth_origin };
-    let origin = format!("http://localhost:{}", config.port);
 
-    let router = Router::new()
-        .nest("/api", api(state))
-        .fallback_service(ServeDir::new(serve_dir))
-        .layer(TraceLayer::new_for_http());
+    let router = Router::new().nest("/api", api(state));
+    #[cfg(not(feature = "aws-lambda"))]
+    let router = {
+        use configuration::server_dir;
+        use tower_http::services::ServeDir;
 
+        let serve_dir = server_dir()
+            .join(config.serve_dir)
+            .canonicalize()
+            .expect("serve dir not found");
+        tracing::info!("Serving files from: {:?}", serve_dir);
+
+        router.fallback_service(ServeDir::new(serve_dir))
+    };
+    let router = router.layer(TraceLayer::new_for_http());
     #[cfg(feature = "aws-lambda")]
-    let router = router
-        .layer(MapRequestLayer::new(extractors::extract_lambda_source_ip))
-        .layer(MapRequestLayer::new(extractors::extract_lambda_origin));
+    let router = router.layer(MapRequestLayer::new(extractors::extract_lambda_source_ip));
 
-    router.layer(Extension(ThisOrigin(origin)))
+    router
 }
 
 fn api(state: AppState) -> Router {
@@ -106,21 +109,25 @@ pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
     .await
     .inspect_err(|e| {
         tracing::debug!(
-            err = tracing::field::debug(e),
+            err = ?e,
             "could not populate demo console and api_key"
         )
     });
 
-    // let _ = db::insert_challenge(
-    //     pool,
-    //     &db::DbChallenge { url: "http://127.0.0.1:1334/".into(), width: 308, height: 308 },
-    // )
-    // .await
-    // .inspect_err(|e| {
-    //     tracing::debug!(
-    //         err = tracing::field::debug(e),
-    //         "could not populate challenge"
-    //     )
-    // });
+    let _ = db::insert_challenge(
+        pool,
+        &db::DbChallenge {
+            url: "http://127.0.0.1:8080/constellation".into(),
+            width: 360,
+            height: 500,
+        },
+    )
+    .await
+    .inspect_err(|e| {
+        tracing::debug!(
+            err = ?e,
+            "could not populate challenge"
+        )
+    });
     Ok(())
 }
