@@ -346,18 +346,18 @@
             </div>
         </div>
 
-        <script src="https://gotcha-public-preview.s3.us-east-1.amazonaws.com/api.js?render=explicit"></script>
-        <!-- <script src="http://localhost:8080/api.js?render=explicit"></script> -->
+        <!-- <script src="https://gotcha-public-preview.s3.us-east-1.amazonaws.com/api.js?render=explicit"></script> -->
+        <script src="http://localhost:8080/api.js?render=explicit"></script>
         <script>
             let captchaInitialized = false;
-            const SITEKEY =
-                "I7S_p0FdQeH9ZHbcWy3rKi6bpZnEDNJX6vd-SpxdI2OlkHlnTKSx9s678I1O-psM";
             // const SITEKEY =
-            //     "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
-            const SECRET =
-                "O+xY7MMEghWF645+FbOaiMSKk7uKEgunZumS63I9adJ4Mv9aZMvi71yA/qqe0Jw1";
+            //     "I7S_p0FdQeH9ZHbcWy3rKi6bpZnEDNJX6vd-SpxdI2OlkHlnTKSx9s678I1O-psM";
+            const SITEKEY =
+                "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
             // const SECRET =
-            //     "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
+            //     "O+xY7MMEghWF645+FbOaiMSKk7uKEgunZumS63I9adJ4Mv9aZMvi71yA/qqe0Jw1";
+            const SECRET =
+                "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q";
 
             function showCaptcha() {
                 const modal = document.getElementById("captchaModal");
@@ -428,9 +428,9 @@
 
             async function verifyCaptcha(responseToken) {
                 try {
-                    const server =
-                        "https://dxwccqlvo8.execute-api.us-east-1.amazonaws.com";
-                    // const server = "http://localhost:8080";
+                    // const server =
+                    //     "https://dxwccqlvo8.execute-api.us-east-1.amazonaws.com";
+                    const server = "http://localhost:8080";
                     const form = new FormData();
                     form.append("secret", SECRET);
                     form.append("response", responseToken);
