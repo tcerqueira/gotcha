@@ -28,7 +28,7 @@ export default function Modal(props: ModalProps) {
 
   return (
     <dialog
-      class="m-auto"
+      class="m-auto bg-transparent backdrop:bg-black/0"
       ref={(el) => (dialogRef = el)}
       // onClose={props.onClose}
     >
