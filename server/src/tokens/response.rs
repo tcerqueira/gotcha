@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{net::IpAddr, time::Duration};
 use url::Host;
 
-use crate::crypto::Base64;
+use crate::encodings::Base64;
 
 use super::TimeClaims;
 

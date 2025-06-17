@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
-use crate::{analysis::proof_of_work::PowChallenge, crypto::Base64};
+use crate::{analysis::proof_of_work::PowChallenge, encodings::Base64};
 
 use super::TimeClaims;
 

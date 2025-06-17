@@ -19,8 +19,8 @@ use aws_lambda::*;
 
 pub mod analysis;
 pub mod configuration;
-pub mod crypto;
 pub mod db;
+pub mod encodings;
 pub mod routes;
 mod serde;
 pub mod test_helpers;

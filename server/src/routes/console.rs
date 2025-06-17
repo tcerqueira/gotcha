@@ -12,8 +12,8 @@ use uuid::Uuid;
 use super::{errors::ConsoleError, extractors::User};
 use crate::{
     AppState,
-    crypto::{Base64, Base64UrlSafe, KEY_SIZE},
     db::{self, DbApiKey, DbConsole, DbUpdateApiKey, DbUpdateConsole, RowsAffected},
+    encodings::{Base64, KEY_SIZE, Standard, UrlSafe},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,7 +86,7 @@ pub async fn delete_console(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiKeyResponse {
-    pub site_key: Base64UrlSafe,
+    pub site_key: Base64<UrlSafe>,
     pub secret: Base64,
     pub label: Option<String>,
 }
@@ -112,9 +112,9 @@ pub async fn gen_api_key(
     Path(console_id): Path<Uuid>,
 ) -> Result<Json<ApiKeyResponse>, ConsoleError> {
     let (site_key, secret) = loop {
-        let site_key = Base64UrlSafe::random::<KEY_SIZE>();
-        let enc_key = Base64::random::<KEY_SIZE>();
-        let secret = Base64::random::<KEY_SIZE>();
+        let site_key = Base64::<UrlSafe>::random::<KEY_SIZE>();
+        let enc_key = Base64::<Standard>::random::<KEY_SIZE>();
+        let secret = Base64::<Standard>::random::<KEY_SIZE>();
 
         match db::insert_api_key(&state.pool, &site_key, &console_id, &enc_key, &secret)
             .await

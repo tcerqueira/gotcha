@@ -11,7 +11,7 @@ use time::OffsetDateTime;
 use tracing::{Level, instrument};
 use url::Host;
 
-use crate::{AppState, crypto::Base64, db, tokens::response};
+use crate::{AppState, db, encodings::Base64, tokens::response};
 
 use super::errors::VerificationError;
 

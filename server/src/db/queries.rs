@@ -4,7 +4,7 @@ use base64::DecodeError;
 use sqlx::{PgExecutor, prelude::*};
 use uuid::Uuid;
 
-use crate::crypto::{Base64, Base64UrlSafe};
+use crate::encodings::{Base64, UrlSafe};
 
 use super::Error;
 
@@ -16,7 +16,7 @@ pub struct RowsAffected(pub u64);
 #[derive(Debug, FromRow)]
 pub struct DbApiKey {
     #[sqlx(try_from = "String")]
-    pub site_key: Base64UrlSafe,
+    pub site_key: Base64<UrlSafe>,
     #[sqlx(try_from = "String")]
     pub encoding_key: Base64,
     #[sqlx(try_from = "String")]
@@ -112,7 +112,7 @@ fn api_key_decode_err(err: DecodeError) -> sqlx::Error {
 
 pub async fn fetch_api_key_by_site_key(
     exec: impl PgExecutor<'_> + Send,
-    site_key: &Base64UrlSafe,
+    site_key: &Base64<UrlSafe>,
 ) -> Result<Option<DbApiKey>> {
     sqlx::query_as!(
         DbApiKeyInternal,
@@ -157,7 +157,7 @@ pub async fn fetch_api_keys(
 
 pub async fn insert_api_key(
     exec: impl PgExecutor<'_> + Send,
-    site_key: &Base64UrlSafe,
+    site_key: &Base64<UrlSafe>,
     console_id: &Uuid,
     enc_key: &Base64,
     secret: &Base64,
@@ -195,7 +195,7 @@ pub async fn with_console_insert_api_key(
     exec: impl PgExecutor<'_> + Send,
     console_label: &str,
     user: &str,
-    site_key: &Base64UrlSafe,
+    site_key: &Base64<UrlSafe>,
     enc_key: &Base64,
     secret: &Base64,
 ) -> Result<()> {

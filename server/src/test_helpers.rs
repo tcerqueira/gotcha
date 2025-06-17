@@ -8,8 +8,8 @@ use uuid::Uuid;
 
 use crate::{
     HTTP_CLIENT, app, configuration,
-    crypto::{Base64, Base64UrlSafe, KEY_SIZE},
     db::{self, DbChallenge},
+    encodings::{Base64, KEY_SIZE, Standard, UrlSafe},
     get_configuration,
 };
 
@@ -105,7 +105,7 @@ impl TestContext {
         .expect("expected a console to be created on setup")
     }
 
-    pub async fn db_api_site_key(&self) -> Base64UrlSafe {
+    pub async fn db_api_site_key(&self) -> Base64<UrlSafe> {
         db::fetch_api_keys(&self.inner.pool, &self.db_console().await)
             .await
             .unwrap()
@@ -145,10 +145,10 @@ async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> db::Result<()> {
     .await?;
     db::insert_api_key(
         &mut *txn,
-        &Base64UrlSafe::random::<KEY_SIZE>(),
+        &Base64::<UrlSafe>::random::<KEY_SIZE>(),
         &console_id,
-        &Base64::random::<KEY_SIZE>(),
-        &Base64::random::<KEY_SIZE>(),
+        &Base64::<Standard>::random::<KEY_SIZE>(),
+        &Base64::<Standard>::random::<KEY_SIZE>(),
     )
     .await?;
 

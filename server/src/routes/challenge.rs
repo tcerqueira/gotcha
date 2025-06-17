@@ -18,8 +18,8 @@ use crate::{
         interaction::{Interaction, Score},
         proof_of_work::PowChallenge,
     },
-    crypto::{Base64, Base64UrlSafe},
     db::{self, DbChallenge},
+    encodings::{Base64, UrlSafe},
     tokens::{
         self, pow_challenge,
         response::{self, ResponseClaims},
@@ -55,7 +55,7 @@ pub async fn get_challenge(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PowParams {
-    pub site_key: Base64UrlSafe,
+    pub site_key: Base64<UrlSafe>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -83,7 +83,7 @@ pub async fn get_proof_of_work_challenge(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeResults {
     pub success: bool,
-    pub site_key: Base64UrlSafe,
+    pub site_key: Base64<UrlSafe>,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub challenge: Url,
@@ -137,7 +137,7 @@ pub async fn process_challenge(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PreAnalysisRequest {
-    pub site_key: Base64UrlSafe,
+    pub site_key: Base64<UrlSafe>,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub interactions: Vec<Interaction>,
@@ -229,7 +229,7 @@ pub async fn process_pre_analysis(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccessibilityRequest {
-    pub site_key: Base64UrlSafe,
+    pub site_key: Base64<UrlSafe>,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub proof_of_work: ProofOfWork,

@@ -1,7 +1,7 @@
 use gotcha_server::{
     HTTP_CLIENT,
-    crypto::{Base64UrlSafe, KEY_SIZE},
     db::{self, RowsAffected},
+    encodings::{Base64, KEY_SIZE, UrlSafe},
     routes::console::{
         ApiKeyResponse, ConsoleResponse, CreateConsoleRequest, UpdateApiKeyRequest,
         UpdateConsoleRequest,
@@ -336,7 +336,7 @@ async fn remove_origin(_server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn create_api_key_on_another_console(port: u16) -> anyhow::Result<(Uuid, Base64UrlSafe)> {
+async fn create_api_key_on_another_console(port: u16) -> anyhow::Result<(Uuid, Base64<UrlSafe>)> {
     // create console
     let label = Alphanumeric.sample_string(&mut rand::rng(), 7);
     let ConsoleResponse { id: console_id, .. } = HTTP_CLIENT
