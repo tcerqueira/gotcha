@@ -86,17 +86,7 @@ script = [
 
 [tasks.bundle-widgets]
 description = "Bundle npm-based widgets"
-dependencies = [
-    "bundle-cup_stack",
-    "bundle-im_not_a_robot",
-    "bundle-constellation",
-]
-
-[tasks.bundle-im_not_a_robot]
-description = "Bundle im-not-a-robot widget"
-cwd = "./widgets/im-not-a-robot"
-script_runner = "@shell"
-script = ["npm install --prefer-offline", "npm run build"]
+dependencies = ["bundle-cup_stack", "bundle-constellation"]
 
 [tasks.bundle-constellation]
 description = "Bundle constellation widget"
