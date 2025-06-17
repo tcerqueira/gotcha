@@ -11,13 +11,13 @@ use time::OffsetDateTime;
 use tracing::{Level, instrument};
 use url::Host;
 
-use crate::{AppState, db, tokens::response};
+use crate::{AppState, crypto::Base64, db, tokens::response};
 
 use super::errors::VerificationError;
 
 #[derive(Debug)]
 pub struct VerificationRequest {
-    secret: Secret<String>,
+    secret: Secret<Base64>,
     response: String,
     remoteip: Option<IpAddr>,
 }
@@ -98,27 +98,34 @@ impl TryFrom<HashMap<String, String>> for VerificationRequest {
 
     fn try_from(mut form: HashMap<String, String>) -> Result<Self, Self::Error> {
         let mut errors = vec![];
-        if !form.contains_key("secret") {
-            errors.push(ErrorCodes::MissingInputSecret);
-        }
+        let secret_b64 = match form.remove("secret").map(|s| s.try_into()) {
+            None => {
+                errors.push(ErrorCodes::MissingInputSecret);
+                None
+            }
+            Some(Err(_)) => {
+                errors.push(ErrorCodes::InvalidInputSecret);
+                None
+            }
+            Some(Ok(secret)) => Some(secret),
+        };
         if !form.contains_key("response") {
             errors.push(ErrorCodes::MissingInputResponse);
         }
-        let remoteip = form.remove("remoteip").as_deref().and_then(|ip| {
-            IpAddr::from_str(ip).ok().or_else(|| {
+        let remoteip = match form.remove("remoteip").as_deref().map(IpAddr::from_str) {
+            None => None,
+            Some(Err(_)) => {
                 errors.push(ErrorCodes::BadRequest);
                 None
-            })
-        });
+            }
+            Some(Ok(r)) => Some(r),
+        };
         if !errors.is_empty() {
             return Err(errors);
         }
 
         Ok(VerificationRequest {
-            secret: Secret::new(
-                form.remove("secret")
-                    .expect("checked if it contains key before"),
-            ),
+            secret: Secret::new(secret_b64.expect("validated before")),
             response: form
                 .remove("response")
                 .expect("checked if it contains key before"),

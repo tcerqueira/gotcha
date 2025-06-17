@@ -1,5 +1,10 @@
+use std::fmt::Debug;
+
+use base64::DecodeError;
 use sqlx::{PgExecutor, prelude::*};
 use uuid::Uuid;
+
+use crate::crypto::{Base64, Base64UrlSafe};
 
 use super::Error;
 
@@ -10,37 +15,128 @@ pub struct RowsAffected(pub u64);
 
 #[derive(Debug, FromRow)]
 pub struct DbApiKey {
+    #[sqlx(try_from = "String")]
+    pub site_key: Base64UrlSafe,
+    #[sqlx(try_from = "String")]
+    pub encoding_key: Base64,
+    #[sqlx(try_from = "String")]
+    pub secret: Base64,
+    pub label: Option<String>,
+}
+
+impl TryFrom<DbApiKeyInternal> for DbApiKey {
+    type Error = DecodeError;
+
+    fn try_from(value: DbApiKeyInternal) -> std::result::Result<Self, Self::Error> {
+        Ok(Self {
+            site_key: value.site_key.try_into()?,
+            encoding_key: value.encoding_key.try_into()?,
+            secret: value.secret.try_into()?,
+            label: value.label,
+        })
+    }
+}
+
+// Internal representation to benefit from sqlx compile time checks on queries
+#[derive(Debug, FromRow)]
+struct DbApiKeyInternal {
     pub site_key: String,
     pub encoding_key: String,
     pub secret: String,
     pub label: Option<String>,
 }
 
+trait MapNested<T, E> {
+    type Output<U>;
+
+    fn map_nested_with<U, E0, F, ErrMap>(
+        self,
+        f: F,
+        err_map: ErrMap,
+    ) -> std::result::Result<Self::Output<U>, E>
+    where
+        F: Fn(T) -> std::result::Result<U, E0>,
+        ErrMap: FnOnce(E0) -> E;
+
+    #[expect(dead_code)]
+    fn map_nested<U, E0, F>(self, f: F) -> std::result::Result<Self::Output<U>, E>
+    where
+        F: Fn(T) -> std::result::Result<U, E0>,
+        E: From<E0>,
+        Self: Sized,
+    {
+        self.map_nested_with(f, Into::into)
+    }
+}
+
+impl<T, E> MapNested<T, E> for std::result::Result<Option<T>, E> {
+    type Output<U> = Option<U>;
+
+    fn map_nested_with<U, E0, F, ErrMap>(
+        self,
+        f: F,
+        err_map: ErrMap,
+    ) -> std::result::Result<Self::Output<U>, E>
+    where
+        F: Fn(T) -> std::result::Result<U, E0>,
+        ErrMap: FnOnce(E0) -> E,
+    {
+        self.and_then(|opt_t| opt_t.map(f).transpose().map_err(err_map))
+    }
+}
+
+impl<T, E> MapNested<T, E> for std::result::Result<Vec<T>, E> {
+    type Output<U> = Vec<U>;
+
+    fn map_nested_with<U, E0, F, ErrMap>(
+        self,
+        f: F,
+        err_map: ErrMap,
+    ) -> std::result::Result<Self::Output<U>, E>
+    where
+        F: Fn(T) -> std::result::Result<U, E0>,
+        ErrMap: FnOnce(E0) -> E,
+    {
+        self.and_then(|vec| {
+            vec.into_iter()
+                .map(f)
+                .collect::<std::result::Result<Vec<U>, E0>>()
+                .map_err(err_map)
+        })
+    }
+}
+
+fn api_key_decode_err(err: DecodeError) -> sqlx::Error {
+    sqlx::Error::Decode(Box::new(err))
+}
+
 pub async fn fetch_api_key_by_site_key(
     exec: impl PgExecutor<'_> + Send,
-    site_key: &str,
+    site_key: &Base64UrlSafe,
 ) -> Result<Option<DbApiKey>> {
     sqlx::query_as!(
-        DbApiKey,
+        DbApiKeyInternal,
         "select site_key, encoding_key, secret, label from api_key where site_key = $1",
-        site_key
+        site_key.as_str()
     )
     .fetch_optional(exec)
     .await
+    .map_nested_with(TryFrom::try_from, api_key_decode_err)
     .map(Ok)?
 }
 
 pub async fn fetch_api_key_by_secret(
     exec: impl PgExecutor<'_> + Send,
-    secret: &str,
+    secret: &Base64,
 ) -> Result<Option<DbApiKey>> {
     sqlx::query_as!(
-        DbApiKey,
+        DbApiKeyInternal,
         "select site_key, encoding_key, secret, label from api_key where secret = $1",
-        secret
+        secret.as_str()
     )
     .fetch_optional(exec)
     .await
+    .map_nested_with(TryFrom::try_from, api_key_decode_err)
     .map(Ok)?
 }
 
@@ -49,27 +145,29 @@ pub async fn fetch_api_keys(
     console_id: &Uuid,
 ) -> Result<Vec<DbApiKey>> {
     sqlx::query_as!(
-        DbApiKey,
+        DbApiKeyInternal,
         "select site_key, encoding_key, secret, label from api_key where console_id = $1 order by created_at",
         console_id
     )
     .fetch_all(exec)
-    .await.map(Ok)?
+    .await
+    .map_nested_with(TryFrom::try_from, api_key_decode_err)
+    .map(Ok)?
 }
 
 pub async fn insert_api_key(
     exec: impl PgExecutor<'_> + Send,
-    site_key: &str,
+    site_key: &Base64UrlSafe,
     console_id: &Uuid,
-    enc_key: &str,
-    secret: &str,
+    enc_key: &Base64,
+    secret: &Base64,
 ) -> Result<()> {
     let _ = sqlx::query!(
         "insert into api_key (site_key, console_id, encoding_key, secret) values ($1, $2, $3, $4)",
-        site_key,
+        site_key.as_str(),
         console_id,
-        enc_key,
-        secret
+        enc_key.as_str(),
+        secret.as_str()
     )
     .execute(exec)
     .await?;
@@ -97,8 +195,9 @@ pub async fn with_console_insert_api_key(
     exec: impl PgExecutor<'_> + Send,
     console_label: &str,
     user: &str,
-    site_key: &str,
-    enc_key: &str,
+    site_key: &Base64UrlSafe,
+    enc_key: &Base64,
+    secret: &Base64,
 ) -> Result<()> {
     sqlx::query!(
         r#"with
@@ -109,12 +208,13 @@ pub async fn with_console_insert_api_key(
       (
         $3,
         (select id from console),
-        $4, $3
+        $4, $5
       )"#,
         console_label,
         user,
-        site_key,
-        enc_key
+        site_key.as_str(),
+        enc_key.as_str(),
+        secret.as_str(),
     )
     .execute(exec)
     .await?;

@@ -1,6 +1,6 @@
 use gotcha_server::{
     HTTP_CLIENT,
-    crypto::KEY_SIZE,
+    crypto::{Base64UrlSafe, KEY_SIZE},
     db::{self, RowsAffected},
     routes::console::{
         ApiKeyResponse, ConsoleResponse, CreateConsoleRequest, UpdateApiKeyRequest,
@@ -186,7 +186,7 @@ async fn gen_api_key(server: TestContext) -> anyhow::Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     let ApiKeyResponse { site_key, .. } = response.json().await?;
-    assert_eq!(site_key.len(), KEY_SIZE * 4 / 3);
+    assert_eq!(site_key.as_str().len(), KEY_SIZE * 4 / 3);
 
     let db_res = db::fetch_api_keys(pool, &console_id).await?;
     assert!(db_res.iter().any(|k| k.site_key == site_key));
@@ -336,7 +336,7 @@ async fn remove_origin(_server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn create_api_key_on_another_console(port: u16) -> anyhow::Result<(Uuid, String)> {
+async fn create_api_key_on_another_console(port: u16) -> anyhow::Result<(Uuid, Base64UrlSafe)> {
     // create console
     let label = Alphanumeric.sample_string(&mut rand::rng(), 7);
     let ConsoleResponse { id: console_id, .. } = HTTP_CLIENT

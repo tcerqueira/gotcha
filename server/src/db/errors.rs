@@ -1,3 +1,4 @@
+use base64::DecodeError;
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
 
@@ -53,5 +54,11 @@ impl From<sqlx::Error> for Error {
             }
             e => Self::Other(e),
         }
+    }
+}
+
+impl From<DecodeError> for Error {
+    fn from(value: DecodeError) -> Self {
+        Self::Other(sqlx::Error::Decode(Box::new(value)))
     }
 }

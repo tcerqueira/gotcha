@@ -53,7 +53,7 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
     eprintln!("{token}");
     let token_data = jsonwebtoken::decode::<TimeClaims<ResponseClaims>>(
         &token,
-        &DecodingKey::from_base64_secret(&enc_key)?,
+        &DecodingKey::from_base64_secret(enc_key.as_str())?,
         &Validation::new(JWT_RESPONSE_ALGORITHM),
     )?;
     assert_eq!(token_data.header.alg, JWT_RESPONSE_ALGORITHM);
@@ -85,7 +85,7 @@ async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
     eprintln!("{token}");
     let token_data = jsonwebtoken::decode::<TimeClaims<ResponseClaims>>(
         &token,
-        &DecodingKey::from_base64_secret(&enc_key)?,
+        &DecodingKey::from_base64_secret(enc_key.as_str())?,
         &Validation::new(JWT_RESPONSE_ALGORITHM),
     )?;
     assert_eq!(token_data.header.alg, JWT_RESPONSE_ALGORITHM);
@@ -100,13 +100,13 @@ async fn process_challenge_with_invalid_secret(server: TestContext) -> anyhow::R
 
     let response = HTTP_CLIENT
         .post(format!("http://localhost:{port}/api/challenge/process"))
-        .json(&ChallengeResults {
-            success: false,
-            site_key: "bXktd3Jvbmctc2VjcmV0".into(), // `my-wrong-secret` in base64
-            hostname: Host::parse("website-integration.test.com")?,
-            challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
-            interactions: vec![],
-        })
+        .json(&serde_json::json!({
+            "success": false,
+            "site_key": "bXktd3Jvbmctc2VjcmV0", // `my-wrong-secret` in base64
+            "hostname": "website-integration.test.com",
+            "challenge": "https://gotcha-integration.test.com/im-not-a-robot/index.html",
+            "interactions": [],
+        }))
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::FORBIDDEN);

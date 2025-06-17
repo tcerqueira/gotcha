@@ -18,6 +18,7 @@ use crate::{
         interaction::{Interaction, Score},
         proof_of_work::PowChallenge,
     },
+    crypto::{Base64, Base64UrlSafe},
     db::{self, DbChallenge},
     tokens::{
         self, pow_challenge,
@@ -54,7 +55,7 @@ pub async fn get_challenge(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PowParams {
-    pub site_key: String,
+    pub site_key: Base64UrlSafe,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -82,7 +83,7 @@ pub async fn get_proof_of_work_challenge(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeResults {
     pub success: bool,
-    pub site_key: String,
+    pub site_key: Base64UrlSafe,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub challenge: Url,
@@ -99,7 +100,7 @@ pub struct ChallengeResponse {
     fields(
         ?addr,
         success = results.success,
-        site_key = results.site_key,
+        %site_key = results.site_key,
         ?hostname = results.hostname,
         %challenge = results.challenge,
         interaction_score,
@@ -136,7 +137,7 @@ pub async fn process_challenge(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PreAnalysisRequest {
-    pub site_key: String,
+    pub site_key: Base64UrlSafe,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub interactions: Vec<Interaction>,
@@ -150,9 +151,9 @@ pub struct ProofOfWork {
 }
 
 impl ProofOfWork {
-    pub fn verify(&self, dec_key: &str) -> Result<bool, jsonwebtoken::errors::Error> {
-        let pow_challenge =
-            tokens::pow_challenge::decode(&self.challenge, dec_key).inspect_err(|_| {
+    pub fn verify(&self, dec_key: &Base64) -> Result<bool, jsonwebtoken::errors::Error> {
+        let pow_challenge = tokens::pow_challenge::decode(&self.challenge, dec_key.as_str())
+            .inspect_err(|_| {
                 Span::current().record("pow_jwt", &self.challenge);
             })?;
         Span::current().record("pow_decoded", tracing::field::debug(&pow_challenge));
@@ -171,7 +172,7 @@ pub enum PreAnalysisResponse {
 
 #[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
-        site_key = request.site_key,
+        %site_key = request.site_key,
         ?hostname = request.hostname,
         pow_jwt,
         pow_decoded,
@@ -228,7 +229,7 @@ pub async fn process_pre_analysis(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccessibilityRequest {
-    pub site_key: String,
+    pub site_key: Base64UrlSafe,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub proof_of_work: ProofOfWork,
@@ -237,7 +238,7 @@ pub struct AccessibilityRequest {
 #[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
         ?addr,
-        site_key = request.site_key,
+        ?site_key = request.site_key,
         ?hostname = request.hostname,
         pow_jwt,
         pow_decoded,

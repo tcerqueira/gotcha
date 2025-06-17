@@ -103,8 +103,15 @@ pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
         pool,
         "demo",
         "demo|user",
-        "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
-        "dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m",
+        &String::from("4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q")
+            .try_into()
+            .expect("invalid Base64UrlSafe"),
+        &String::from("dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m")
+            .try_into()
+            .expect("invalid Base64"),
+        &String::from("cutadiY3N7fhf+JsB/cx4V8G4/eb9kJ0smVyNdjp5yKrpWUWV0ff5GzioM3y6p9Y")
+            .try_into()
+            .expect("invalid Base64"),
     )
     .await
     .inspect_err(|e| {
