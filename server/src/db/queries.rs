@@ -362,13 +362,23 @@ pub struct DbChallenge {
     pub url: String,
     pub width: i16,
     pub height: i16,
+    pub logo_url: Option<String>,
+}
+
+impl DbChallenge {
+    pub fn new(url: String) -> Self {
+        Self { url, width: 360, height: 500, logo_url: None }
+    }
 }
 
 pub async fn fetch_challenges(exec: impl PgExecutor<'_> + Send) -> Result<Vec<DbChallenge>> {
-    sqlx::query_as!(DbChallenge, "select url, width, height from challenge")
-        .fetch_all(exec)
-        .await
-        .map(Ok)?
+    sqlx::query_as!(
+        DbChallenge,
+        "select url, default_width as width, default_height as height, default_logo_url as logo_url from challenge"
+    )
+    .fetch_all(exec)
+    .await
+    .map(Ok)?
 }
 
 pub async fn insert_challenge(
@@ -376,10 +386,11 @@ pub async fn insert_challenge(
     challenge: &DbChallenge,
 ) -> Result<()> {
     sqlx::query!(
-        "insert into challenge (url, width, height) values ($1, $2, $3)",
+        "insert into challenge (url, default_width, default_height, default_logo_url) values ($1, $2, $3, $4)",
         challenge.url,
         challenge.width,
-        challenge.height
+        challenge.height,
+        challenge.logo_url
     )
     .execute(exec)
     .await?;

@@ -123,11 +123,7 @@ pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
 
     let _ = db::insert_challenge(
         pool,
-        &db::DbChallenge {
-            url: "http://127.0.0.1:8080/constellation".into(),
-            width: 360,
-            height: 500,
-        },
+        &db::DbChallenge::new("http://127.0.0.1:8080/constellation".into()),
     )
     .await
     .inspect_err(|e| {

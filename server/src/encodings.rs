@@ -53,7 +53,8 @@ impl TryFrom<String> for Base64<Standard> {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         // PERF: find method to just check string validity
-        _ = BASE64_STANDARD.decode(value.clone())?;
+        let mut out_buf = [0; KEY_SIZE];
+        BASE64_STANDARD.decode_slice_unchecked(&value, &mut out_buf)?;
         Ok(Self::new(value))
     }
 }
@@ -63,7 +64,8 @@ impl TryFrom<String> for Base64<UrlSafe> {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         // PERF: find method to just check string validity
-        _ = BASE64_URL_SAFE.decode(value.clone())?;
+        let mut out_buf = [0; KEY_SIZE];
+        BASE64_URL_SAFE.decode_slice_unchecked(&value, &mut out_buf)?;
         Ok(Self::new(value))
     }
 }
