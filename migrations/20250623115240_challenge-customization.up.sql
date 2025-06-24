@@ -37,23 +37,3 @@ create table public.challenge_customization (
         constraint challenge_customization_small_height_positive check (small_height > 0),
         constraint challenge_customization_console_challenge_unique unique (console_id, challenge_url)
 );
-
--- Copy existing challenge data to challenge_customization for all existing consoles
--- This creates challenge_customization records for all existing challenges for all consoles
-insert into
-    public.challenge_customization (
-        console_id,
-        challenge_url,
-        width,
-        height,
-        created_at
-    )
-select
-    c.id,
-    ch.url,
-    ch.default_width,
-    ch.default_height,
-    ch.created_at
-from
-    public.challenge ch
-    cross join public.console c;
