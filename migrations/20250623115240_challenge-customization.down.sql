@@ -3,7 +3,8 @@ drop table public.challenge_customization;
 
 -- Remove default_logo_url column and rename columns back to original names
 alter table public.challenge
-drop column default_logo_url;
+drop column if exists default_logo_url,
+drop column if exists label;
 
 alter table public.challenge
 rename column default_width to width;

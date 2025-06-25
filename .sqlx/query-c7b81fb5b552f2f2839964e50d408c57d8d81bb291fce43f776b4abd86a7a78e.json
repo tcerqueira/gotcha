@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update challenge_customization set\n            width = coalesce($1, width),\n            height = coalesce($2, height),\n            small_width = coalesce($3, small_width),\n            small_height = coalesce($4, small_height),\n            logo_url = case when $5 then $6 else logo_url end\n        where console_id = $7",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Bool",
+        "Varchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c7b81fb5b552f2f2839964e50d408c57d8d81bb291fce43f776b4abd86a7a78e"
+}

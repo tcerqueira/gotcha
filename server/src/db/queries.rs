@@ -360,6 +360,7 @@ pub async fn delete_console(
 #[derive(Debug, FromRow)]
 pub struct DbChallenge {
     pub url: String,
+    pub label: Option<String>,
     pub width: i16,
     pub height: i16,
     pub logo_url: Option<String>,
@@ -367,14 +368,14 @@ pub struct DbChallenge {
 
 impl DbChallenge {
     pub fn new(url: String) -> Self {
-        Self { url, width: 360, height: 500, logo_url: None }
+        Self { url, label: None, width: 360, height: 500, logo_url: None }
     }
 }
 
 pub async fn fetch_challenges(exec: impl PgExecutor<'_> + Send) -> Result<Vec<DbChallenge>> {
     sqlx::query_as!(
         DbChallenge,
-        "select url, default_width as width, default_height as height, default_logo_url as logo_url from challenge"
+        "select url, label, default_width as width, default_height as height, default_logo_url as logo_url from challenge"
     )
     .fetch_all(exec)
     .await
@@ -415,4 +416,48 @@ pub async fn delete_challenge_like(
         .execute(exec)
         .await?;
     Ok(RowsAffected(res.rows_affected()))
+}
+
+#[derive(Debug)]
+pub struct DbUpdateChallengeCustomization<'a> {
+    pub width: Option<i16>,
+    pub height: Option<i16>,
+    pub small_width: Option<i16>,
+    pub small_height: Option<i16>,
+    pub logo_url: Option<Option<&'a str>>,
+}
+
+pub async fn update_challenge_customization(
+    exec: impl PgExecutor<'_> + Send,
+    console_id: &Uuid,
+    update: DbUpdateChallengeCustomization<'_>,
+) -> Result<RowsAffected> {
+    let (should_update_logo_url, logo_url_value) = match update.logo_url {
+        None => (false, None),
+        Some(inner) => (true, inner),
+    };
+
+    let res = sqlx::query!(
+        "update challenge_customization set
+            width = coalesce($1, width),
+            height = coalesce($2, height),
+            small_width = coalesce($3, small_width),
+            small_height = coalesce($4, small_height),
+            logo_url = case when $5 then $6 else logo_url end
+        where console_id = $7",
+        update.width,
+        update.height,
+        update.small_width,
+        update.small_height,
+        should_update_logo_url,
+        logo_url_value,
+        console_id
+    )
+    .execute(exec)
+    .await?;
+
+    match res.rows_affected() {
+        0 => Err(Error::NotFound),
+        r => Ok(RowsAffected(r)),
+    }
 }

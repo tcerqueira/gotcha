@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select url, default_width as width, default_height as height, default_logo_url as logo_url from challenge",
+  "query": "select url, label, default_width as width, default_height as height, default_logo_url as logo_url from challenge",
   "describe": {
     "columns": [
       {
@@ -10,16 +10,21 @@
       },
       {
         "ordinal": 1,
+        "name": "label",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
         "name": "width",
         "type_info": "Int2"
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "height",
         "type_info": "Int2"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "logo_url",
         "type_info": "Varchar"
       }
@@ -29,10 +34,11 @@
     },
     "nullable": [
       false,
+      true,
       false,
       false,
       true
     ]
   },
-  "hash": "ea8b948f49353303f419d3918e51801eb3d954ac07905ec944da5b1df21857ac"
+  "hash": "e5697faa5f1efed40d561ffeb11935c7958bd8dce80ac04cb663a6dceb98235b"
 }
