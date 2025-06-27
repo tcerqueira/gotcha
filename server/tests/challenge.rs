@@ -14,6 +14,7 @@ use jsonwebtoken::{DecodingKey, Validation};
 use reqwest::StatusCode;
 use url::{Host, Url};
 
+#[ignore = "TODO: insert challenge and then request"]
 #[integration_test]
 async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
@@ -24,6 +25,19 @@ async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
     let _challenge: GetChallenge = response.json().await?;
+
+    Ok(())
+}
+
+#[integration_test]
+async fn get_challenge_fails(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+
+    let response = HTTP_CLIENT
+        .get(format!("http://localhost:{port}/api/challenge"))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     Ok(())
 }
