@@ -1,6 +1,6 @@
 use std::{fmt::Debug, ops::DerefMut};
 
-use base64::DecodeError;
+use anyhow::Context;
 use sqlx::{PgExecutor, Postgres, Transaction, prelude::*};
 use uuid::Uuid;
 
@@ -25,13 +25,22 @@ pub struct DbApiKey {
 }
 
 impl TryFrom<DbApiKeyInternal> for DbApiKey {
-    type Error = DecodeError;
+    type Error = anyhow::Error;
 
     fn try_from(value: DbApiKeyInternal) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
-            site_key: value.site_key.try_into()?,
-            encoding_key: value.encoding_key.try_into()?,
-            secret: value.secret.try_into()?,
+            site_key: value
+                .site_key
+                .try_into()
+                .context("could not convert site_key from string")?,
+            encoding_key: value
+                .encoding_key
+                .try_into()
+                .context("could not convert encoding_key from string")?,
+            secret: value
+                .secret
+                .try_into()
+                .context("could not convert secret from string")?,
             label: value.label,
         })
     }
@@ -106,8 +115,8 @@ impl<T, E> MapNested<T, E> for std::result::Result<Vec<T>, E> {
     }
 }
 
-fn api_key_decode_err(err: DecodeError) -> sqlx::Error {
-    sqlx::Error::Decode(Box::new(err))
+fn api_key_decode_err(err: anyhow::Error) -> sqlx::Error {
+    sqlx::Error::Decode(err.into_boxed_dyn_error())
 }
 
 pub async fn fetch_api_key_by_site_key(
