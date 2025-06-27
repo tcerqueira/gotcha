@@ -1,6 +1,6 @@
 use gotcha_server::{
     HTTP_CLIENT,
-    db::{self, RowsAffected},
+    db::{self, DbChallengeCustomization, RowsAffected},
     encodings::{Base64, KEY_SIZE, UrlSafe},
     routes::console::{
         ApiKeyResponse, ConsoleResponse, CreateConsoleRequest, UpdateApiKeyRequest,
@@ -10,7 +10,8 @@ use gotcha_server::{
 };
 use gotcha_server_macros::integration_test;
 use rand::distr::{Alphanumeric, SampleString};
-use reqwest::StatusCode;
+use reqwest::{Response, StatusCode};
+use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
 async fn post_console(port: u16) -> anyhow::Result<ConsoleResponse> {
@@ -62,6 +63,9 @@ async fn create_console(server: TestContext) -> anyhow::Result<()> {
     let db_id = db::fetch_console_by_label(pool, &label)
         .await?
         .unwrap_or_else(|| panic!("console '{label}' doesn't exist"));
+    db::fetch_challenge_customization(pool, &db_id)
+        .await?
+        .expect("challenge_customization row should exist for console");
     let RowsAffected(r_affected) = db::delete_console(pool, &id).await?;
 
     assert_eq!(db_id, id);
@@ -216,7 +220,9 @@ async fn gen_api_key_forbidden_console(server: TestContext) -> anyhow::Result<()
     let port = server.port();
     let pool = server.pool();
 
-    let console_id = db::insert_console(pool, "another_console", "another_user").await?;
+    let mut txn = pool.begin().await?;
+    let console_id = db::insert_console(&mut txn, "another_console", "another_user").await?;
+    txn.commit().await?;
 
     let response = HTTP_CLIENT
         .post(format!(
@@ -326,14 +332,136 @@ async fn revoke_forbidden_api_key(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
+async fn update_challenge_preferences_helper(
+    port: u16,
+    pool: &Pool<Postgres>,
+    console_id: &Uuid,
+) -> anyhow::Result<Response> {
+    let prev_preferences = db::fetch_challenge_customization(pool, console_id)
+        .await?
+        .expect("console doesnt have associated challenge_customization row");
+    assert_eq!(prev_preferences, DbChallengeCustomization::default());
+
+    let response = HTTP_CLIENT
+        .patch(format!(
+            "http://localhost:{port}/api/console/{console_id}/challenge-preferences"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&serde_json::json!({
+            "width": 400,
+            "height": 600,
+            "small_width": 250,
+            "small_height": 400,
+            "logo_url": "http://integration-test.com/logo.svg",
+        }))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    Ok(response)
+}
+
 #[integration_test]
-async fn add_origin(_server: TestContext) -> anyhow::Result<()> {
+async fn update_all_challenge_preferences(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+    let console_id = server.db_console().await;
+
+    let _response = update_challenge_preferences_helper(port, pool, &console_id).await?;
+
+    let curr_preferences = db::fetch_challenge_customization(pool, &console_id)
+        .await?
+        .expect("console doesnt have associated challenge_customization row");
+    assert_eq!(curr_preferences.width, 400);
+    assert_eq!(curr_preferences.height, 600);
+    assert_eq!(curr_preferences.small_width, 250);
+    assert_eq!(curr_preferences.small_height, 400);
+    assert_eq!(
+        curr_preferences.logo_url,
+        Some("http://integration-test.com/logo.svg".into())
+    );
+
     Ok(())
 }
 
 #[integration_test]
-async fn remove_origin(_server: TestContext) -> anyhow::Result<()> {
+async fn update_partially_challenge_preferences_1(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+    let console_id = server.db_console().await;
+
+    let _response = update_challenge_preferences_helper(port, pool, &console_id).await?;
+
+    let response = HTTP_CLIENT
+        .patch(format!(
+            "http://localhost:{port}/api/console/{console_id}/challenge-preferences"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&serde_json::json!({
+            "width": 600,
+            "logo_url": null,
+        }))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let curr_preferences = db::fetch_challenge_customization(pool, &console_id)
+        .await?
+        .expect("console doesnt have associated challenge_customization row");
+    assert_eq!(curr_preferences.width, 600);
+    assert_eq!(curr_preferences.height, 600);
+    assert_eq!(curr_preferences.small_width, 250);
+    assert_eq!(curr_preferences.small_height, 400);
+    assert_eq!(curr_preferences.logo_url, None);
+
     Ok(())
+}
+
+#[integration_test]
+async fn update_partially_challenge_preferences_2(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let pool = server.pool();
+    let console_id = server.db_console().await;
+
+    let _response = update_challenge_preferences_helper(port, pool, &console_id).await?;
+
+    let response = HTTP_CLIENT
+        .patch(format!(
+            "http://localhost:{port}/api/console/{console_id}/challenge-preferences"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .json(&serde_json::json!({
+            "small_height": 600,
+        }))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let curr_preferences = db::fetch_challenge_customization(pool, &console_id)
+        .await?
+        .expect("console doesnt have associated challenge_customization row");
+    assert_eq!(curr_preferences.width, 400);
+    assert_eq!(curr_preferences.height, 600);
+    assert_eq!(curr_preferences.small_width, 250);
+    assert_eq!(curr_preferences.small_height, 600);
+    assert_eq!(
+        curr_preferences.logo_url,
+        Some("http://integration-test.com/logo.svg".into())
+    );
+
+    Ok(())
+}
+
+#[ignore = "TODO"]
+#[integration_test]
+async fn add_origin(_server: TestContext) -> anyhow::Result<()> {
+    todo!()
+}
+
+#[ignore = "TODO"]
+#[integration_test]
+async fn remove_origin(_server: TestContext) -> anyhow::Result<()> {
+    todo!()
 }
 
 async fn create_api_key_on_another_console(port: u16) -> anyhow::Result<(Uuid, Base64<UrlSafe>)> {

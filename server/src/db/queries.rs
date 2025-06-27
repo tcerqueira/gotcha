@@ -1,7 +1,7 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::DerefMut};
 
 use base64::DecodeError;
-use sqlx::{PgExecutor, prelude::*};
+use sqlx::{PgExecutor, Postgres, Transaction, prelude::*};
 use uuid::Uuid;
 
 use crate::encodings::{Base64, UrlSafe};
@@ -309,6 +309,21 @@ pub async fn exists_console_for_user(
 }
 
 pub async fn insert_console(
+    txn: &mut Transaction<'_, Postgres>,
+    label: &str,
+    user: &str,
+) -> Result<Uuid> {
+    let console_id = insert_only_console(txn.deref_mut(), label, user).await?;
+    insert_challenge_customization(
+        txn.deref_mut(),
+        &console_id,
+        &DbChallengeCustomization::default(),
+    )
+    .await?;
+    Ok(console_id)
+}
+
+async fn insert_only_console(
     exec: impl PgExecutor<'_> + Send,
     label: &str,
     user: &str,
@@ -418,6 +433,61 @@ pub async fn delete_challenge_like(
     Ok(RowsAffected(res.rows_affected()))
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct DbChallengeCustomization {
+    pub width: i16,
+    pub height: i16,
+    pub small_width: i16,
+    pub small_height: i16,
+    pub logo_url: Option<String>,
+}
+
+impl Default for DbChallengeCustomization {
+    fn default() -> Self {
+        Self {
+            width: 360,
+            height: 500,
+            small_width: 360,
+            small_height: 500,
+            logo_url: None,
+        }
+    }
+}
+
+pub async fn fetch_challenge_customization(
+    exec: impl PgExecutor<'_> + Send,
+    console_id: &Uuid,
+) -> Result<Option<DbChallengeCustomization>> {
+    sqlx::query_as!(
+        DbChallengeCustomization,
+        "select width, height, small_width, small_height, logo_url from challenge_customization where console_id = $1",
+        console_id
+    )
+    .fetch_optional(exec)
+    .await
+    .map(Ok)?
+}
+
+pub async fn insert_challenge_customization(
+    exec: impl PgExecutor<'_> + Send,
+    console_id: &Uuid,
+    insert: &DbChallengeCustomization,
+) -> Result<()> {
+    sqlx::query_as!(
+        DbChallengeCustomization,
+        "insert into challenge_customization (console_id, width, height, small_width, small_height, logo_url) values ($1, $2, $3, $4, $5, $6)",
+        console_id,
+        insert.width,
+        insert.height,
+        insert.small_width,
+        insert.small_height,
+        insert.logo_url,
+    )
+    .execute(exec)
+    .await?;
+    Ok(())
+}
+
 #[derive(Debug)]
 pub struct DbUpdateChallengeCustomization<'a> {
     pub width: Option<i16>,
@@ -430,11 +500,11 @@ pub struct DbUpdateChallengeCustomization<'a> {
 pub async fn update_challenge_customization(
     exec: impl PgExecutor<'_> + Send,
     console_id: &Uuid,
-    update: DbUpdateChallengeCustomization<'_>,
+    update: &DbUpdateChallengeCustomization<'_>,
 ) -> Result<RowsAffected> {
     let (should_update_logo_url, logo_url_value) = match update.logo_url {
         None => (false, None),
-        Some(inner) => (true, inner),
+        Some(value) => (true, value),
     };
 
     let res = sqlx::query!(

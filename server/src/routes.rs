@@ -18,7 +18,10 @@ use middleware::{
 };
 use verification::site_verify;
 
-use crate::AppState;
+use crate::{
+    AppState,
+    routes::console::{get_challenge_preferences, update_challenge_preferences},
+};
 
 pub mod admin;
 pub mod challenge;
@@ -68,6 +71,10 @@ pub fn console(state: &Arc<AppState>) -> Router {
                 )),
         );
 
+    let challenge_preferences = Router::new()
+        .route("/", get(get_challenge_preferences))
+        .route("/", patch(update_challenge_preferences));
+
     Router::new()
         .route("/", get(get_consoles))
         .route("/", post(create_console))
@@ -77,6 +84,7 @@ pub fn console(state: &Arc<AppState>) -> Router {
                 .route("/", patch(update_console))
                 .route("/", delete(delete_console))
                 .nest("/api-key", api_key)
+                .nest("/challenge-preferences", challenge_preferences)
                 .layer(axum::middleware::from_fn_with_state(
                     Arc::clone(&state),
                     validate_console_id,

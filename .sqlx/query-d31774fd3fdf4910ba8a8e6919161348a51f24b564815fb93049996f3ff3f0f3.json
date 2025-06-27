@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select width, height, small_width, small_height, logo_url from challenge_customization where console_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "width",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "height",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 2,
+        "name": "small_width",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "small_height",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 4,
+        "name": "logo_url",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "d31774fd3fdf4910ba8a8e6919161348a51f24b564815fb93049996f3ff3f0f3"
+}

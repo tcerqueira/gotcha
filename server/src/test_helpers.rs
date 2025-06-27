@@ -138,7 +138,7 @@ async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> db::Result<()> {
     let mut txn = pool.begin().await?;
 
     let console_id = db::insert_console(
-        &mut *txn,
+        &mut txn,
         &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"),
         DEMO_USER,
     )

@@ -138,3 +138,35 @@ pub mod single_or_sequence {
         })
     }
 }
+
+/// Use in conjunction with `#[serde(default)]` so it falls back to `None` on absence.
+pub mod nested_option {
+    use serde::{Deserialize, Deserializer, de::DeserializeOwned};
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: DeserializeOwned,
+    {
+        let nested = Option::<T>::deserialize(deserializer)?;
+        Ok(Some(nested))
+    }
+
+    #[test]
+    fn nested_option_string() {
+        use super::*;
+
+        #[derive(Debug, Deserialize, PartialEq)]
+        struct Test {
+            #[serde(default, deserialize_with = "nested_option::deserialize")]
+            s: Option<Option<String>>,
+        }
+
+        let empty_value: Test = serde_json::from_str("{}").unwrap();
+        assert_eq!(empty_value, Test { s: None });
+        let null_value: Test = serde_json::from_str("{\"s\":null}").unwrap();
+        assert_eq!(null_value, Test { s: Some(None) });
+        let some_value: Test = serde_json::from_str("{\"s\":\"wtv\"}").unwrap();
+        assert_eq!(some_value, Test { s: Some(Some("wtv".into())) });
+    }
+}

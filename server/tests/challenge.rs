@@ -15,7 +15,6 @@ use reqwest::StatusCode;
 use url::{Host, Url};
 
 #[integration_test]
-#[ignore = "custom challenges feature not complete"]
 async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
 
