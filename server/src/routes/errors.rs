@@ -61,6 +61,8 @@ pub enum ConsoleError {
     Forbidden,
     #[error("Duplicate")]
     Duplicate,
+    #[error("Invalid input: {what}")]
+    InvalidInput { what: String },
     #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
@@ -69,16 +71,18 @@ impl IntoResponse for ConsoleError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self, "ConsoleError");
         match self {
-            // if a db::Error was wrapped in an anyhow error we try to unwrap it
             ConsoleError::Unexpected(e) => try_unwrap_db_error(e, |err| match err {
                 ConsoleError::Unexpected(_) => None,
                 other => Some(other.into_response()),
             }),
             ConsoleError::Duplicate => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            ConsoleError::NotFound { what: _ } => {
+            ConsoleError::NotFound { .. } => {
                 (StatusCode::NOT_FOUND, self.to_string()).into_response()
             }
             ConsoleError::Forbidden => StatusCode::FORBIDDEN.into_response(),
+            ConsoleError::InvalidInput { .. } => {
+                (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()).into_response()
+            }
         }
     }
 }

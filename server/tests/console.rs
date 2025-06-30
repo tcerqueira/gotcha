@@ -3,8 +3,8 @@ use gotcha_server::{
     db::{self, DbChallengeCustomization, RowsAffected},
     encodings::{Base64, KEY_SIZE, UrlSafe},
     routes::console::{
-        ApiKeyResponse, ConsoleResponse, CreateConsoleRequest, UpdateApiKeyRequest,
-        UpdateConsoleRequest,
+        ApiKeyResponse, ChallengePreferences, ConsoleResponse, CreateConsoleRequest,
+        UpdateApiKeyRequest, UpdateConsoleRequest,
     },
     test_helpers,
 };
@@ -359,6 +359,28 @@ async fn update_challenge_preferences_helper(
     assert_eq!(response.status(), StatusCode::OK);
 
     Ok(response)
+}
+
+#[integration_test]
+async fn get_challenge_preferences(server: TestContext) -> anyhow::Result<()> {
+    let port = server.port();
+    let console_id = server.db_console().await;
+
+    let response = HTTP_CLIENT
+        .get(format!(
+            "http://localhost:{port}/api/console/{console_id}/challenge-preferences"
+        ))
+        .bearer_auth(test_helpers::auth_jwt().await)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    assert_eq!(
+        response.json::<ChallengePreferences>().await.unwrap(),
+        ChallengePreferences::default()
+    );
+
+    Ok(())
 }
 
 #[integration_test]

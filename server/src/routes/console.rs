@@ -186,7 +186,7 @@ pub async fn revoke_api_key(
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct ChallengePreferences {
     pub width: u16,
     pub height: u16,
@@ -207,7 +207,7 @@ impl Default for ChallengePreferences {
     }
 }
 
-#[instrument(skip(state), err(Debug, level = Level::ERROR))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn get_challenge_preferences(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -233,7 +233,19 @@ pub struct UpdateChallengePreferences {
     pub logo_url: Option<Option<String>>,
 }
 
-#[instrument(skip(state), err(Debug, level = Level::ERROR))]
+fn validate_update_dimension(
+    input_name: &str,
+    value: Option<u16>,
+) -> Result<Option<i16>, ConsoleError> {
+    value
+        .map(TryInto::try_into)
+        .transpose()
+        .map_err(move |_| ConsoleError::InvalidInput {
+            what: format!("{input_name} out of range [1:32,767]"),
+        })
+}
+
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn update_challenge_preferences(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -243,10 +255,10 @@ pub async fn update_challenge_preferences(
         &state.pool,
         &console_id,
         &DbUpdateChallengeCustomization {
-            width: update.width.map(|x| x as i16),
-            height: update.height.map(|x| x as i16),
-            small_width: update.small_width.map(|x| x as i16),
-            small_height: update.small_height.map(|x| x as i16),
+            width: validate_update_dimension("width", update.width)?,
+            height: validate_update_dimension("height", update.height)?,
+            small_width: validate_update_dimension("small_width", update.small_width)?,
+            small_height: validate_update_dimension("small_height", update.small_height)?,
             logo_url: update.logo_url.as_ref().map(|l| l.as_deref()),
         },
     )
