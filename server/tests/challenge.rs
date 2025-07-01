@@ -29,6 +29,7 @@ async fn get_challenge(server: TestContext) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[ignore = "TODO: create one db per test to isolate"]
 #[integration_test]
 async fn get_challenge_fails(server: TestContext) -> anyhow::Result<()> {
     let port = server.port();
