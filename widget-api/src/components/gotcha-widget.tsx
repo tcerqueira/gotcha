@@ -55,10 +55,14 @@ export function GotchaWidget(props: GotchaWidgetProps) {
               open={state() === "challenging"}
               params={{
                 k: props.sitekey,
-                theme: props.theme,
-                size: props.size,
-                badge: props.badge,
+                // TODO: add language support
+                hl: null,
+                theme: props.theme ?? null,
+                size: props.size ?? null,
+                badge: props.badge ?? null,
                 sv: window.location.origin,
+                // TODO: add branding support
+                logoUrl: null,
               }}
               onComplete={handleChallengeComplete}
               onFail={handleFail}

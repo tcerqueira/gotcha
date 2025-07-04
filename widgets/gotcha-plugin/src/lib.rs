@@ -18,6 +18,7 @@ impl Plugin for GotchaPlugin {
         app.insert_resource(AttemptCount(0));
         app.add_event::<GameplayAttempt>();
         app.add_plugins(UiPlugin);
+        // FIXME: should wait for this task to complete before continuing
         app.add_systems(Startup, set_up_gotcha);
         app.add_systems(
             PreUpdate,
@@ -95,7 +96,12 @@ fn remove_debounce_timer(mut commands: Commands) {
 
 fn set_up_gotcha() {
     #[cfg(target_arch = "wasm32")]
-    let _ = gotcha_lib::init();
+    use bevy::tasks::AsyncComputeTaskPool;
+
+    #[cfg(target_arch = "wasm32")]
+    AsyncComputeTaskPool::get().spawn(async {
+        let _ = gotcha_lib::init().await;
+    });
 }
 
 fn start_gameplay(
