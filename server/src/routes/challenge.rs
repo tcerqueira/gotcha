@@ -28,7 +28,7 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeParams {
-    pub site_key: Option<String>,
+    pub site_key: Option<Base64<UrlSafe>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,6 +36,9 @@ pub struct GetChallenge {
     pub url: Url,
     pub width: u16,
     pub height: u16,
+    pub small_width: u16,
+    pub small_height: u16,
+    pub logo_url: Option<String>,
 }
 
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
@@ -44,7 +47,7 @@ pub async fn get_challenge(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<GetChallenge>, ChallengeError> {
     let challenges = match query.site_key {
-        Some(_) => unimplemented!(),
+        Some(site_key) => db::fetch_challenges_with_customization(&state.pool, &site_key).await,
         None => db::fetch_challenges(&state.pool).await,
     }
     .context("failed to fetch challenges")?;
@@ -291,6 +294,9 @@ impl TryFrom<DbChallenge> for GetChallenge {
             url,
             width: db_challenge.width as u16,
             height: db_challenge.height as u16,
+            small_width: db_challenge.small_width as u16,
+            small_height: db_challenge.small_height as u16,
+            logo_url: db_challenge.logo_url,
         })
     }
 }

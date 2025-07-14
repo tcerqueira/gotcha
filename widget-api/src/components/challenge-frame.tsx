@@ -1,10 +1,8 @@
 import {
   createEffect,
-  createMemo,
   createResource,
   createSignal,
   Match,
-  Show,
   Switch,
 } from "solid-js";
 import { Challenge } from "./types";
@@ -90,7 +88,8 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
         </h1>
 
         <div
-          class={`w-[${challengeRes.latest?.width ?? 360}px] h-[${challengeRes.latest?.height ?? 500}px]`}
+          class={`md:w-[${challengeRes.latest?.width ?? 360}px] md:h-[${challengeRes.latest?.height ?? 500}px]
+            w-[${challengeRes.latest?.smallWidth ?? 360}px] h-[${challengeRes.latest?.smallHeight ?? 500}px]`}
         >
           <Switch>
             <Match when={challengeRes.loading}>Loading...</Match>
@@ -98,7 +97,7 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
             <Match when={challengeRes()}>
               <iframe
                 ref={setIframeRef}
-                src={buildChallengeUrl(challengeRes()!.url, props.params)}
+                src={buildChallengeUrl(challengeRes()!, props.params)}
                 width={challengeRes()!.width}
                 height={challengeRes()!.height}
                 sandbox="allow-forms allow-scripts allow-same-origin"
@@ -136,13 +135,22 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
   );
 }
 
-async function fetchChallenge(): Promise<Challenge | null> {
+async function fetchChallenge(siteKey: string): Promise<Challenge | null> {
   try {
     const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
-    const url = new URL(`${origin}/api/challenge`);
+    const url = new URL(`${origin}/api/challenge?site_key=${siteKey}`);
 
     const response = await fetch(url);
-    return (await response.json()) as Challenge;
+    const challenge_res = await response.json();
+
+    return {
+      url: challenge_res.url,
+      width: challenge_res.width,
+      height: challenge_res.height,
+      smallWidth: challenge_res.small_width,
+      smallHeight: challenge_res.small_height,
+      logoUrl: challenge_res.logo_url,
+    };
   } catch (e) {
     console.error("failed to fetch", e);
     return null;
@@ -154,7 +162,7 @@ type ChallengeResponse = {
 };
 
 async function processChallenge(
-  site_key: string,
+  siteKey: string,
   success: boolean,
   challengeUrl: string,
   interactions: Interaction[],
@@ -169,7 +177,7 @@ async function processChallenge(
       },
       body: JSON.stringify({
         success,
-        site_key,
+        site_key: siteKey,
         hostname: window.location.hostname,
         challenge: challengeUrl,
         interactions,
@@ -188,14 +196,17 @@ async function processChallenge(
   }
 }
 
-function buildChallengeUrl(baseUrl: string, params: SearchParams): string {
-  const url = new URL(baseUrl);
+function buildChallengeUrl(challenge: Challenge, params: SearchParams): string {
+  const url = new URL(challenge.url);
   url.searchParams.append("k", params.k);
   url.searchParams.append("hl", params.hl ?? navigator.language);
   url.searchParams.append("theme", params.theme ?? defaultRenderParams.theme!);
   url.searchParams.append("size", params.size ?? defaultRenderParams.size!);
   url.searchParams.append("badge", params.badge ?? defaultRenderParams.badge!);
   url.searchParams.append("sv", params.sv ?? window.location.origin);
+  if (challenge.logoUrl) {
+    url.searchParams.append("logoUrl", challenge.logoUrl);
+  }
 
   return url.toString();
 }

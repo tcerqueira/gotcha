@@ -47,7 +47,7 @@ impl TryFrom<DbApiKeyInternal> for DbApiKey {
 }
 
 // Internal representation to benefit from sqlx compile time checks on queries
-#[derive(Debug, FromRow)]
+#[derive(Debug)]
 struct DbApiKeyInternal {
     pub site_key: String,
     pub encoding_key: String,
@@ -200,15 +200,15 @@ pub async fn exists_api_key_for_console(
     .map(Ok)?
 }
 
-pub async fn with_console_insert_api_key(
-    exec: impl PgExecutor<'_> + Send,
+pub(crate) async fn with_console_insert_api_key(
+    exec: impl PgExecutor<'_> + Send + Clone,
     console_label: &str,
     user: &str,
     site_key: &Base64<UrlSafe>,
     enc_key: &Base64,
     secret: &Base64,
-) -> Result<()> {
-    sqlx::query!(
+) -> Result<Uuid> {
+    let row = sqlx::query!(
         r#"with
       console as (insert into public.console (label, user_id) values ($1, $2) returning id)
     insert into
@@ -218,16 +218,20 @@ pub async fn with_console_insert_api_key(
         $3,
         (select id from console),
         $4, $5
-      )"#,
+      ) returning console_id"#,
         console_label,
         user,
         site_key.as_str(),
         enc_key.as_str(),
         secret.as_str(),
     )
-    .execute(exec)
+    .fetch_one(exec.clone())
     .await?;
-    Ok(())
+
+    insert_challenge_customization(exec, &row.console_id, &DbChallengeCustomization::default())
+        .await?;
+
+    Ok(row.console_id)
 }
 
 #[derive(Debug)]
@@ -271,7 +275,7 @@ pub async fn delete_api_key(
     Ok(RowsAffected(res.rows_affected()))
 }
 
-#[derive(Debug, FromRow)]
+#[derive(Debug)]
 pub struct DbConsole {
     pub id: Uuid,
     pub label: Option<String>,
@@ -381,25 +385,70 @@ pub async fn delete_console(
     Ok(RowsAffected(res.rows_affected()))
 }
 
-#[derive(Debug, FromRow)]
+#[derive(Debug)]
 pub struct DbChallenge {
     pub url: String,
     pub label: Option<String>,
     pub width: i16,
     pub height: i16,
+    pub small_width: i16,
+    pub small_height: i16,
     pub logo_url: Option<String>,
 }
 
 impl DbChallenge {
     pub fn new(url: String) -> Self {
-        Self { url, label: None, width: 360, height: 500, logo_url: None }
+        Self {
+            url,
+            label: None,
+            width: 360,
+            height: 500,
+            small_width: 360,
+            small_height: 500,
+            logo_url: None,
+        }
     }
 }
 
 pub async fn fetch_challenges(exec: impl PgExecutor<'_> + Send) -> Result<Vec<DbChallenge>> {
     sqlx::query_as!(
         DbChallenge,
-        "select url, label, default_width as width, default_height as height, default_logo_url as logo_url from challenge"
+        "select
+            url,
+            label,
+            default_width as width,
+            default_height as height,
+            default_width as small_width,
+            default_height as small_height,
+            default_logo_url as logo_url
+        from challenge"
+    )
+    .fetch_all(exec)
+    .await
+    .map(Ok)?
+}
+
+pub async fn fetch_challenges_with_customization(
+    exec: impl PgExecutor<'_> + Send,
+    site_key: &Base64<UrlSafe>,
+) -> Result<Vec<DbChallenge>> {
+    sqlx::query_as!(
+        DbChallenge,
+        "select
+            c.url,
+            c.label,
+            coalesce(cc.width, c.default_width) as \"width!\",
+            coalesce(cc.height, c.default_height) as \"height!\",
+            coalesce(cc.small_width, c.default_width) as \"small_width!\",
+            coalesce(cc.small_height, c.default_height) as \"small_height!\",
+            coalesce(cc.logo_url, c.default_logo_url) as logo_url
+        from public.challenge c
+        left join public.challenge_customization cc on cc.console_id = (
+            select console_id
+            from public.api_key
+            where site_key = $1
+        )",
+        site_key.as_str(),
     )
     .fetch_all(exec)
     .await

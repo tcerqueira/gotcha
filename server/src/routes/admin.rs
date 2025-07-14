@@ -33,6 +33,8 @@ pub async fn add_challenge(
             url,
             width: width as i16,
             height: height as i16,
+            small_width: width as i16,
+            small_height: height as i16,
             logo_url: None,
             label: None,
         },

@@ -19,4 +19,7 @@ export type Challenge = {
   url: string;
   width: number;
   height: number;
+  smallWidth: number;
+  smallHeight: number;
+  logoUrl: string | null;
 };

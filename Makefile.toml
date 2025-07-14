@@ -81,7 +81,9 @@ description = "Bundle cup-stack to /dist"
 cwd = "./widgets"
 script = [
     "bevy build --yes --bin=cup-stack --profile=wasm-release web --bundle",
-    "cp -R target/bevy_web/wasm-release/cup-stack ../dist",
+    "mkdir -p ../dist/cup-stack",
+    # the slash in cup-stack/ is important
+    "cp -r target/bevy_web/wasm-release/cup-stack/ ../dist/cup-stack",
 ]
 
 [tasks.bundle-widgets]

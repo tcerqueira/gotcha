@@ -7,6 +7,7 @@ import LoseScreen from "./components/LoseScreen";
 import BackgroundLogo from "./components/BackgroundLogo";
 import Animations from "./components/Animations";
 import starknetLogo from "./assets/starknet-logo.svg";
+import { getParams } from "@gotcha-widget/lib";
 
 const App: Component = () => {
   const {
@@ -26,13 +27,16 @@ const App: Component = () => {
 
   return (
     <div class="w-screen h-screen relative bg-slate-900 overflow-hidden">
-      <BackgroundLogo src={starknetLogo} alt="Starknet" />
-      
+      <BackgroundLogo
+        src={getParams().logoUrl ?? starknetLogo}
+        alt="brand logo"
+      />
+
       {!gameStarted() ? (
         <SplashScreen onStart={startGame} />
-      ) : gameState() === 'won' ? (
+      ) : gameState() === "won" ? (
         <WinScreen score={score()} onRestart={resetGame} />
-      ) : gameState() === 'lost' ? (
+      ) : gameState() === "lost" ? (
         <LoseScreen misses={misses()} onRestart={resetGame} />
       ) : (
         <GameScreen
@@ -46,7 +50,7 @@ const App: Component = () => {
           onStarClick={handleStarClick}
         />
       )}
-      
+
       <Animations />
     </div>
   );

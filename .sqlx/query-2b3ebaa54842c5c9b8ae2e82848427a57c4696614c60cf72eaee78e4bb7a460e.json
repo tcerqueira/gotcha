@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select\n            c.url,\n            c.label,\n            coalesce(cc.width, c.default_width) as \"width!\",\n            coalesce(cc.height, c.default_height) as \"height!\",\n            coalesce(cc.small_width, c.default_width) as \"small_width!\",\n            coalesce(cc.small_height, c.default_height) as \"small_height!\",\n            coalesce(cc.logo_url, c.default_logo_url) as logo_url\n        from public.challenge c\n        left join public.challenge_customization cc on cc.console_id = (\n            select console_id\n            from public.api_key\n            where site_key = $1\n        )",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "label",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "width!",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "height!",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 4,
+        "name": "small_width!",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 5,
+        "name": "small_height!",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 6,
+        "name": "logo_url",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "2b3ebaa54842c5c9b8ae2e82848427a57c4696614c60cf72eaee78e4bb7a460e"
+}

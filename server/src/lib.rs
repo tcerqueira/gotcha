@@ -99,7 +99,7 @@ pub fn init_tracing() {
 }
 
 pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
-    let _ = db::with_console_insert_api_key(
+    let _console_id = db::with_console_insert_api_key(
         pool,
         "demo",
         "demo|user",
@@ -119,7 +119,7 @@ pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
             err = ?e,
             "could not populate demo console and api_key"
         )
-    });
+    })?;
 
     let _ = db::insert_challenge(
         pool,
