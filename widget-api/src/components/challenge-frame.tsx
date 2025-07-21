@@ -91,8 +91,15 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
         </h1>
 
         <div
-          class={`md:w-[${challengeRes.latest?.width ?? 360}px] md:h-[${challengeRes.latest?.height ?? 500}px]
-            w-[${challengeRes.latest?.smallWidth ?? 360}px] h-[${challengeRes.latest?.smallHeight ?? 500}px]`}
+          style={{
+            "--challenge-width": `${challengeRes.latest?.width ?? 360}px`,
+            "--challenge-small-width": `${challengeRes.latest?.smallWidth ?? 360}px`,
+            "--challenge-height": `${challengeRes.latest?.height ?? 500}px`,
+            "--challenge-small-height": `${challengeRes.latest?.smallHeight ?? 500}px`,
+          }}
+          class="mx-auto w-[80vw] h-[80vh]
+          md:max-w-[var(--challenge-width)] md:max-h-[var(--challenge-height)]
+          max-w-[var(--challenge-small-width)] max-h-[var(--challenge-small-height)]"
         >
           <Switch>
             <Match when={challengeRes.loading}>Loading...</Match>
@@ -101,16 +108,7 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
               <iframe
                 ref={setIframeRef}
                 src={buildChallengeUrl(challengeRes()!, props.params)}
-                width={
-                  isSmallWindow()
-                    ? challengeRes()!.smallWidth
-                    : challengeRes()!.width
-                }
-                height={
-                  isSmallWindow()
-                    ? challengeRes()!.smallHeight
-                    : challengeRes()!.height
-                }
+                class="w-full h-full"
                 sandbox="allow-forms allow-scripts allow-same-origin"
               />
             </Match>
