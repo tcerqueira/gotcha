@@ -1,6 +1,6 @@
 import { Component } from "solid-js";
-import CheckingSvg from "./icons/checking";
 import CheckedSvg from "./icons/checked";
+import CheckingSvg from "./icons/checking";
 
 export type CheckboxState = "blank" | "checking" | "checked";
 

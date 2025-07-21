@@ -1,5 +1,5 @@
-import { getJsParams } from "./js-params";
 import { render } from "solid-js/web";
+import { getJsParams } from "./js-params";
 import { createWidget, Widget } from "./widget";
 
 export class GreCaptcha {

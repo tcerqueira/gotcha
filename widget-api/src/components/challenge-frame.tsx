@@ -1,4 +1,5 @@
 import { Interaction, SearchParams } from "@gotcha-widget/lib";
+import { createMediaQuery } from "@solid-primitives/media";
 import {
   createEffect,
   createResource,
@@ -6,7 +7,6 @@ import {
   Match,
   Switch,
 } from "solid-js";
-import { createMediaQuery } from "@solid-primitives/media";
 import { defaultRenderParams } from "../grecaptcha";
 import CloseSvg from "./icons/close";
 import RefreshSvg from "./icons/refresh";

@@ -1,7 +1,7 @@
-import { createSignal, Show, createEffect } from "solid-js";
-import { ChallengeState, GotchaWidgetProps } from "./types";
-import ImNotRobot, { PreAnalysisResponse } from "./im-not-a-robot";
+import { createEffect, createSignal, Show } from "solid-js";
 import ChallengeFrame from "./challenge-frame";
+import ImNotRobot, { PreAnalysisResponse } from "./im-not-a-robot";
+import { ChallengeState, GotchaWidgetProps } from "./types";
 
 export function GotchaWidget(props: GotchaWidgetProps) {
   const [state, setState] = createSignal<ChallengeState>("blank");

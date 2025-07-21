@@ -3,9 +3,9 @@ import * as jose from "jose";
 import { createEffect } from "solid-js";
 import { RenderParams } from "../grecaptcha";
 import { PowChallenge, ProofOfWork } from "../proof-of-work";
-import { ChallengeState } from "./types";
-import Logo from "./logo";
 import Checkbox, { CheckboxState } from "./checkbox";
+import Logo from "./logo";
+import { ChallengeState } from "./types";
 
 export type PreAnalysisResponse =
   | { result: "failure" }

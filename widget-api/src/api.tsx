@@ -1,7 +1,7 @@
-import "./styles.css";
 import { GreCaptcha } from "./grecaptcha";
 import { getJsParams } from "./js-params";
 import { loadCss } from "./load-css";
+import "./styles.css";
 
 loadCss()
   .then(() => {

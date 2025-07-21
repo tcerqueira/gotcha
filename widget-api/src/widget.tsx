@@ -1,8 +1,8 @@
-import { render } from "solid-js/web";
 import { createSignal } from "solid-js";
-import { RenderParams } from "./grecaptcha";
+import { render } from "solid-js/web";
 import { GotchaWidget } from "./components/gotcha-widget";
 import { GotchaWidgetProps } from "./components/types";
+import { RenderParams } from "./grecaptcha";
 
 export interface Widget {
   render: (container: Element, parameters: RenderParams) => void;
