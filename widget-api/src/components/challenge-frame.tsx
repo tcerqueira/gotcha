@@ -1,3 +1,4 @@
+import { Interaction, SearchParams } from "@gotcha-widget/lib";
 import {
   createEffect,
   createResource,
@@ -5,13 +6,13 @@ import {
   Match,
   Switch,
 } from "solid-js";
-import { Challenge } from "./types";
-import Modal from "./modal";
-import { Interaction, SearchParams } from "@gotcha-widget/lib";
+import { createMediaQuery } from "@solid-primitives/media";
 import { defaultRenderParams } from "../grecaptcha";
-import Logo from "./logo";
 import CloseSvg from "./icons/close";
 import RefreshSvg from "./icons/refresh";
+import Logo from "./logo";
+import Modal from "./modal";
+import { Challenge } from "./types";
 
 type ChallengeFrameProps = {
   open: boolean;
@@ -33,6 +34,8 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
     props.params.k,
     fetchChallenge,
   );
+
+  const isSmallWindow = createMediaQuery("(max-width: 767px)");
 
   const handleMessage = async (event: MessageEvent) => {
     const challenge = challengeRes();
@@ -98,8 +101,16 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
               <iframe
                 ref={setIframeRef}
                 src={buildChallengeUrl(challengeRes()!, props.params)}
-                width={challengeRes()!.width}
-                height={challengeRes()!.height}
+                width={
+                  isSmallWindow()
+                    ? challengeRes()!.smallWidth
+                    : challengeRes()!.width
+                }
+                height={
+                  isSmallWindow()
+                    ? challengeRes()!.smallHeight
+                    : challengeRes()!.height
+                }
                 sandbox="allow-forms allow-scripts allow-same-origin"
               />
             </Match>
@@ -203,6 +214,7 @@ function buildChallengeUrl(challenge: Challenge, params: SearchParams): string {
   url.searchParams.append("theme", params.theme ?? defaultRenderParams.theme!);
   url.searchParams.append("size", params.size ?? defaultRenderParams.size!);
   url.searchParams.append("badge", params.badge ?? defaultRenderParams.badge!);
+  // TODO: window.location.origin makes no sense
   url.searchParams.append("sv", params.sv ?? window.location.origin);
   if (challenge.logoUrl) {
     url.searchParams.append("logoUrl", challenge.logoUrl);

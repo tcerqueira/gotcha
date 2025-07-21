@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "@gotcha-widget/lib": "github:tcerqueira/gotcha-widget-lib#master",
+    "@solid-primitives/media": "^2.3.3",
     "jose": "^5.9.6",
     "solid-js": "^1.9.1"
   },
