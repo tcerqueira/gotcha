@@ -346,7 +346,8 @@
             </div>
         </div>
 
-        <script src="https://dxwccqlvo8.execute-api.us-east-1.amazonaws.com/api.js?render=explicit"></script>
+        <script src="https://gotcha-public-preview.s3.us-east-1.amazonaws.com/api.js?render=explicit"></script>
+        <!-- <script src="http://localhost:8080/api.js?render=explicit"></script> -->
         <script>
             let captchaInitialized = false;
             const SITEKEY =
@@ -423,17 +424,17 @@
 
             async function verifyCaptcha(responseToken) {
                 try {
+                    const server =
+                        "https://dxwccqlvo8.execute-api.us-east-1.amazonaws.com";
+                    // const server = "http://localhost:8080";
                     const form = new FormData();
                     form.append("secret", SECRET);
                     form.append("response", responseToken);
 
-                    const response = await fetch(
-                        "https://dxwccqlvo8.execute-api.us-east-1.amazonaws.com/api/siteverify",
-                        {
-                            method: "POST",
-                            body: new URLSearchParams(form),
-                        },
-                    );
+                    const response = await fetch(`${server}/api/siteverify`, {
+                        method: "POST",
+                        body: new URLSearchParams(form),
+                    });
 
                     if (!response.ok) {
                         throw new Error("Verification failed");

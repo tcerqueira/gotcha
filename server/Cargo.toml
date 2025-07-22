@@ -9,11 +9,11 @@ license = "MIT"
 aws-lambda = ["dep:lambda_http"]
 
 [dependencies]
+tower-http = { version = "0.6", features = ["fs", "trace", "cors"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 axum = { version = "0.8", features = ["macros"] }
 axum-extra = { version = "0.10", features = ["typed-header"] }
-tower = { version = "0.4", features = ["util"] }
-tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
+tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rayon = "1"
@@ -54,4 +54,4 @@ axum-server = { version = "0.7", features = ["tls-rustls"] }
 [package.metadata.lambda.deploy]
 env = { "APP_ENVIRONMENT" = "production", "AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH" = "true" }
 tags = { "organization" = "gotcha" }
-include = ["dist/", "config/"]
+include = ["config/"]

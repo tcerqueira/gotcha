@@ -150,7 +150,6 @@ export const useGameLogic = () => {
   createEffect(async () => {
     switch (gameState()) {
       case "won":
-        console.log("win");
         onChallengeResponse(true);
         break;
       case "lost":
@@ -161,7 +160,6 @@ export const useGameLogic = () => {
 
   createEffect(() => {
     if (attemptCount() % 3 === 0 && gameState() === "lost") {
-      console.log("lose");
       onChallengeResponse(false);
     }
   });

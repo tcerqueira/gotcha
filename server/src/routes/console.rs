@@ -12,8 +12,12 @@ use uuid::Uuid;
 use super::{errors::ConsoleError, extractors::User};
 use crate::{
     AppState,
-    crypto::{self, KEY_SIZE},
-    db::{self, DbApiKey, DbConsole, DbUpdateApiKey, DbUpdateConsole, RowsAffected},
+    db::{
+        self, DbApiKey, DbChallengeCustomization, DbConsole, DbUpdateApiKey,
+        DbUpdateChallengeCustomization, DbUpdateConsole, RowsAffected,
+    },
+    encodings::{Base64, KEY_SIZE, Standard, UrlSafe},
+    serde::nested_option,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -47,7 +51,15 @@ pub async fn create_console(
     User { user_id }: User,
     Json(request): Json<CreateConsoleRequest>,
 ) -> Result<Json<ConsoleResponse>, ConsoleError> {
-    let id = db::insert_console(&state.pool, &request.label, &user_id).await?;
+    let mut txn = state
+        .pool
+        .begin()
+        .await
+        .context("db could not begin transaction")?;
+    let id = db::insert_console(&mut txn, &request.label, &user_id).await?;
+    txn.commit()
+        .await
+        .context("db could not commit transaction")?;
     Ok(Json(ConsoleResponse { id, label: Some(request.label) }))
 }
 
@@ -86,8 +98,8 @@ pub async fn delete_console(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiKeyResponse {
-    pub site_key: String,
-    pub secret: String,
+    pub site_key: Base64<UrlSafe>,
+    pub secret: Base64,
     pub label: Option<String>,
 }
 
@@ -112,9 +124,9 @@ pub async fn gen_api_key(
     Path(console_id): Path<Uuid>,
 ) -> Result<Json<ApiKeyResponse>, ConsoleError> {
     let (site_key, secret) = loop {
-        let site_key = crypto::gen_base64_url_safe_key::<KEY_SIZE>();
-        let enc_key = crypto::gen_base64_key::<KEY_SIZE>();
-        let secret = crypto::gen_base64_key::<KEY_SIZE>();
+        let site_key = Base64::<UrlSafe>::random::<KEY_SIZE>();
+        let enc_key = Base64::<Standard>::random::<KEY_SIZE>();
+        let secret = Base64::<Standard>::random::<KEY_SIZE>();
 
         match db::insert_api_key(&state.pool, &site_key, &console_id, &enc_key, &secret)
             .await
@@ -174,6 +186,92 @@ pub async fn revoke_api_key(
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct ChallengePreferences {
+    pub width: u16,
+    pub height: u16,
+    pub small_width: u16,
+    pub small_height: u16,
+    pub logo_url: Option<String>,
+}
+
+impl Default for ChallengePreferences {
+    fn default() -> Self {
+        Self {
+            width: 360,
+            height: 500,
+            small_width: 360,
+            small_height: 500,
+            logo_url: None,
+        }
+    }
+}
+
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
+pub async fn get_challenge_preferences(
+    State(state): State<Arc<AppState>>,
+    Path(console_id): Path<Uuid>,
+) -> Result<Json<ChallengePreferences>, ConsoleError> {
+    let challenge_preferences = db::fetch_challenge_customization(&state.pool, &console_id)
+        .await?
+        .map(Into::into)
+        .unwrap_or_default();
+    Ok(Json(challenge_preferences))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateChallengePreferences {
+    #[serde(default)]
+    pub width: Option<u16>,
+    #[serde(default)]
+    pub height: Option<u16>,
+    #[serde(default)]
+    pub small_width: Option<u16>,
+    #[serde(default)]
+    pub small_height: Option<u16>,
+    #[serde(default, deserialize_with = "nested_option::deserialize")]
+    pub logo_url: Option<Option<String>>,
+}
+
+fn validate_update_dimension(
+    input_name: &str,
+    value: Option<u16>,
+) -> Result<Option<i16>, ConsoleError> {
+    value
+        .map(TryInto::try_into)
+        .transpose()
+        .map_err(move |_| ConsoleError::InvalidInput {
+            what: format!("{input_name} out of range [1:32,767]"),
+        })
+}
+
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
+pub async fn update_challenge_preferences(
+    State(state): State<Arc<AppState>>,
+    Path(console_id): Path<Uuid>,
+    Json(update): Json<UpdateChallengePreferences>,
+) -> Result<(), ConsoleError> {
+    let res = db::update_challenge_customization(
+        &state.pool,
+        &console_id,
+        &DbUpdateChallengeCustomization {
+            width: validate_update_dimension("width", update.width)?,
+            height: validate_update_dimension("height", update.height)?,
+            small_width: validate_update_dimension("small_width", update.small_width)?,
+            small_height: validate_update_dimension("small_height", update.small_height)?,
+            logo_url: update.logo_url.as_ref().map(|l| l.as_deref()),
+        },
+    )
+    .await?;
+
+    match res {
+        RowsAffected(0) => Err(ConsoleError::NotFound {
+            what: format!("challenge preferences for console with id {console_id}"),
+        }),
+        RowsAffected(_) => Ok(()),
+    }
+}
+
 impl From<DbConsole> for ConsoleResponse {
     fn from(c: DbConsole) -> Self {
         ConsoleResponse { id: c.id, label: c.label }
@@ -183,5 +281,17 @@ impl From<DbConsole> for ConsoleResponse {
 impl From<DbApiKey> for ApiKeyResponse {
     fn from(k: DbApiKey) -> Self {
         ApiKeyResponse { site_key: k.site_key, secret: k.secret, label: k.label }
+    }
+}
+
+impl From<DbChallengeCustomization> for ChallengePreferences {
+    fn from(c: DbChallengeCustomization) -> Self {
+        ChallengePreferences {
+            height: c.height as u16,
+            width: c.width as u16,
+            small_width: c.small_width as u16,
+            small_height: c.small_height as u16,
+            logo_url: c.logo_url,
+        }
     }
 }

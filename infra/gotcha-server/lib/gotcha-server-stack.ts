@@ -3,6 +3,8 @@ import * as apigateway from "aws-cdk-lib/aws-apigatewayv2";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import { Stage, StageProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
@@ -88,8 +90,31 @@ class GotchaServerStack extends cdk.Stack {
 
     logGroup.grantWrite(new iam.ServicePrincipal("apigateway.amazonaws.com"));
 
+    // S3 bucket for static files
+    const staticFilesBucket = new s3.Bucket(this, "StaticFilesBucket", {
+      bucketName: `gotcha-public-${stageName}`,
+      publicReadAccess: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    // Deploy static files to S3 (assuming dist folder exists in project root)
+    new s3deploy.BucketDeployment(this, "DeployStaticFiles", {
+      sources: [s3deploy.Source.asset("../../dist")],
+      destinationBucket: staticFilesBucket,
+    });
+
     new cdk.CfnOutput(this, "ApiUrl", {
       value: `https://${api.ref}.execute-api.${this.region}.amazonaws.com/`,
+    });
+
+    new cdk.CfnOutput(this, "StaticFilesUrl", {
+      value: `https://${staticFilesBucket.bucketName}.s3.${this.region}.amazonaws.com/`,
+    });
+
+    new cdk.CfnOutput(this, "S3BucketName", {
+      value: staticFilesBucket.bucketName,
     });
   }
 }

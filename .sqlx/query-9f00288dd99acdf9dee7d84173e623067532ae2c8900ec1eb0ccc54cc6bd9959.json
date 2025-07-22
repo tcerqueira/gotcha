@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into challenge (url, default_width, default_height, default_logo_url) values ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int2",
+        "Int2",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9f00288dd99acdf9dee7d84173e623067532ae2c8900ec1eb0ccc54cc6bd9959"
+}

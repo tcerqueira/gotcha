@@ -1,3 +1,4 @@
+use base64::DecodeError;
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
 
@@ -19,8 +20,8 @@ pub enum ConstraintKind {
     ForeignKey,
     #[error("Unique key")]
     UniqueKey,
-    #[error("Positive width and height")]
-    DimensionsPositive,
+    #[error("Value range")]
+    ValueRange,
 }
 
 impl From<sqlx::Error> for Error {
@@ -38,20 +39,19 @@ impl From<sqlx::Error> for Error {
                     ref err if err.constraint().is_some_and(|c| c.ends_with("_unique")) => {
                         Self::Constraint { source: pg_err, kind: ConstraintKind::UniqueKey }
                     }
-                    ref err
-                        if err
-                            .constraint()
-                            .is_some_and(|c| c == "width_positive" || c == "height_positive") =>
-                    {
-                        Self::Constraint {
-                            source: pg_err,
-                            kind: ConstraintKind::DimensionsPositive,
-                        }
+                    ref err if err.constraint().is_some_and(|c| c.ends_with("_range")) => {
+                        Self::Constraint { source: pg_err, kind: ConstraintKind::ValueRange }
                     }
                     _ => Self::Other(sqlx::Error::from(*pg_err)),
                 }
             }
             e => Self::Other(e),
         }
+    }
+}
+
+impl From<DecodeError> for Error {
+    fn from(value: DecodeError) -> Self {
+        Self::Other(sqlx::Error::Decode(Box::new(value)))
     }
 }

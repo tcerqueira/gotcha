@@ -1,17 +1,18 @@
+import { Interaction, SearchParams } from "@gotcha-widget/lib";
+import { createMediaQuery } from "@solid-primitives/media";
 import {
   createEffect,
-  createMemo,
   createResource,
   createSignal,
   Match,
-  Show,
   Switch,
 } from "solid-js";
-import { Challenge } from "./types";
-import Modal from "./modal";
-import { Interaction, SearchParams } from "@gotcha-widget/lib";
 import { defaultRenderParams } from "../grecaptcha";
+import CloseSvg from "./icons/close";
+import RefreshSvg from "./icons/refresh";
 import Logo from "./logo";
+import Modal from "./modal";
+import { Challenge } from "./types";
 
 type ChallengeFrameProps = {
   open: boolean;
@@ -33,6 +34,8 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
     props.params.k,
     fetchChallenge,
   );
+
+  const isSmallWindow = createMediaQuery("(max-width: 767px)");
 
   const handleMessage = async (event: MessageEvent) => {
     const challenge = challengeRes();
@@ -82,13 +85,17 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
 
   return (
     <Modal open={props.open} onClose={onClose}>
-      <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 shadow-lg">
-        <div class="text-gray-700 dark:text-gray-50 text-xl text-center mb-4">
+      <div class="bg-gray-50 dark:bg-gray-700 border-2 border-gray-400 dark:border-gray-600 rounded-lg p-5">
+        <h1 class="text-gray-700 dark:text-gray-50 text-xl text-center mb-4">
           Solve the challenge
-        </div>
+        </h1>
 
         <div
-          class={`w-[${challengeRes.latest?.width ?? 304}px] h-[${challengeRes.latest?.height ?? 68}px]`}
+          style={{
+            "--challenge-width": `${(isSmallWindow() ? challengeRes.latest?.smallWidth : challengeRes.latest?.width) ?? 360}px`,
+            "--challenge-height": `${(isSmallWindow() ? challengeRes.latest?.smallHeight : challengeRes.latest?.height) ?? 500}px`,
+          }}
+          class="mx-auto w-[80vw] h-[80vh] max-w-[var(--challenge-width)] max-h-[var(--challenge-height)]"
         >
           <Switch>
             <Match when={challengeRes.loading}>Loading...</Match>
@@ -96,9 +103,8 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
             <Match when={challengeRes()}>
               <iframe
                 ref={setIframeRef}
-                src={buildChallengeUrl(challengeRes()!.url, props.params)}
-                width={challengeRes()!.width}
-                height={challengeRes()!.height}
+                src={buildChallengeUrl(challengeRes()!, props.params)}
+                class="w-full h-full"
                 sandbox="allow-forms allow-scripts allow-same-origin"
               />
             </Match>
@@ -112,9 +118,7 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
               class="text-gray-400 hover:text-purple-700 dark:hover:text-purple-400"
               onClick={onClose}
             >
-              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-              </svg>
+              <CloseSvg />
             </button>
             <button
               type="button"
@@ -124,9 +128,7 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
                 props.onReroll?.();
               }}
             >
-              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
-              </svg>
+              <RefreshSvg />
             </button>
           </div>
           <div class="w-1/4">
@@ -138,12 +140,26 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
   );
 }
 
-async function fetchChallenge(): Promise<Challenge> {
-  const origin = new URL(import.meta.url).origin;
-  const url = new URL(`${origin}/api/challenge`);
+async function fetchChallenge(siteKey: string): Promise<Challenge | null> {
+  try {
+    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
+    const url = new URL(`${origin}/api/challenge?site_key=${siteKey}`);
 
-  const response = await fetch(url);
-  return (await response.json()) as Challenge;
+    const response = await fetch(url);
+    const challenge_res = await response.json();
+
+    return {
+      url: challenge_res.url,
+      width: challenge_res.width,
+      height: challenge_res.height,
+      smallWidth: challenge_res.small_width,
+      smallHeight: challenge_res.small_height,
+      logoUrl: challenge_res.logo_url,
+    };
+  } catch (e) {
+    console.error("failed to fetch", e);
+    return null;
+  }
 }
 
 type ChallengeResponse = {
@@ -151,13 +167,13 @@ type ChallengeResponse = {
 };
 
 async function processChallenge(
-  site_key: string,
+  siteKey: string,
   success: boolean,
   challengeUrl: string,
   interactions: Interaction[],
 ): Promise<string | null> {
   try {
-    const origin = new URL(import.meta.url).origin;
+    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
     const url = new URL(`${origin}/api/challenge/process`);
     const response = await fetch(url, {
       method: "POST",
@@ -166,7 +182,7 @@ async function processChallenge(
       },
       body: JSON.stringify({
         success,
-        site_key,
+        site_key: siteKey,
         hostname: window.location.hostname,
         challenge: challengeUrl,
         interactions,
@@ -180,18 +196,23 @@ async function processChallenge(
 
     return token;
   } catch (e) {
+    console.error("failed to fetch", e);
     return null;
   }
 }
 
-function buildChallengeUrl(baseUrl: string, params: SearchParams): string {
-  const url = new URL(baseUrl);
+function buildChallengeUrl(challenge: Challenge, params: SearchParams): string {
+  const url = new URL(challenge.url);
   url.searchParams.append("k", params.k);
   url.searchParams.append("hl", params.hl ?? navigator.language);
   url.searchParams.append("theme", params.theme ?? defaultRenderParams.theme!);
   url.searchParams.append("size", params.size ?? defaultRenderParams.size!);
   url.searchParams.append("badge", params.badge ?? defaultRenderParams.badge!);
+  // TODO: window.location.origin makes no sense
   url.searchParams.append("sv", params.sv ?? window.location.origin);
+  if (challenge.logoUrl) {
+    url.searchParams.append("logoUrl", challenge.logoUrl);
+  }
 
   return url.toString();
 }

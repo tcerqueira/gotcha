@@ -8,8 +8,8 @@ use uuid::Uuid;
 
 use crate::{
     HTTP_CLIENT, app, configuration,
-    crypto::{self, KEY_SIZE},
     db::{self, DbChallenge},
+    encodings::{Base64, KEY_SIZE, Standard, UrlSafe},
     get_configuration,
 };
 
@@ -105,7 +105,7 @@ impl TestContext {
         .expect("expected a console to be created on setup")
     }
 
-    pub async fn db_api_site_key(&self) -> String {
+    pub async fn db_api_site_key(&self) -> Base64<UrlSafe> {
         db::fetch_api_keys(&self.inner.pool, &self.db_console().await)
             .await
             .unwrap()
@@ -113,7 +113,7 @@ impl TestContext {
             .site_key
     }
 
-    pub async fn db_api_secret(&self) -> String {
+    pub async fn db_api_secret(&self) -> Base64 {
         db::fetch_api_keys(&self.inner.pool, &self.db_console().await)
             .await
             .unwrap()
@@ -121,7 +121,7 @@ impl TestContext {
             .secret
     }
 
-    pub async fn db_enconding_key(&self) -> String {
+    pub async fn db_enconding_key(&self) -> Base64 {
         db::fetch_api_key_by_site_key(&self.inner.pool, &self.db_api_site_key().await)
             .await
             .unwrap()
@@ -138,17 +138,17 @@ async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> db::Result<()> {
     let mut txn = pool.begin().await?;
 
     let console_id = db::insert_console(
-        &mut *txn,
+        &mut txn,
         &format!("{DEMO_CONSOLE_LABEL_PREFIX}-{test_id}"),
         DEMO_USER,
     )
     .await?;
     db::insert_api_key(
         &mut *txn,
-        &crypto::gen_base64_url_safe_key::<KEY_SIZE>(),
+        &Base64::<UrlSafe>::random::<KEY_SIZE>(),
         &console_id,
-        &crypto::gen_base64_key::<KEY_SIZE>(),
-        &crypto::gen_base64_key::<KEY_SIZE>(),
+        &Base64::<Standard>::random::<KEY_SIZE>(),
+        &Base64::<Standard>::random::<KEY_SIZE>(),
     )
     .await?;
 

@@ -27,7 +27,7 @@ mod verify_site {
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", &secret), ("response", &token)])
+            .form(&[("secret", secret.as_str()), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -54,7 +54,7 @@ mod verify_site {
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
             .form(&[
-                ("secret", &secret),
+                ("secret", secret.as_str()),
                 ("response", &token),
                 ("remoteip", &addr.to_string()),
             ])
@@ -88,7 +88,7 @@ mod verify_site {
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
             .form(&[
-                ("secret", &secret),
+                ("secret", secret.as_str()),
                 ("response", &token),
                 ("remoteip", &other_addr.to_string()),
             ])
@@ -120,7 +120,7 @@ mod verify_site {
 
         let response = HTTP_CLIENT
             .post(format!("http://localhost:{port}/api/siteverify"))
-            .form(&[("secret", &secret), ("response", &token)])
+            .form(&[("secret", secret.as_str()), ("response", &token)])
             .send()
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
@@ -358,7 +358,7 @@ mod verify_site {
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", secret), ("response", token)])
+                .form(&[("secret", secret.as_str()), ("response", &token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -426,7 +426,7 @@ mod verify_site {
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", secret), ("response", token)])
+                .form(&[("secret", secret.as_str()), ("response", &token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);
@@ -456,12 +456,12 @@ mod verify_site {
                     addr: [127, 0, 0, 1].into(),
                     host: Host::parse("gotcha-integration.test.com")?,
                 }),
-                &EncodingKey::from_base64_secret(&enc_key)?,
+                &EncodingKey::from_base64_secret(enc_key.as_str())?,
             )?;
 
             let response = HTTP_CLIENT
                 .post(format!("http://localhost:{port}/api/siteverify"))
-                .form(&[("secret", secret), ("response", token)])
+                .form(&[("secret", secret.as_str()), ("response", &token)])
                 .send()
                 .await?;
             assert_eq!(response.status(), StatusCode::OK);

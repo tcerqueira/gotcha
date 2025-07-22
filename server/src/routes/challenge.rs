@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{Level, Span, instrument};
 use url::{Host, Url};
 
-use super::{errors::ChallengeError, extractors::ThisOrigin};
+use super::errors::ChallengeError;
 use crate::{
     AppState,
     analysis::{
@@ -19,6 +19,7 @@ use crate::{
         proof_of_work::PowChallenge,
     },
     db::{self, DbChallenge},
+    encodings::{Base64, UrlSafe},
     tokens::{
         self, pow_challenge,
         response::{self, ResponseClaims},
@@ -26,32 +27,38 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ChallengeParams {
+    pub site_key: Option<Base64<UrlSafe>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GetChallenge {
     pub url: Url,
     pub width: u16,
     pub height: u16,
+    pub small_width: u16,
+    pub small_height: u16,
+    pub logo_url: Option<String>,
 }
 
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn get_challenge(
+    Query(query): Query<ChallengeParams>,
     State(state): State<Arc<AppState>>,
-    ThisOrigin(origin): ThisOrigin,
 ) -> Result<Json<GetChallenge>, ChallengeError> {
-    let challenges = db::fetch_challenges(&state.pool)
-        .await
-        .context("failed to fetch challenges")?;
-    let challenge = choose_challenge(challenges).unwrap_or_else(|| DbChallenge {
-        url: format!("{origin}/im-not-a-robot/index.html"),
-        width: 304,
-        height: 78,
-    });
+    let challenges = match query.site_key {
+        Some(site_key) => db::fetch_challenges_with_customization(&state.pool, &site_key).await,
+        None => db::fetch_challenges(&state.pool).await,
+    }
+    .context("failed to fetch challenges")?;
+    let challenge = choose_challenge(challenges).ok_or(ChallengeError::NoMatchingChallenge)?;
 
     Ok(Json(challenge.try_into()?))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PowSiteKey {
-    pub site_key: String,
+pub struct PowParams {
+    pub site_key: Base64<UrlSafe>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -61,17 +68,17 @@ pub struct PowResponse {
 
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn get_proof_of_work_challenge(
-    Query(query): Query<PowSiteKey>,
+    Query(query): Query<PowParams>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<PowResponse>, ChallengeError> {
     let enc_key = db::fetch_api_key_by_site_key(&state.pool, &query.site_key)
         .await
-        .context("failed to fetch encoding key by api secret while processing challenge")?
+        .context("failed to fetch api key by site key while getting proof of work")?
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
     Ok(Json(PowResponse {
-        token: pow_challenge::encode(PowChallenge::random(4), &enc_key)
+        token: pow_challenge::encode(PowChallenge::random(3), &enc_key)
             .context("failed encoding jwt response")?,
     }))
 }
@@ -79,7 +86,7 @@ pub async fn get_proof_of_work_challenge(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeResults {
     pub success: bool,
-    pub site_key: String,
+    pub site_key: Base64<UrlSafe>,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub challenge: Url,
@@ -96,7 +103,7 @@ pub struct ChallengeResponse {
     fields(
         ?addr,
         success = results.success,
-        site_key = results.site_key,
+        %site_key = results.site_key,
         ?hostname = results.hostname,
         %challenge = results.challenge,
         interaction_score,
@@ -123,7 +130,7 @@ pub async fn process_challenge(
             ResponseClaims { score, addr: addr.ip(), host: results.hostname },
             &db::fetch_api_key_by_site_key(&state.pool, &results.site_key)
                 .await
-                .context("failed to fetch encoding key by api secret while processing challenge")?
+                .context("failed to fetch api key by site key while processing challenge")?
                 .ok_or(ChallengeError::InvalidKey)?
                 .encoding_key,
         )
@@ -133,7 +140,7 @@ pub async fn process_challenge(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PreAnalysisRequest {
-    pub site_key: String,
+    pub site_key: Base64<UrlSafe>,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub interactions: Vec<Interaction>,
@@ -147,9 +154,9 @@ pub struct ProofOfWork {
 }
 
 impl ProofOfWork {
-    pub fn verify(&self, dec_key: &str) -> Result<bool, jsonwebtoken::errors::Error> {
-        let pow_challenge =
-            tokens::pow_challenge::decode(&self.challenge, dec_key).inspect_err(|_| {
+    pub fn verify(&self, dec_key: &Base64) -> Result<bool, jsonwebtoken::errors::Error> {
+        let pow_challenge = tokens::pow_challenge::decode(&self.challenge, dec_key.as_str())
+            .inspect_err(|_| {
                 Span::current().record("pow_jwt", &self.challenge);
             })?;
         Span::current().record("pow_decoded", tracing::field::debug(&pow_challenge));
@@ -168,7 +175,7 @@ pub enum PreAnalysisResponse {
 
 #[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
-        site_key = request.site_key,
+        %site_key = request.site_key,
         ?hostname = request.hostname,
         pow_jwt,
         pow_decoded,
@@ -184,7 +191,7 @@ pub async fn process_pre_analysis(
     // TODO: look at cookies and other fingerprints
     let crypt_key = db::fetch_api_key_by_site_key(&state.pool, &request.site_key)
         .await
-        .context("failed to fetch encoding key by api secret while processing challenge")?
+        .context("failed to fetch api key by api secret while processing pre analysis")?
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
@@ -225,7 +232,7 @@ pub async fn process_pre_analysis(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccessibilityRequest {
-    pub site_key: String,
+    pub site_key: Base64<UrlSafe>,
     #[serde(with = "crate::serde::host_as_str")]
     pub hostname: Host,
     pub proof_of_work: ProofOfWork,
@@ -234,7 +241,7 @@ pub struct AccessibilityRequest {
 #[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
     fields(
         ?addr,
-        site_key = request.site_key,
+        ?site_key = request.site_key,
         ?hostname = request.hostname,
         pow_jwt,
         pow_decoded,
@@ -249,7 +256,7 @@ pub async fn process_accessibility_challenge(
     // TODO: look at cookies and other fingerprints
     let crypt_key = db::fetch_api_key_by_site_key(&state.pool, &request.site_key)
         .await
-        .context("failed to fetch encoding key by api secret while processing challenge")?
+        .context("failed to fetch api key by api secret while processing accessility challenge")?
         .ok_or(ChallengeError::InvalidKey)?
         .encoding_key;
 
@@ -287,6 +294,9 @@ impl TryFrom<DbChallenge> for GetChallenge {
             url,
             width: db_challenge.width as u16,
             height: db_challenge.height as u16,
+            small_width: db_challenge.small_width as u16,
+            small_height: db_challenge.small_height as u16,
+            logo_url: db_challenge.logo_url,
         })
     }
 }

@@ -20,6 +20,7 @@ dependencies = ["server-build", "widget-api-build", "bundle-widgets"]
 description = "Build server and widgets"
 run_task = { name = [
     "watch-server",
+    "watch-client",
     "watch-widget_api",
     "bundle-widgets",
 ], fork = true, parallel = true }
@@ -45,13 +46,13 @@ args = ["build", "${@}"]
 description = "Watch and run the server"
 command = "cargo"
 args = ["run", "-q", "-p", "gotcha-server"]
-watch = { ignore_pattern = "server/examples/*", watch = ["./server"] }
+watch = { watch = ["./server"], ignore_pattern = "server/examples/*" }
 
 [tasks.watch-client]
 description = "Watch and run the client"
 command = "cargo"
 args = ["run", "-q", "--example", "client"]
-watch = { watch = ["./server/examples"] }
+watch = { watch = ["./server/examples/client/"], ignore_pattern = "assets/*" }
 
 [tasks.server-bundle]
 description = "Bundle server for aws lambda"
@@ -80,22 +81,13 @@ description = "Bundle cup-stack to /dist"
 cwd = "./widgets"
 script = [
     "bevy build --yes --bin=cup-stack --profile=wasm-release web --bundle",
-    "cp -R target/bevy_web/wasm-release/cup-stack ../dist",
+    "mkdir -p ../dist/cup-stack",
+    "cp -r target/bevy_web/wasm-release/cup-stack/* ../dist/cup-stack",
 ]
 
 [tasks.bundle-widgets]
 description = "Bundle npm-based widgets"
-dependencies = [
-    "bundle-cup_stack",
-    "bundle-im_not_a_robot",
-    "bundle-constellation",
-]
-
-[tasks.bundle-im_not_a_robot]
-description = "Bundle im-not-a-robot widget"
-cwd = "./widgets/im-not-a-robot"
-script_runner = "@shell"
-script = ["npm install --prefer-offline", "npm run build"]
+dependencies = ["bundle-cup_stack", "bundle-constellation"]
 
 [tasks.bundle-constellation]
 description = "Bundle constellation widget"

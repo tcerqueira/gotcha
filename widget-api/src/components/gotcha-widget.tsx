@@ -1,7 +1,7 @@
-import { createSignal, Show, createEffect } from "solid-js";
-import { ChallengeState, GotchaWidgetProps } from "./types";
-import ImNotRobot, { PreAnalysisResponse } from "./im-not-a-robot";
+import { createEffect, createSignal, Show } from "solid-js";
 import ChallengeFrame from "./challenge-frame";
+import ImNotRobot, { PreAnalysisResponse } from "./im-not-a-robot";
+import { ChallengeState, GotchaWidgetProps } from "./types";
 
 export function GotchaWidget(props: GotchaWidgetProps) {
   const [state, setState] = createSignal<ChallengeState>("blank");
@@ -48,27 +48,32 @@ export function GotchaWidget(props: GotchaWidgetProps) {
             onVerificationComplete={handlePreVerificationComplete}
             onError={handleError}
           />
-
-          {/* <Show when={state() === "challenging"}> */}
-          <ChallengeFrame
-            open={state() === "challenging"}
-            params={{
-              k: props.sitekey,
-              theme: props.theme,
-              size: props.size,
-              badge: props.badge,
-              sv: window.location.origin,
-            }}
-            onComplete={handleChallengeComplete}
-            onFail={handleFail}
-            onError={handleError}
-            onClose={() => {
-              if (state() != "verified" && state() != "error") {
-                setState("failed");
-              }
-            }}
-          />
-          {/* </Show> */}
+          {/* dont run the challenge frame unless we are solving or doing proof of work.
+            this way we control prefetching */}
+          <Show when={state() === "challenging" || state() === "verifying"}>
+            <ChallengeFrame
+              open={state() === "challenging"}
+              params={{
+                k: props.sitekey,
+                // TODO: add language support
+                hl: null,
+                theme: props.theme ?? null,
+                size: props.size ?? null,
+                badge: props.badge ?? null,
+                sv: window.location.origin,
+                // TODO: add branding support
+                logoUrl: null,
+              }}
+              onComplete={handleChallengeComplete}
+              onFail={handleFail}
+              onError={handleError}
+              onClose={() => {
+                if (state() != "verified" && state() != "error") {
+                  setState("failed");
+                }
+              }}
+            />
+          </Show>
         </div>
       </div>
     </div>

@@ -29,7 +29,15 @@ pub async fn add_challenge(
 
     db::insert_challenge(
         &state.pool,
-        &db::DbChallenge { url, width: width as i16, height: height as i16 },
+        &db::DbChallenge {
+            url,
+            width: width as i16,
+            height: height as i16,
+            small_width: width as i16,
+            small_height: height as i16,
+            logo_url: None,
+            label: None,
+        },
     )
     .await?;
 

@@ -1,13 +1,12 @@
 use std::sync::{Arc, LazyLock};
 
-use axum::{Extension, Router};
-use configuration::{ApplicationConfig, server_dir};
+use axum::Router;
+use configuration::ApplicationConfig;
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use routes::extractors::ThisOrigin;
 use sqlx::PgPool;
-use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[cfg(feature = "aws-lambda")]
@@ -20,8 +19,8 @@ use aws_lambda::*;
 
 pub mod analysis;
 pub mod configuration;
-pub mod crypto;
 pub mod db;
+pub mod encodings;
 pub mod routes;
 mod serde;
 pub mod test_helpers;
@@ -56,23 +55,27 @@ pub struct AppState {
 }
 
 pub fn app(config: ApplicationConfig, pool: PgPool) -> Router {
-    let serve_dir = server_dir().join(config.serve_dir).canonicalize().unwrap();
-    tracing::info!("Serving files from: {:?}", serve_dir);
-
     let state = AppState { pool, auth_origin: config.auth_origin };
-    let origin = format!("http://localhost:{}", config.port);
 
-    let router = Router::new()
-        .nest("/api", api(state))
-        .fallback_service(ServeDir::new(serve_dir))
-        .layer(TraceLayer::new_for_http());
+    let router = Router::new().nest("/api", api(state));
+    #[cfg(not(feature = "aws-lambda"))]
+    let router = {
+        use configuration::server_dir;
+        use tower_http::services::ServeDir;
 
+        let serve_dir = server_dir()
+            .join(config.serve_dir)
+            .canonicalize()
+            .expect("serve dir not found");
+        tracing::info!("Serving files from: {:?}", serve_dir);
+
+        router.fallback_service(ServeDir::new(serve_dir))
+    };
+    let router = router.layer(TraceLayer::new_for_http());
     #[cfg(feature = "aws-lambda")]
-    let router = router
-        .layer(MapRequestLayer::new(extractors::extract_lambda_source_ip))
-        .layer(MapRequestLayer::new(extractors::extract_lambda_origin));
+    let router = router.layer(MapRequestLayer::new(extractors::extract_lambda_source_ip));
 
-    router.layer(Extension(ThisOrigin(origin)))
+    router
 }
 
 fn api(state: AppState) -> Router {
@@ -96,31 +99,38 @@ pub fn init_tracing() {
 }
 
 pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
-    let _ = db::with_console_insert_api_key(
+    let _console_id = db::with_console_insert_api_key(
         pool,
         "demo",
         "demo|user",
-        "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
-        "dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m",
+        &String::from("4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q")
+            .try_into()
+            .expect("invalid Base64UrlSafe"),
+        &String::from("dHsFxb7mDHNv+cuI1L9GDW8AhXdWzuq/pwKWceDGq1SG4y2WD7zBwtiY2LHWNg3m")
+            .try_into()
+            .expect("invalid Base64"),
+        &String::from("cutadiY3N7fhf+JsB/cx4V8G4/eb9kJ0smVyNdjp5yKrpWUWV0ff5GzioM3y6p9Y")
+            .try_into()
+            .expect("invalid Base64"),
     )
     .await
     .inspect_err(|e| {
         tracing::debug!(
-            err = tracing::field::debug(e),
+            err = ?e,
             "could not populate demo console and api_key"
         )
-    });
+    })?;
 
-    // let _ = db::insert_challenge(
-    //     pool,
-    //     &db::DbChallenge { url: "http://127.0.0.1:1334/".into(), width: 308, height: 308 },
-    // )
-    // .await
-    // .inspect_err(|e| {
-    //     tracing::debug!(
-    //         err = tracing::field::debug(e),
-    //         "could not populate challenge"
-    //     )
-    // });
+    let _ = db::insert_challenge(
+        pool,
+        &db::DbChallenge::new("http://127.0.0.1:8080/constellation".into()),
+    )
+    .await
+    .inspect_err(|e| {
+        tracing::debug!(
+            err = ?e,
+            "could not populate challenge"
+        )
+    });
     Ok(())
 }

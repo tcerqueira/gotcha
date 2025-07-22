@@ -45,7 +45,7 @@ pub async fn require_auth(
         token,
         &DecodingKey::from_jwk(
             jwks.find(&kid)
-                .with_context(|| format!("kid {} not found in jwks", kid))?,
+                .with_context(|| format!("kid {kid} not found in jwks"))?,
         )
         .context("could not create decoding key from JWK")?,
     )
