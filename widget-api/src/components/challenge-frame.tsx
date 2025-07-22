@@ -92,14 +92,10 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
 
         <div
           style={{
-            "--challenge-width": `${challengeRes.latest?.width ?? 360}px`,
-            "--challenge-small-width": `${challengeRes.latest?.smallWidth ?? 360}px`,
-            "--challenge-height": `${challengeRes.latest?.height ?? 500}px`,
-            "--challenge-small-height": `${challengeRes.latest?.smallHeight ?? 500}px`,
+            "--challenge-width": `${(isSmallWindow() ? challengeRes.latest?.smallWidth : challengeRes.latest?.width) ?? 360}px`,
+            "--challenge-height": `${(isSmallWindow() ? challengeRes.latest?.smallHeight : challengeRes.latest?.height) ?? 500}px`,
           }}
-          class="mx-auto w-[80vw] h-[80vh]
-          md:max-w-[var(--challenge-width)] md:max-h-[var(--challenge-height)]
-          max-w-[var(--challenge-small-width)] max-h-[var(--challenge-small-height)]"
+          class="mx-auto w-[80vw] h-[80vh] max-w-[var(--challenge-width)] max-h-[var(--challenge-height)]"
         >
           <Switch>
             <Match when={challengeRes.loading}>Loading...</Match>
