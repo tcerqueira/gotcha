@@ -1,4 +1,4 @@
-import { GreCaptcha } from "./grecaptcha";
+import { GotchaCaptcha } from "./gotcha-captcha";
 import { getJsParams } from "./js-params";
 import { loadCss } from "./load-css";
 import "./styles.css";
@@ -6,7 +6,7 @@ import "./styles.css";
 loadCss()
   .then(() => {
     // Expose the API globally
-    (window as any).grecaptcha = new GreCaptcha();
+    (window as any).gotcha = new GotchaCaptcha();
     const { onload } = getJsParams();
     onload?.();
   })

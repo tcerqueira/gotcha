@@ -2,7 +2,7 @@ import { render } from "solid-js/web";
 import { getJsParams } from "./js-params";
 import { createWidget, Widget } from "./widget";
 
-export class GreCaptcha {
+export class GotchaCaptcha {
   widgets: Widget[] = [];
 
   constructor() {
@@ -10,10 +10,10 @@ export class GreCaptcha {
     if (render === "explicit") return;
 
     // the first we find
-    let captchaElem = document.getElementsByClassName("g-recaptcha")[0];
+    let captchaElem = document.getElementsByClassName("gotcha")[0];
     if (captchaElem === undefined) {
       console.error(
-        "Could not find 'g-recaptcha' tag. Add 'g-recaptcha' to your class name list.",
+        "Could not find 'gotcha' tag. Add 'gotcha' to your class name list.",
       );
       return;
     }
@@ -34,19 +34,15 @@ export class GreCaptcha {
 
     const widgetId = this.widgets.length;
     const containerId =
-      widgetId === 0
-        ? "g-recaptcha-container"
-        : `g-recaptcha-container-${widgetId}`;
+      widgetId === 0 ? "gotcha-container" : `gotcha-container-${widgetId}`;
     const textareaId =
-      widgetId === 0
-        ? "g-recaptcha-response"
-        : `g-recaptcha-response-${widgetId}`;
+      widgetId === 0 ? "gotcha-response" : `gotcha-response-${widgetId}`;
 
     const innerContainer = (
       <div id={containerId}>
         <textarea
           id={textareaId}
-          name="g-recaptcha-response"
+          name="gotcha-response"
           style="display: none;"
         ></textarea>
       </div>
@@ -88,9 +84,7 @@ export class GreCaptcha {
 
   private getResponseElement(widgetId: number = 0): Element | null {
     return document.getElementById(
-      widgetId === 0
-        ? "g-recaptcha-response"
-        : `g-recaptcha-response-${widgetId}`,
+      widgetId === 0 ? "gotcha-response" : `gotcha-response-${widgetId}`,
     );
   }
 
@@ -107,14 +101,8 @@ export class GreCaptcha {
   private getParamsFromContainer(container: Element): RenderParams {
     return {
       sitekey: container.getAttribute("data-sitekey") ?? "",
-      theme: container.getAttribute("data-theme") as
-        | "dark"
-        | "light"
-        | undefined,
-      size: container.getAttribute("data-size") as
-        | "compact"
-        | "normal"
-        | undefined,
+      theme: container.getAttribute("data-theme") as RenderParams["theme"],
+      size: container.getAttribute("data-size") as RenderParams["size"],
       tabindex: parseInt(container.getAttribute("data-tabindex") || "0") || 0,
       callback:
         (window as any)[container.getAttribute("data-callback") ?? ""] ?? null,

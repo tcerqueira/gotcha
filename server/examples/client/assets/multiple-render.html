@@ -36,19 +36,16 @@
             var onloadCallback = function () {
                 // Renders the HTML element with id 'example1' as a reCAPTCHA widget.
                 // The id of the reCAPTCHA widget is assigned to 'widgetId1'.
-                widgetId1 = grecaptcha.render("example1", {
+                widgetId1 = gotcha.render("example1", {
                     sitekey:
                         "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
                     theme: "light",
                 });
-                widgetId2 = grecaptcha.render(
-                    document.getElementById("example2"),
-                    {
-                        sitekey:
-                            "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
-                    },
-                );
-                grecaptcha.render("example3", {
+                widgetId2 = gotcha.render(document.getElementById("example2"), {
+                    sitekey:
+                        "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
+                });
+                gotcha.render("example3", {
                     sitekey:
                         "4BdwFU84HLqceCQbE90-U5mw7f0erayega3nFOYvp1T5qXd8IqnTHJfsh675Vb2q",
                     callback: verifyCallback,
@@ -58,21 +55,21 @@
         </script>
     </head>
     <body>
-        <!-- The g-recaptcha-response string displays in an alert message upon submit. -->
-        <form action="javascript:alert(grecaptcha.getResponse(widgetId1));">
+        <!-- The gotcha-response string displays in an alert message upon submit. -->
+        <form action="javascript:alert(gotcha.getResponse(widgetId1));">
             <div id="example1"></div>
             <br />
             <input type="submit" value="getResponse" />
         </form>
         <br />
         <!-- Resets reCAPTCHA widgetId2 upon submit. -->
-        <form action="javascript:grecaptcha.reset(widgetId2);">
+        <form action="javascript:gotcha.reset(widgetId2);">
             <div id="example2"></div>
             <br />
             <input type="submit" value="reset" />
         </form>
         <br />
-        <!-- POSTs back to the page's URL upon submit with a g-recaptcha-response POST parameter. -->
+        <!-- POSTs back to the page's URL upon submit with a gotcha-response POST parameter. -->
         <form onsubmit="handleSubmit(event)">
             <div id="example3"></div>
             <br />

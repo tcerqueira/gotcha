@@ -77,7 +77,7 @@ async fn submit(
     Form(data): Form<HashMap<String, String>>,
 ) -> Result<(StatusCode, Json<VerificationResponse>), StatusCode> {
     let token = data
-        .get("g-recaptcha-response")
+        .get("gotcha-response")
         .ok_or(StatusCode::FORBIDDEN)?
         .as_str();
 

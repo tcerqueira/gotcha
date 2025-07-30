@@ -11,6 +11,8 @@ export default defineConfig({
       typescript: true,
     }),
     {
+      // unholy hack to deploy gotcha-widget-lib as a static lib.js
+      // proper fix is to build a deployment pipeline on the gotcha-widget-lib repo
       name: "copy-files",
       closeBundle() {
         fs.copyFileSync(

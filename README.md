@@ -26,8 +26,8 @@ Gotcha is a modular CAPTCHA system designed to be fully compatible with Google's
 │   Client Web    │    │  Gotcha Server  │    │   PostgreSQL    │
 │   Application   │◄──►│   (Rust/Axum)   │◄──►│    Database     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │           /           
-         ▼         /              
+         │           /
+         ▼         /
 ┌─────────────────┐    ┌─────────────────┐
 │   Widget API    │    │    Challenge    │
 │ (TypeScript/    │◄──►│     Widgets     │
@@ -94,7 +94,7 @@ The client website will be available at `http://localhost:8001`.
 
 2. **Add a widget container**
    ```html
-   <div class="g-recaptcha" data-sitekey="YOUR_SITE_KEY"></div>
+   <div class="gotcha" data-sitekey="YOUR_SITE_KEY"></div>
    ```
 
 3. **Handle the response**
