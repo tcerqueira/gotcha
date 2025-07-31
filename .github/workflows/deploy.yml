@@ -77,11 +77,6 @@ jobs:
           VITE_GOTCHA_SV_ORIGIN: ${{ vars.GOTCHA_SV_ORIGIN }}
         run: cargo make bundle
 
-      - name: Deploy /dist to Github Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: dist/
-
       - name: Run Migrations
         env:
           DATABASE_URL: postgresql://${{ secrets.SUPABASE_USER }}:${{ secrets.SUPABASE_PASSWORD }}@${{ secrets.SUPABASE_HOST }}:${{ secrets.SUPABASE_PORT }}/${{ secrets.SUPABASE_DB_NAME }}
