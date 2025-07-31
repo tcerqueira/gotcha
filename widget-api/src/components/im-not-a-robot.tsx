@@ -1,7 +1,7 @@
 import { Interaction } from "@gotcha-widget/lib";
 import * as jose from "jose";
 import { createEffect } from "solid-js";
-import { RenderParams } from "../grecaptcha";
+import { RenderParams } from "../gotcha-captcha";
 import { PowChallenge, ProofOfWork } from "../proof-of-work";
 import Checkbox, { CheckboxState } from "./checkbox";
 import Logo from "./logo";

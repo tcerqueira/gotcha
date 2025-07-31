@@ -1,5 +1,5 @@
 import { Accessor } from "solid-js";
-import { RenderParams } from "../grecaptcha";
+import { RenderParams } from "../gotcha-captcha";
 import { LiveState } from "../widget";
 
 export type ChallengeState =

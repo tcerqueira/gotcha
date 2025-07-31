@@ -7,7 +7,7 @@ import {
   Match,
   Switch,
 } from "solid-js";
-import { defaultRenderParams } from "../grecaptcha";
+import { defaultRenderParams } from "../gotcha-captcha";
 import CloseSvg from "./icons/close";
 import RefreshSvg from "./icons/refresh";
 import Logo from "./logo";

@@ -360,7 +360,7 @@
                 modal.style.display = "flex";
 
                 if (!captchaInitialized) {
-                    grecaptcha.render("captcha-container", {
+                    gotcha.render("captcha-container", {
                         sitekey: SITEKEY,
                         theme: "dark",
                         callback: onCaptchaResponse,
@@ -369,7 +369,7 @@
                     });
                     captchaInitialized = true;
                 } else {
-                    grecaptcha.reset();
+                    gotcha.reset();
                 }
             }
 

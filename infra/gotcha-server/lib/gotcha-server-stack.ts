@@ -1,5 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as apigateway from "aws-cdk-lib/aws-apigatewayv2";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -90,27 +92,47 @@ class GotchaServerStack extends cdk.Stack {
 
     logGroup.grantWrite(new iam.ServicePrincipal("apigateway.amazonaws.com"));
 
-    // S3 bucket for static files
+    // S3 bucket for widget files (private)
     const staticFilesBucket = new s3.Bucket(this, "StaticFilesBucket", {
-      bucketName: `gotcha-public-${stageName}`,
-      publicReadAccess: true,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
+      bucketName: `gotcha-widget-${stageName}`,
+      publicReadAccess: false,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
 
-    // Deploy static files to S3 (assuming dist folder exists in project root)
+    // Deploy widget files to S3
     new s3deploy.BucketDeployment(this, "DeployStaticFiles", {
       sources: [s3deploy.Source.asset("../../dist")],
       destinationBucket: staticFilesBucket,
     });
 
+    // CloudFront distribution for widget files
+    const distribution = new cloudfront.Distribution(
+      this,
+      "GocthaDistribution",
+      {
+        defaultBehavior: {
+          origin:
+            origins.S3BucketOrigin.withOriginAccessControl(staticFilesBucket),
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          responseHeadersPolicy:
+            cloudfront.ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS,
+        },
+        comment: `Gotcha Widget CDN - ${stageName}`,
+      },
+    );
+
     new cdk.CfnOutput(this, "ApiUrl", {
       value: `https://${api.ref}.execute-api.${this.region}.amazonaws.com/`,
     });
 
-    new cdk.CfnOutput(this, "StaticFilesUrl", {
-      value: `https://${staticFilesBucket.bucketName}.s3.${this.region}.amazonaws.com/`,
+    new cdk.CfnOutput(this, "WidgetUrl", {
+      value: `https://${distribution.distributionDomainName}`,
+      description: "CloudFront URL for widget files (api.js, lib.js, api.css)",
     });
 
     new cdk.CfnOutput(this, "S3BucketName", {

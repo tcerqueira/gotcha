@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { GotchaWidget } from "./components/gotcha-widget";
 import { GotchaWidgetProps } from "./components/types";
-import { RenderParams } from "./grecaptcha";
+import { RenderParams } from "./gotcha-captcha";
 
 export interface Widget {
   render: (container: Element, parameters: RenderParams) => void;
