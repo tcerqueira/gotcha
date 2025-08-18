@@ -5,6 +5,9 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+/// Stores an interaction event at a certain point in time.
+/// An interaction refers to actions of the user with the computer and currently it includes
+/// any mouse movement, mouse clicks, mouse enter and exit out of the target and key presses.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Interaction {
     #[serde(with = "time::serde::timestamp::milliseconds")]
@@ -12,6 +15,7 @@ pub struct Interaction {
     event: Event,
 }
 
+/// Describes the kind of event for the interaction.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind")]
 enum Event {
@@ -49,8 +53,10 @@ enum InOut {
     Out,
 }
 
+/// A score from 0f to 1f of how confident thinks a human interacted with the computer.
 pub struct Score(pub f32);
 
+/// Takes a group of ordered interactions and computes the score.
 pub fn interaction_analysis(interactions: &[Interaction]) -> Score {
     let mut actions: Vec<&[Interaction]> = vec![];
     let mut events_stacks = HashMap::<String, VecDeque<usize>>::new();
@@ -118,6 +124,7 @@ pub fn interaction_analysis(interactions: &[Interaction]) -> Score {
     })
 }
 
+// Two Gaussian curves for track pad and mouse click timings overlapped
 fn timing_score_for_click(ts1: i64, ts2: i64) -> f32 {
     match ts2 - ts1 {
         2..15 => 1.,

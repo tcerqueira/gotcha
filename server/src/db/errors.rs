@@ -1,7 +1,10 @@
+//! Errors associated with the database.
+
 use base64::DecodeError;
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
 
+/// High level kind of errors the database reports.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Row not found")]
@@ -12,6 +15,7 @@ pub enum Error {
     Other(sqlx::Error),
 }
 
+/// Kind of constraint errors.
 #[derive(Debug, Error)]
 pub enum ConstraintKind {
     #[error("Primary key")]

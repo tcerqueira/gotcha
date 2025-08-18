@@ -1,8 +1,13 @@
+//! A proof of work is useful for preventing replay attacks. This proof of work is a simple challenge of finding X number of prefix zeros,
+//! that is determined by the difficulty.
+
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 
+/// Proof of work challnge that it's sent to the client. The `nonce` and `timestamp` are the sources of randomness and uniqueness,
+/// while difficulty dictates how much prefixing zeros the solver has to find.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PowChallenge {
     pub nonce: u32,

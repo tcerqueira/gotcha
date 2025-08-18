@@ -1,3 +1,5 @@
+//! `/api/admin` routes.
+
 use std::sync::Arc;
 
 use axum::{Json, extract::State};
@@ -12,13 +14,18 @@ use crate::{
 
 use super::errors::AdminError;
 
+/// Expected payload for new challenge route.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AddChallenge {
+    /// Public URL.
     pub url: String,
+    /// Default width.
     pub width: u16,
+    /// Default height.
     pub height: u16,
 }
 
+/// Adds a new challenge to the database.
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn add_challenge(
     State(state): State<Arc<AppState>>,
@@ -44,18 +51,21 @@ pub async fn add_challenge(
     Ok(())
 }
 
+/// Expected payload for delete challenge route.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteChallenge {
+    /// Public URL.
     pub url: String,
 }
 
+/// Deletes a challenge from the database.
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn remove_challenge(
     State(state): State<Arc<AppState>>,
     Json(challenge): Json<DeleteChallenge>,
 ) -> Result<(), AdminError> {
-    let RowsAffected(rows_affected) = db::delete_challenge(&state.pool, &challenge.url).await?;
-    match rows_affected {
+    let RowsAffected(deleted) = db::delete_challenge(&state.pool, &challenge.url).await?;
+    match deleted {
         0 => Err(AdminError::NotFound(challenge.url)),
         _ => Ok(()),
     }

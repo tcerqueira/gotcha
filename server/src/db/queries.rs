@@ -1,3 +1,5 @@
+//! Abstraction for database queries.
+
 use std::{fmt::Debug, ops::DerefMut};
 
 use anyhow::Context;
@@ -10,9 +12,11 @@ use super::Error;
 
 pub type Result<T> = ::core::result::Result<T, Error>;
 
+/// Wrapper type for reporting the number of rows affected by updates and deletes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RowsAffected(pub u64);
 
+/// Database representation of an api key.
 #[derive(Debug, FromRow)]
 pub struct DbApiKey {
     #[sqlx(try_from = "String")]
@@ -46,7 +50,7 @@ impl TryFrom<DbApiKeyInternal> for DbApiKey {
     }
 }
 
-// Internal representation to benefit from sqlx compile time checks on queries
+/// Internal representation to benefit from sqlx compile time checks on queries
 #[derive(Debug)]
 struct DbApiKeyInternal {
     pub site_key: String,
@@ -55,6 +59,7 @@ struct DbApiKeyInternal {
     pub label: Option<String>,
 }
 
+// Extension trait to try to map nested types inside a result type.
 trait MapNested<T, E> {
     type Output<U>;
 
