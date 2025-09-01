@@ -3,13 +3,16 @@ import * as jose from "jose";
 import { createEffect } from "solid-js";
 import { RenderParams } from "../gotcha-captcha";
 import { PowChallenge, ProofOfWork } from "../proof-of-work";
+import {
+  getProofOfWorkChallenge,
+  PowResult,
+  PreAnalysisResponse,
+  processAccessibility,
+  processPreAnalysis,
+} from "../server";
 import Checkbox, { CheckboxState } from "./checkbox";
 import Logo from "./logo";
 import { ChallengeState } from "./types";
-
-export type PreAnalysisResponse =
-  | { result: "failure" }
-  | { result: "success"; response: { token: string } };
 
 type ImNotRobotProps = {
   params: RenderParams;
@@ -111,8 +114,6 @@ function checkboxState(state: ChallengeState): CheckboxState {
   }
 }
 
-type PowResult = { challenge: string; solution: number };
-
 async function solveProofOfWork(siteKey: string): Promise<PowResult | null> {
   const powChallenge = await getProofOfWorkChallenge(siteKey);
   if (!powChallenge) {
@@ -121,92 +122,6 @@ async function solveProofOfWork(siteKey: string): Promise<PowResult | null> {
   const claims: PowChallenge = jose.decodeJwt(powChallenge.token);
   const solution = await ProofOfWork.solve(claims);
   return { challenge: powChallenge.token, solution };
-}
-
-async function processPreAnalysis(
-  site_key: string,
-  proofOfWork: PowResult,
-  interactions: Interaction[],
-): Promise<PreAnalysisResponse | null> {
-  try {
-    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
-    const url = new URL(`${origin}/api/challenge/process-pre-analysis`);
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        site_key,
-        hostname: window.location.hostname,
-        interactions,
-        proof_of_work: proofOfWork,
-      }),
-    });
-    if (response.status !== 200)
-      throw new Error(
-        `processPreAnalysis returned status code ${response.status}`,
-      );
-
-    return await response.json();
-  } catch (e) {
-    console.error(e);
-    return null;
-  }
-}
-
-async function processAccessibility(
-  site_key: string,
-  proofOfWork: { challenge: string; solution: number },
-): Promise<PreAnalysisResponse | null> {
-  try {
-    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
-    const url = new URL(`${origin}/api/challenge/process-accessibility`);
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        site_key,
-        hostname: window.location.hostname,
-        proof_of_work: proofOfWork,
-      }),
-    });
-    if (response.status !== 200)
-      throw new Error(
-        `processAccessibility returned status code ${response.status}`,
-      );
-
-    return await response.json();
-  } catch (e) {
-    console.error(e);
-    return null;
-  }
-}
-
-type ProofOfWorkChallenge = {
-  token: string;
-};
-
-async function getProofOfWorkChallenge(
-  siteKey: string,
-): Promise<ProofOfWorkChallenge | null> {
-  try {
-    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
-    const response = await fetch(
-      `${origin}/api/challenge/proof-of-work?site_key=${siteKey}`,
-    );
-    if (response.status !== 200)
-      throw new Error(
-        `getProofOfWorkChallenge returned status code ${response.status}`,
-      );
-
-    return await response.json();
-  } catch (e) {
-    console.error(e);
-    return null;
-  }
 }
 
 function getText(state: ChallengeState): string {

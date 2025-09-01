@@ -1,6 +1,7 @@
 import { createEffect, createSignal, Show } from "solid-js";
+import { PreAnalysisResponse } from "../server";
 import ChallengeFrame from "./challenge-frame";
-import ImNotRobot, { PreAnalysisResponse } from "./im-not-a-robot";
+import ImNotRobot from "./im-not-a-robot";
 import { ChallengeState, GotchaWidgetProps } from "./types";
 
 export function GotchaWidget(props: GotchaWidgetProps) {
