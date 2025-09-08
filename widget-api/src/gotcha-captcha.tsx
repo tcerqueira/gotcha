@@ -1,5 +1,6 @@
 import { render } from "solid-js/web";
 import { getJsParams } from "./js-params";
+import { siteVerify, VerificationResponse } from "./server";
 import { createWidget, Widget } from "./widget";
 
 export class GotchaCaptcha {
@@ -80,6 +81,29 @@ export class GotchaCaptcha {
 
   getResponse(widgetId?: number): string | null {
     return this.getResponseElement(widgetId)?.textContent ?? null;
+  }
+
+  async verify(
+    secret: string,
+    widgetId?: number,
+  ): Promise<VerificationResponse | null> {
+    const response = this.getResponse(widgetId);
+    if (!response) {
+      console.error("call verify with an empty response token or wrong widget");
+      return null;
+    }
+    return this.verifyResponse(secret, response);
+  }
+
+  async verifyResponse(
+    secret: string,
+    response: string,
+  ): Promise<VerificationResponse | null> {
+    if (!response) {
+      console.error("call verify with an empty response token");
+      return null;
+    }
+    return siteVerify(secret, response);
   }
 
   private getResponseElement(widgetId: number = 0): Element | null {

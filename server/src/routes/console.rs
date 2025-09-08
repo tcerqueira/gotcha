@@ -20,17 +20,14 @@ use crate::{
     serde::nested_option,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateConsoleRequest {
-    pub label: String,
-}
-
+/// Response payload of retrieving a console.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConsoleResponse {
     pub id: Uuid,
     pub label: Option<String>,
 }
 
+/// Gets all consoles associated with user given by the token in the "Authorization" header.
 #[instrument(skip_all, ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR))]
 pub async fn get_consoles(
     State(state): State<Arc<AppState>>,
@@ -45,6 +42,15 @@ pub async fn get_consoles(
     Ok(Json(consoles))
 }
 
+/// Expected payload for create console route.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateConsoleRequest {
+    /// Label.
+    pub label: String,
+}
+
+/// Creates a console associated to the user given by the token in the "Authorization" header
+/// with the label provided in the payload.
 #[instrument(skip(state, user_id), ret(level = Level::INFO))]
 pub async fn create_console(
     State(state): State<Arc<AppState>>,
@@ -63,11 +69,14 @@ pub async fn create_console(
     Ok(Json(ConsoleResponse { id, label: Some(request.label) }))
 }
 
+/// Expected payload for update console route.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateConsoleRequest {
+    // Label to be updated. `None` means "don't change".
     pub label: Option<String>,
 }
 
+/// Updates console by id given in the path with the non-`None` fields in the payload.
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn update_console(
     State(state): State<Arc<AppState>>,
@@ -83,6 +92,7 @@ pub async fn update_console(
     }
 }
 
+/// Deletes console by id given in the path.
 #[instrument(skip(state), err(Debug, level = Level::ERROR))]
 pub async fn delete_console(
     State(state): State<Arc<AppState>>,
@@ -96,13 +106,18 @@ pub async fn delete_console(
     }
 }
 
+/// Response payload of retrieving an api key.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiKeyResponse {
+    /// Public site key encoded in base64 url safe alphabet.
     pub site_key: Base64<UrlSafe>,
+    /// Secret site key encoded in base64 standard alphabet.
     pub secret: Base64,
+    /// Label. Can be absent.
     pub label: Option<String>,
 }
 
+/// Gets api keys for a console id given in the path.
 #[instrument(skip(state), ret(level = Level::INFO), err(Debug, level = Level::ERROR))]
 pub async fn get_api_keys(
     State(state): State<Arc<AppState>>,
@@ -118,6 +133,7 @@ pub async fn get_api_keys(
     Ok(Json(keys))
 }
 
+/// Generates a random api key for a console id given in the path.
 #[instrument(skip(state), ret(level = Level::INFO), err(Debug, level = Level::ERROR))]
 pub async fn gen_api_key(
     State(state): State<Arc<AppState>>,

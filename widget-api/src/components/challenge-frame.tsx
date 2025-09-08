@@ -1,4 +1,4 @@
-import { Interaction, SearchParams } from "@gotcha-widget/lib";
+import { SearchParams } from "@gotcha-widget/lib";
 import { createMediaQuery } from "@solid-primitives/media";
 import {
   createEffect,
@@ -8,6 +8,7 @@ import {
   Switch,
 } from "solid-js";
 import { defaultRenderParams } from "../gotcha-captcha";
+import { fetchChallenge, processChallenge } from "../server";
 import CloseSvg from "./icons/close";
 import RefreshSvg from "./icons/refresh";
 import Logo from "./logo";
@@ -32,7 +33,7 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
 
   const [challengeRes, challengeActions] = createResource(
     props.params.k,
-    fetchChallenge,
+    fetchChallengeWrapper,
   );
 
   const isSmallWindow = createMediaQuery("(max-width: 767px)");
@@ -140,65 +141,22 @@ export default function ChallengeFrame(props: ChallengeFrameProps) {
   );
 }
 
-async function fetchChallenge(siteKey: string): Promise<Challenge | null> {
-  try {
-    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
-    const url = new URL(`${origin}/api/challenge?site_key=${siteKey}`);
-
-    const response = await fetch(url);
-    const challenge_res = await response.json();
-
-    return {
-      url: challenge_res.url,
-      width: challenge_res.width,
-      height: challenge_res.height,
-      smallWidth: challenge_res.small_width,
-      smallHeight: challenge_res.small_height,
-      logoUrl: challenge_res.logo_url,
-    };
-  } catch (e) {
-    console.error("failed to fetch", e);
-    return null;
-  }
-}
-
-type ChallengeResponse = {
-  token: string;
-};
-
-async function processChallenge(
+export async function fetchChallengeWrapper(
   siteKey: string,
-  success: boolean,
-  challengeUrl: string,
-  interactions: Interaction[],
-): Promise<string | null> {
-  try {
-    const origin = import.meta.env.VITE_GOTCHA_SV_ORIGIN;
-    const url = new URL(`${origin}/api/challenge/process`);
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        success,
-        site_key: siteKey,
-        hostname: window.location.hostname,
-        challenge: challengeUrl,
-        interactions,
-      }),
-    });
-    if (response.status !== 200)
-      throw new Error(
-        `processChallenge returned status code ${response.status}`,
-      );
-    const { token }: ChallengeResponse = await response.json();
-
-    return token;
-  } catch (e) {
-    console.error("failed to fetch", e);
+): Promise<Challenge | null> {
+  const challenge = await fetchChallenge(siteKey);
+  if (challenge === null) {
     return null;
   }
+
+  return {
+    url: challenge.url,
+    width: challenge.width,
+    height: challenge.height,
+    smallWidth: challenge.small_width,
+    smallHeight: challenge.small_height,
+    logoUrl: challenge.logo_url,
+  };
 }
 
 function buildChallengeUrl(challenge: Challenge, params: SearchParams): string {
