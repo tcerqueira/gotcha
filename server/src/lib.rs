@@ -21,6 +21,7 @@ pub mod analysis;
 pub mod configuration;
 pub mod db;
 pub mod encodings;
+pub mod hostname;
 pub mod routes;
 mod serde;
 pub mod test_helpers;
@@ -112,6 +113,7 @@ pub async fn db_dev_populate(pool: &PgPool) -> db::Result<()> {
         &String::from("cutadiY3N7fhf+JsB/cx4V8G4/eb9kJ0smVyNdjp5yKrpWUWV0ff5GzioM3y6p9Y")
             .try_into()
             .expect("invalid Base64"),
+        &[],
     )
     .await
     .inspect_err(|e| {

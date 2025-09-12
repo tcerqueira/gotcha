@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into api_key (site_key, console_id, encoding_key, secret, allowed_domains) values ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ef8cb00e53c69a4e219fff5408c2fe4597f79b5bcd65aa8df884a708c691ff06"
+}

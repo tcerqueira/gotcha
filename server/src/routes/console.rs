@@ -17,6 +17,7 @@ use crate::{
         DbUpdateChallengeCustomization, DbUpdateConsole, RowsAffected,
     },
     encodings::{Base64, KEY_SIZE, Standard, UrlSafe},
+    hostname::Hostname,
     serde::nested_option,
 };
 
@@ -28,7 +29,7 @@ pub struct ConsoleResponse {
 }
 
 /// Gets all consoles associated with user given by the token in the "Authorization" header.
-#[instrument(skip_all, ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR))]
+#[instrument(skip_all, ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn get_consoles(
     State(state): State<Arc<AppState>>,
     User { user_id }: User,
@@ -51,7 +52,7 @@ pub struct CreateConsoleRequest {
 
 /// Creates a console associated to the user given by the token in the "Authorization" header
 /// with the label provided in the payload.
-#[instrument(skip(state, user_id), ret(level = Level::INFO))]
+#[instrument(skip(state, user_id), ret(level = Level::DEBUG))]
 pub async fn create_console(
     State(state): State<Arc<AppState>>,
     User { user_id }: User,
@@ -73,6 +74,7 @@ pub async fn create_console(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateConsoleRequest {
     // Label to be updated. `None` means "don't change".
+    #[serde(default)]
     pub label: Option<String>,
 }
 
@@ -109,16 +111,18 @@ pub async fn delete_console(
 /// Response payload of retrieving an api key.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiKeyResponse {
+    /// Label. Can be absent.
+    pub label: Option<String>,
     /// Public site key encoded in base64 url safe alphabet.
     pub site_key: Base64<UrlSafe>,
     /// Secret site key encoded in base64 standard alphabet.
     pub secret: Base64,
-    /// Label. Can be absent.
-    pub label: Option<String>,
+    /// Allowed domains the api key is valid.
+    pub allowed_domains: Vec<Hostname>,
 }
 
 /// Gets api keys for a console id given in the path.
-#[instrument(skip(state), ret(level = Level::INFO), err(Debug, level = Level::ERROR))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn get_api_keys(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -134,7 +138,7 @@ pub async fn get_api_keys(
 }
 
 /// Generates a random api key for a console id given in the path.
-#[instrument(skip(state), ret(level = Level::INFO), err(Debug, level = Level::ERROR))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn gen_api_key(
     State(state): State<Arc<AppState>>,
     Path(console_id): Path<Uuid>,
@@ -144,7 +148,7 @@ pub async fn gen_api_key(
         let enc_key = Base64::<Standard>::random::<KEY_SIZE>();
         let secret = Base64::<Standard>::random::<KEY_SIZE>();
 
-        match db::insert_api_key(&state.pool, &site_key, &console_id, &enc_key, &secret)
+        match db::insert_api_key(&state.pool, &site_key, &console_id, &enc_key, &secret, &[])
             .await
             .map_err(ConsoleError::from)
         {
@@ -153,26 +157,39 @@ pub async fn gen_api_key(
             Err(err) => return Err(err),
         };
     };
-    Ok(Json(ApiKeyResponse { site_key, secret, label: None }))
+    Ok(Json(ApiKeyResponse {
+        label: None,
+        site_key,
+        secret,
+        allowed_domains: Vec::new(),
+    }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateApiKeyRequest {
+    #[serde(default)]
     pub label: Option<String>,
+    #[serde(default)]
+    pub allowed_domains: Option<Vec<Hostname>>,
 }
 
-#[instrument(skip(state), err(Debug, level = Level::ERROR))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn update_api_key(
     State(state): State<Arc<AppState>>,
-    Path((console_id, site_key)): Path<(Uuid, String)>,
+    Path((console_id, site_key)): Path<(Uuid, Base64<UrlSafe>)>,
     Json(request): Json<UpdateApiKeyRequest>,
 ) -> Result<(), ConsoleError> {
-    let update = DbUpdateApiKey { label: request.label.as_deref() };
-    match db::update_api_key(&state.pool, &site_key, &console_id, update)
+    let update = DbUpdateApiKey {
+        label: request.label.as_deref(),
+        allowed_domains: request.allowed_domains.as_deref(),
+    };
+    let rows_affected = db::update_api_key(&state.pool, &site_key, &console_id, update)
         .await
         .with_context(|| {
             format!("failed to update api key '{site_key}' for console id '{console_id}'")
-        })? {
+        })?;
+
+    match rows_affected {
         RowsAffected(0) => Err(ConsoleError::NotFound {
             what: format!("sitekey {site_key} for console with id {console_id}"),
         }),
@@ -185,10 +202,10 @@ pub struct RevokeKeyRequest {
     pub site_key: String,
 }
 
-#[instrument(skip(state), err(Debug, level = Level::ERROR))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn revoke_api_key(
     State(state): State<Arc<AppState>>,
-    Path((console_id, site_key)): Path<(Uuid, String)>,
+    Path((console_id, site_key)): Path<(Uuid, Base64<UrlSafe>)>,
 ) -> Result<(), ConsoleError> {
     match db::delete_api_key(&state.pool, &site_key, &console_id)
         .await
@@ -267,7 +284,7 @@ pub async fn update_challenge_preferences(
     Path(console_id): Path<Uuid>,
     Json(update): Json<UpdateChallengePreferences>,
 ) -> Result<(), ConsoleError> {
-    let res = db::update_challenge_customization(
+    let rows_affected = db::update_challenge_customization(
         &state.pool,
         &console_id,
         &DbUpdateChallengeCustomization {
@@ -280,7 +297,7 @@ pub async fn update_challenge_preferences(
     )
     .await?;
 
-    match res {
+    match rows_affected {
         RowsAffected(0) => Err(ConsoleError::NotFound {
             what: format!("challenge preferences for console with id {console_id}"),
         }),
@@ -296,7 +313,12 @@ impl From<DbConsole> for ConsoleResponse {
 
 impl From<DbApiKey> for ApiKeyResponse {
     fn from(k: DbApiKey) -> Self {
-        ApiKeyResponse { site_key: k.site_key, secret: k.secret, label: k.label }
+        ApiKeyResponse {
+            label: k.label,
+            site_key: k.site_key,
+            secret: k.secret,
+            allowed_domains: k.allowed_domains,
+        }
     }
 }
 

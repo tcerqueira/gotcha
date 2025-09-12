@@ -18,7 +18,12 @@ use thiserror::Error;
 use tracing::{Level, Span, field, instrument};
 use uuid::Uuid;
 
-use crate::{AppState, HTTP_CACHE_CLIENT, db, routes::extractors::User, tokens};
+use crate::{
+    AppState, HTTP_CACHE_CLIENT, db,
+    encodings::{Base64, UrlSafe},
+    routes::extractors::User,
+    tokens,
+};
 
 use super::errors::ConsoleError;
 
@@ -115,7 +120,7 @@ pub async fn validate_console_id(
 
 #[derive(Debug, Deserialize)]
 pub struct ApiKeyPath {
-    pub site_key: String,
+    pub site_key: Base64<UrlSafe>,
 }
 
 #[instrument(skip_all, fields(site_key, console_id), err(Debug, level = Level::ERROR))]
@@ -129,7 +134,7 @@ pub async fn validate_api_key(
     match db::exists_api_key_for_console(&state.pool, &site_key, &console_id).await? {
         true => Ok(next.run(request).await),
         false => {
-            Span::current().record("site_key", site_key);
+            Span::current().record("site_key", site_key.as_str());
             Span::current().record("console_id", field::display(console_id));
             Err(ConsoleError::Forbidden)
         }

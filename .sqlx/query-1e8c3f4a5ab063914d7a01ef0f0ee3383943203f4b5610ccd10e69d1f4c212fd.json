@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select site_key, encoding_key, secret, label from api_key where secret = $1",
+  "query": "select site_key, encoding_key, secret, label, allowed_domains from api_key where secret = $1",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,11 @@
         "ordinal": 3,
         "name": "label",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "allowed_domains",
+        "type_info": "TextArray"
       }
     ],
     "parameters": {
@@ -33,8 +38,9 @@
       false,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "f41339b166ccc1d71fe993148e036a25dc2ef2d1f9cddc5ce7944e984aa69230"
+  "hash": "1e8c3f4a5ab063914d7a01ef0f0ee3383943203f4b5610ccd10e69d1f4c212fd"
 }

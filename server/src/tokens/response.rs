@@ -1,9 +1,8 @@
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use std::{net::IpAddr, time::Duration};
-use url::Host;
 
-use crate::encodings::Base64;
+use crate::{encodings::Base64, hostname::Hostname};
 
 use super::TimeClaims;
 
@@ -13,8 +12,7 @@ pub static JWT_RESPONSE_ALGORITHM: Algorithm = Algorithm::HS256;
 pub struct ResponseClaims {
     pub score: f32,
     pub addr: IpAddr,
-    #[serde(with = "crate::serde::host_as_str")]
-    pub host: Host,
+    pub host: Hostname,
 }
 
 pub fn encode(

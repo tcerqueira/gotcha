@@ -7,8 +7,6 @@ use thiserror::Error;
 /// High level kind of errors the database reports.
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Row not found")]
-    NotFound,
     #[error("{kind} constraint not met: {source}")]
     Constraint { source: Box<PgDatabaseError>, kind: ConstraintKind },
     #[error(transparent)]

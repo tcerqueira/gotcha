@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with\n      console as (insert into public.console (label, user_id) values ($1, $2) returning id)\n    insert into\n      public.api_key (site_key, console_id, encoding_key, secret, allowed_domains)\n    values\n      (\n        $3,\n        (select id from console),\n        $4, $5, $6\n      ) returning console_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "console_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f1016700f9794b734fe75b3ff251dbd4d89031894755cffe480fc2976250d73d"
+}

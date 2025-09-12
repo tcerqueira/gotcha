@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update api_key set label = coalesce($1, label), allowed_domains = coalesce($2, allowed_domains) where site_key = $3 and console_id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "TextArray",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e4841d872c75c7c51f3064cc6599e1108145762ee443283f95c6f1cb23e03ce4"
+}

@@ -3,10 +3,14 @@
 use std::{fmt::Debug, ops::DerefMut};
 
 use anyhow::Context;
-use sqlx::{PgExecutor, Postgres, Transaction, prelude::*};
+use sqlx::{PgExecutor, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::encodings::{Base64, UrlSafe};
+use crate::{
+    db::MapNested,
+    encodings::{Base64, UrlSafe},
+    hostname::Hostname,
+};
 
 use super::Error;
 
@@ -16,16 +20,24 @@ pub type Result<T> = ::core::result::Result<T, Error>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RowsAffected(pub u64);
 
-/// Database representation of an api key.
-#[derive(Debug, FromRow)]
-pub struct DbApiKey {
-    #[sqlx(try_from = "String")]
-    pub site_key: Base64<UrlSafe>,
-    #[sqlx(try_from = "String")]
-    pub encoding_key: Base64,
-    #[sqlx(try_from = "String")]
-    pub secret: Base64,
+/// Internal representation to benefit from sqlx compile time checks on queries
+#[derive(Debug)]
+struct DbApiKeyInternal {
     pub label: Option<String>,
+    pub site_key: String,
+    pub encoding_key: String,
+    pub secret: String,
+    pub allowed_domains: Vec<String>,
+}
+
+/// Database representation of an api key.
+#[derive(Debug)]
+pub struct DbApiKey {
+    pub label: Option<String>,
+    pub site_key: Base64<UrlSafe>,
+    pub encoding_key: Base64,
+    pub secret: Base64,
+    pub allowed_domains: Vec<Hostname>,
 }
 
 impl TryFrom<DbApiKeyInternal> for DbApiKey {
@@ -33,6 +45,7 @@ impl TryFrom<DbApiKeyInternal> for DbApiKey {
 
     fn try_from(value: DbApiKeyInternal) -> std::result::Result<Self, Self::Error> {
         Ok(Self {
+            label: value.label,
             site_key: value
                 .site_key
                 .try_into()
@@ -45,83 +58,13 @@ impl TryFrom<DbApiKeyInternal> for DbApiKey {
                 .secret
                 .try_into()
                 .context("could not convert secret from string")?,
-            label: value.label,
+            allowed_domains: value
+                .allowed_domains
+                .into_iter()
+                .map(Hostname::new_unchecked)
+                .collect(),
         })
     }
-}
-
-/// Internal representation to benefit from sqlx compile time checks on queries
-#[derive(Debug)]
-struct DbApiKeyInternal {
-    pub site_key: String,
-    pub encoding_key: String,
-    pub secret: String,
-    pub label: Option<String>,
-}
-
-// Extension trait to try to map nested types inside a result type.
-trait MapNested<T, E> {
-    type Output<U>;
-
-    fn map_nested_with<U, E0, F, ErrMap>(
-        self,
-        f: F,
-        err_map: ErrMap,
-    ) -> std::result::Result<Self::Output<U>, E>
-    where
-        F: Fn(T) -> std::result::Result<U, E0>,
-        ErrMap: FnOnce(E0) -> E;
-
-    #[expect(dead_code)]
-    fn map_nested<U, E0, F>(self, f: F) -> std::result::Result<Self::Output<U>, E>
-    where
-        F: Fn(T) -> std::result::Result<U, E0>,
-        E: From<E0>,
-        Self: Sized,
-    {
-        self.map_nested_with(f, Into::into)
-    }
-}
-
-impl<T, E> MapNested<T, E> for std::result::Result<Option<T>, E> {
-    type Output<U> = Option<U>;
-
-    fn map_nested_with<U, E0, F, ErrMap>(
-        self,
-        f: F,
-        err_map: ErrMap,
-    ) -> std::result::Result<Self::Output<U>, E>
-    where
-        F: Fn(T) -> std::result::Result<U, E0>,
-        ErrMap: FnOnce(E0) -> E,
-    {
-        self.and_then(|opt_t| opt_t.map(f).transpose().map_err(err_map))
-    }
-}
-
-impl<T, E> MapNested<T, E> for std::result::Result<Vec<T>, E> {
-    type Output<U> = Vec<U>;
-
-    fn map_nested_with<U, E0, F, ErrMap>(
-        self,
-        f: F,
-        err_map: ErrMap,
-    ) -> std::result::Result<Self::Output<U>, E>
-    where
-        F: Fn(T) -> std::result::Result<U, E0>,
-        ErrMap: FnOnce(E0) -> E,
-    {
-        self.and_then(|vec| {
-            vec.into_iter()
-                .map(f)
-                .collect::<std::result::Result<Vec<U>, E0>>()
-                .map_err(err_map)
-        })
-    }
-}
-
-fn api_key_decode_err(err: anyhow::Error) -> sqlx::Error {
-    sqlx::Error::Decode(err.into_boxed_dyn_error())
 }
 
 pub async fn fetch_api_key_by_site_key(
@@ -130,12 +73,12 @@ pub async fn fetch_api_key_by_site_key(
 ) -> Result<Option<DbApiKey>> {
     sqlx::query_as!(
         DbApiKeyInternal,
-        "select site_key, encoding_key, secret, label from api_key where site_key = $1",
+        "select site_key, encoding_key, secret, label, allowed_domains from api_key where site_key = $1",
         site_key.as_str()
     )
     .fetch_optional(exec)
     .await
-    .map_nested_with(TryFrom::try_from, api_key_decode_err)
+    .map_nested_with(TryFrom::try_from, super::api_key_decode_err)
     .map(Ok)?
 }
 
@@ -145,12 +88,12 @@ pub async fn fetch_api_key_by_secret(
 ) -> Result<Option<DbApiKey>> {
     sqlx::query_as!(
         DbApiKeyInternal,
-        "select site_key, encoding_key, secret, label from api_key where secret = $1",
+        "select site_key, encoding_key, secret, label, allowed_domains from api_key where secret = $1",
         secret.as_str()
     )
     .fetch_optional(exec)
     .await
-    .map_nested_with(TryFrom::try_from, api_key_decode_err)
+    .map_nested_with(TryFrom::try_from, super::api_key_decode_err)
     .map(Ok)?
 }
 
@@ -160,12 +103,12 @@ pub async fn fetch_api_keys(
 ) -> Result<Vec<DbApiKey>> {
     sqlx::query_as!(
         DbApiKeyInternal,
-        "select site_key, encoding_key, secret, label from api_key where console_id = $1 order by created_at",
+        "select site_key, encoding_key, secret, label, allowed_domains from api_key where console_id = $1 order by created_at",
         console_id
     )
     .fetch_all(exec)
     .await
-    .map_nested_with(TryFrom::try_from, api_key_decode_err)
+    .map_nested_with(TryFrom::try_from, super::api_key_decode_err)
     .map(Ok)?
 }
 
@@ -175,13 +118,20 @@ pub async fn insert_api_key(
     console_id: &Uuid,
     enc_key: &Base64,
     secret: &Base64,
+    allowed_domains: &[Hostname],
 ) -> Result<()> {
+    let allowed_domains = allowed_domains
+        .iter()
+        .map(|h| h.to_string())
+        .collect::<Vec<_>>();
+
     let _ = sqlx::query!(
-        "insert into api_key (site_key, console_id, encoding_key, secret) values ($1, $2, $3, $4)",
+        "insert into api_key (site_key, console_id, encoding_key, secret, allowed_domains) values ($1, $2, $3, $4, $5)",
         site_key.as_str(),
         console_id,
         enc_key.as_str(),
-        secret.as_str()
+        secret.as_str(),
+        &allowed_domains
     )
     .execute(exec)
     .await?;
@@ -191,12 +141,12 @@ pub async fn insert_api_key(
 
 pub async fn exists_api_key_for_console(
     exec: impl PgExecutor<'_> + Send,
-    site_key: &str,
+    site_key: &Base64<UrlSafe>,
     console_id: &Uuid,
 ) -> Result<bool> {
     sqlx::query_scalar!(
         "select exists (select 1 from api_key where site_key = $1 and console_id = $2) as found_site_key_for_console",
-        site_key,
+        site_key.as_str(),
         console_id,
     )
     .fetch_one(exec)
@@ -212,23 +162,30 @@ pub(crate) async fn with_console_insert_api_key(
     site_key: &Base64<UrlSafe>,
     enc_key: &Base64,
     secret: &Base64,
+    allowed_domains: &[Hostname],
 ) -> Result<Uuid> {
+    let allowed_domains = allowed_domains
+        .iter()
+        .map(|h| h.to_string())
+        .collect::<Vec<_>>();
+
     let row = sqlx::query!(
         r#"with
       console as (insert into public.console (label, user_id) values ($1, $2) returning id)
     insert into
-      public.api_key (site_key, console_id, encoding_key, secret)
+      public.api_key (site_key, console_id, encoding_key, secret, allowed_domains)
     values
       (
         $3,
         (select id from console),
-        $4, $5
+        $4, $5, $6
       ) returning console_id"#,
         console_label,
         user,
         site_key.as_str(),
         enc_key.as_str(),
         secret.as_str(),
+        &allowed_domains
     )
     .fetch_one(exec.clone())
     .await?;
@@ -242,37 +199,40 @@ pub(crate) async fn with_console_insert_api_key(
 #[derive(Debug)]
 pub struct DbUpdateApiKey<'a> {
     pub label: Option<&'a str>,
+    pub allowed_domains: Option<&'a [Hostname]>,
 }
 
 pub async fn update_api_key(
     exec: impl PgExecutor<'_> + Send,
-    site_key: &str,
+    site_key: &Base64<UrlSafe>,
     console_id: &Uuid,
     update: DbUpdateApiKey<'_>,
 ) -> Result<RowsAffected> {
+    let allowed_domains = update
+        .allowed_domains
+        .map(|domains| domains.iter().map(|h| h.to_string()).collect::<Vec<_>>());
+
     let res = sqlx::query!(
-        "update api_key set label = coalesce($1, label) where site_key = $2 and console_id = $3",
+        "update api_key set label = coalesce($1, label), allowed_domains = coalesce($2, allowed_domains) where site_key = $3 and console_id = $4",
         update.label,
-        site_key,
+        allowed_domains.as_deref(),
+        site_key.as_str(),
         console_id
     )
     .execute(exec)
     .await?;
 
-    match res.rows_affected() {
-        0 => Err(Error::NotFound),
-        r => Ok(RowsAffected(r)),
-    }
+    Ok(RowsAffected(res.rows_affected()))
 }
 
 pub async fn delete_api_key(
     exec: impl PgExecutor<'_> + Send,
-    site_key: &str,
+    site_key: &Base64<UrlSafe>,
     console_id: &Uuid,
 ) -> Result<RowsAffected> {
     let res = sqlx::query!(
         "delete from api_key where site_key = $1 and console_id = $2",
-        site_key,
+        site_key.as_str(),
         console_id
     )
     .execute(exec)
@@ -374,10 +334,7 @@ pub async fn update_console(
     .execute(exec)
     .await?;
 
-    match res.rows_affected() {
-        0 => Err(Error::NotFound),
-        r => Ok(RowsAffected(r)),
-    }
+    Ok(RowsAffected(res.rows_affected()))
 }
 
 pub async fn delete_console(
@@ -589,8 +546,5 @@ pub async fn update_challenge_customization(
     .execute(exec)
     .await?;
 
-    match res.rows_affected() {
-        0 => Err(Error::NotFound),
-        r => Ok(RowsAffected(r)),
-    }
+    Ok(RowsAffected(res.rows_affected()))
 }

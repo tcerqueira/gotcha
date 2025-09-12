@@ -8,7 +8,6 @@ mod verify_site {
     };
     use gotcha_server_macros::integration_test;
     use reqwest::StatusCode;
-    use url::Host;
 
     #[integration_test]
     async fn sucessful_challenge(server: TestContext) -> anyhow::Result<()> {
@@ -20,7 +19,7 @@ mod verify_site {
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
-                host: Host::parse("gotcha-integration.test.com")?,
+                host: "gotcha-integration.test.com".parse()?,
             },
             &enc_key,
         )?;
@@ -47,7 +46,7 @@ mod verify_site {
         let addr = [127, 0, 0, 1].into();
 
         let token = response::encode(
-            ResponseClaims { score: 0.75, addr, host: Host::parse("gotcha-integration.test.com")? },
+            ResponseClaims { score: 0.75, addr, host: "gotcha-integration.test.com".parse()? },
             &enc_key,
         )?;
 
@@ -79,7 +78,7 @@ mod verify_site {
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
-                host: Host::parse("gotcha-integration.test.com")?,
+                host: "gotcha-integration.test.com".parse()?,
             },
             &enc_key,
         )?;
@@ -113,7 +112,7 @@ mod verify_site {
             ResponseClaims {
                 score: 0.3,
                 addr: [127, 0, 0, 1].into(),
-                host: Host::parse("gotcha-integration.test.com")?,
+                host: "gotcha-integration.test.com".parse()?,
             },
             &enc_key,
         )?;
@@ -141,7 +140,7 @@ mod verify_site {
             ResponseClaims {
                 score: 1.,
                 addr: [127, 0, 0, 1].into(),
-                host: Host::parse("gotcha-integration.test.com")?,
+                host: "gotcha-integration.test.com".parse()?,
             },
             &enc_key,
         )?;
@@ -229,7 +228,7 @@ mod verify_site {
             ResponseClaims {
                 score: 1.,
                 addr: [127, 0, 0, 1].into(),
-                host: Host::parse("gotcha-integration.test.com")?,
+                host: "gotcha-integration.test.com".parse()?,
             },
             &enc_key,
         )?;
@@ -270,7 +269,7 @@ mod verify_site {
             ResponseClaims {
                 score: 0.75,
                 addr: [127, 0, 0, 1].into(),
-                host: Host::parse("gotcha-integration.test.com")?,
+                host: "gotcha-integration.test.com".parse()?,
             },
             &enc_key,
         )?;
@@ -334,7 +333,6 @@ mod verify_site {
         use gotcha_server::tokens::TimeClaims;
         use jsonwebtoken::{EncodingKey, Header};
         use response::JWT_RESPONSE_ALGORITHM;
-        use url::Host;
 
         use super::*;
 
@@ -348,7 +346,7 @@ mod verify_site {
                 ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
-                    host: Host::parse("gotcha-integration.test.com")?,
+                    host: "gotcha-integration.test.com".parse()?,
                 },
                 &enc_key,
                 Duration::from_secs(0),
@@ -417,7 +415,7 @@ mod verify_site {
                 &TimeClaims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
-                    host: Host::parse("gotcha-integration.test.com")?,
+                    host: "gotcha-integration.test.com".parse()?,
                 }),
                 &EncodingKey::from_base64_secret(
                     "bXktd3Jvbmctc2VjcmV0", /* `my-wrong-secret` in base64 */
@@ -454,7 +452,7 @@ mod verify_site {
                 &TimeClaims::new(ResponseClaims {
                     score: 1.,
                     addr: [127, 0, 0, 1].into(),
-                    host: Host::parse("gotcha-integration.test.com")?,
+                    host: "gotcha-integration.test.com".parse()?,
                 }),
                 &EncodingKey::from_base64_secret(enc_key.as_str())?,
             )?;
