@@ -1,4 +1,7 @@
-use std::{fmt::Display, marker::PhantomData};
+use std::{
+    fmt::{Debug, Display},
+    marker::PhantomData,
+};
 
 use base64::{DecodeError, prelude::*};
 use rand::{Rng, RngCore};
@@ -12,7 +15,7 @@ pub struct Standard;
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UrlSafe;
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(transparent)]
 pub struct Base64<A = Standard>(Box<str>, PhantomData<A>);
 
@@ -67,6 +70,18 @@ impl TryFrom<String> for Base64<UrlSafe> {
         let mut out_buf = [0; KEY_SIZE];
         BASE64_URL_SAFE.decode_slice_unchecked(&value, &mut out_buf)?;
         Ok(Self::new(value))
+    }
+}
+
+impl Debug for Base64<Standard> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Base64<Standard>").field(&self.0).finish()
+    }
+}
+
+impl Debug for Base64<UrlSafe> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Base64<UrlSafe>").field(&self.0).finish()
     }
 }
 

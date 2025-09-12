@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select site_key, encoding_key, secret, label from api_key where site_key = $1",
+  "query": "select site_key, encoding_key, secret, label, allowed_domains from api_key where console_id = $1 order by created_at",
   "describe": {
     "columns": [
       {
@@ -22,19 +22,25 @@
         "ordinal": 3,
         "name": "label",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "allowed_domains",
+        "type_info": "TextArray"
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
       false,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "745064af65ec8c03a438511f3e9c0ec893d035ee7cc090b526ddd5973a0b609a"
+  "hash": "f6be37ab3a1bf76f0013a6ba79ff10899183cafdc6247b9a739df12ca9d904ea"
 }

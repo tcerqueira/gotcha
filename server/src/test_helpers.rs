@@ -149,6 +149,7 @@ async fn populate_demo(pool: &PgPool, test_id: &Uuid) -> db::Result<()> {
         &console_id,
         &Base64::<Standard>::random::<KEY_SIZE>(),
         &Base64::<Standard>::random::<KEY_SIZE>(),
+        &[],
     )
     .await?;
 

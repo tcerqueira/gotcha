@@ -12,7 +12,7 @@ use gotcha_server::{
 use gotcha_server_macros::integration_test;
 use jsonwebtoken::{DecodingKey, Validation};
 use reqwest::StatusCode;
-use url::{Host, Url};
+use url::Url;
 
 #[ignore = "TODO: insert challenge and then request"]
 #[integration_test]
@@ -55,7 +55,7 @@ async fn process_successful_challenge(server: TestContext) -> anyhow::Result<()>
         .json(&ChallengeResults {
             success: true,
             site_key,
-            hostname: Host::parse("website-integration.test.com")?,
+            hostname: "website-integration.test.com".parse()?,
             challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
             interactions: vec![],
         })
@@ -87,7 +87,7 @@ async fn process_failed_challenge(server: TestContext) -> anyhow::Result<()> {
         .json(&ChallengeResults {
             success: false,
             site_key,
-            hostname: Host::parse("website-integration.test.com")?,
+            hostname: "website-integration.test.com".parse()?,
             challenge: Url::parse("https://gotcha-integration.test.com/im-not-a-robot/index.html")?,
             interactions: vec![],
         })
@@ -141,7 +141,7 @@ async fn process_pre_analysis_fails_on_invalid_proof_of_work(
         ))
         .json(&PreAnalysisRequest {
             site_key,
-            hostname: Host::parse("website-integration.test.com")?,
+            hostname: "website-integration.test.com".parse()?,
             interactions: vec![],
             proof_of_work: ProofOfWork { challenge: "".into(), solution: 0 },
         })
@@ -174,7 +174,7 @@ async fn process_pre_analysis_fails_on_proof_of_work_failed(
         ))
         .json(&PreAnalysisRequest {
             site_key,
-            hostname: Host::parse("website-integration.test.com")?,
+            hostname: "website-integration.test.com".parse()?,
             interactions: vec![],
             proof_of_work: ProofOfWork { challenge: pow.token, solution: 0 },
         })
@@ -198,7 +198,7 @@ async fn process_accessibility_fails_on_invalid_proof_of_work(
         ))
         .json(&AccessibilityRequest {
             site_key,
-            hostname: Host::parse("website-integration.test.com")?,
+            hostname: "website-integration.test.com".parse()?,
             proof_of_work: ProofOfWork { challenge: "".into(), solution: 0 },
         })
         .send()
@@ -230,7 +230,7 @@ async fn process_accessibility_fails_on_proof_of_work_failed(
         ))
         .json(&AccessibilityRequest {
             site_key,
-            hostname: Host::parse("website-integration.test.com")?,
+            hostname: "website-integration.test.com".parse()?,
             proof_of_work: ProofOfWork { challenge: pow.token, solution: 0 },
         })
         .send()

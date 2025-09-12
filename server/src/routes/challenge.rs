@@ -10,7 +10,7 @@ use axum::{
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use tracing::{Level, Span, instrument};
-use url::{Host, Url};
+use url::Url;
 
 use super::errors::ChallengeError;
 use crate::{
@@ -22,6 +22,7 @@ use crate::{
     },
     db::{self, DbChallenge},
     encodings::{Base64, UrlSafe},
+    hostname::Hostname,
     tokens::{
         self, pow_challenge,
         response::{self, ResponseClaims},
@@ -53,7 +54,7 @@ pub struct GetChallenge {
 
 /// Fetches challenges a responds with one of them randomly and its customization.
 /// If `site_key` param is absent it responds with the defaults.
-#[instrument(skip(state), err(Debug, level = Level::ERROR))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn get_challenge(
     Query(query): Query<ChallengeParams>,
     State(state): State<Arc<AppState>>,
@@ -84,7 +85,7 @@ pub struct PowResponse {
 
 /// Constructs a unique proof of work challenge and encodes it in a JWT.
 /// Difficulty hardcoded to 3. Future work may include customizing it in an admin page.
-#[instrument(skip(state), err(Debug, level = Level::ERROR))]
+#[instrument(skip(state), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR))]
 pub async fn get_proof_of_work_challenge(
     Query(query): Query<PowParams>,
     State(state): State<Arc<AppState>>,
@@ -109,8 +110,7 @@ pub struct ChallengeResults {
     /// Public site key encoded in base64 url safe alphabet.
     pub site_key: Base64<UrlSafe>,
     /// The host name of the URL where it was solved.
-    #[serde(with = "crate::serde::host_as_str")]
-    pub hostname: Host,
+    pub hostname: Hostname,
     /// The challenge URL that it was solved.
     pub challenge: Url,
     /// The list of interactions performed while solving the challenge.
@@ -126,7 +126,7 @@ pub struct ChallengeResponse {
 }
 
 /// Proccesses the challenge results and responds with a proof in the form of a JWT.
-#[instrument(skip(state, results), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
+#[instrument(skip(state, results), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR),
     fields(
         ?addr,
         success = results.success,
@@ -141,7 +141,7 @@ pub async fn process_challenge(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(results): Json<ChallengeResults>,
 ) -> Result<Json<ChallengeResponse>, ChallengeError> {
-    // TODO: potentially heavy CPU operation - offload to rayon
+    // TODO: potentially heavy CPU operation - offload to a task
     let Score(score) = analysis::interaction::interaction_analysis(&results.interactions);
     Span::current().record("interaction_score", score);
     let score = match results.success {
@@ -170,9 +170,8 @@ pub async fn process_challenge(
 pub struct PreAnalysisRequest {
     /// Public site key encoded in base64 url safe alphabet.
     pub site_key: Base64<UrlSafe>,
-    #[serde(with = "crate::serde::host_as_str")]
     /// The host name of the URL where it was solved.
-    pub hostname: Host,
+    pub hostname: Hostname,
     /// The list of interactions performed while solving the challenge.
     pub interactions: Vec<Interaction>,
     /// Proof of work computed by the client.
@@ -218,7 +217,7 @@ pub enum PreAnalysisResponse {
 /// The pre analysis consists on analysing user input and checking the proof of work. At the moment,
 /// it is configured to always fail thus forcing the user to solve a captcha every time.
 /// TODO: check fingerprint.
-#[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
+#[instrument(skip(state, request), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR),
     fields(
         %site_key = request.site_key,
         ?hostname = request.hostname,
@@ -281,15 +280,14 @@ pub struct AccessibilityRequest {
     /// Public site key encoded in base64 url safe alphabet.
     pub site_key: Base64<UrlSafe>,
     /// The host name of the URL where it was solved.
-    #[serde(with = "crate::serde::host_as_str")]
-    pub hostname: Host,
+    pub hostname: Hostname,
     /// Proof of work computed by the client.
     pub proof_of_work: ProofOfWork,
 }
 
 /// Alternative process for accessibility users. At the moment, just checks proof of work.
 /// TODO: check fingerprint.
-#[instrument(skip(state, request), ret(Debug, level = Level::INFO), err(Debug, level = Level::ERROR),
+#[instrument(skip(state, request), ret(Debug, level = Level::DEBUG), err(Debug, level = Level::ERROR),
     fields(
         ?addr,
         ?site_key = request.site_key,

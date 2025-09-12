@@ -20,14 +20,15 @@
                 .getElementById("login")
                 .addEventListener("submit", async (e) => {
                     e.preventDefault();
+                    // implicit input named `gotcha-response` stores the token
+                    const formData = new FormData(e.target);
+                    const token = formData.get("gotcha-response");
+                    console.log(token);
                     // verify client side
                     const verification = await gotcha.verify(
                         "cutadiY3N7fhf+JsB/cx4V8G4/eb9kJ0smVyNdjp5yKrpWUWV0ff5GzioM3y6p9Y",
                     );
                     console.log(verification);
-                    // implicit input named `gotcha-response` stores the token
-                    const formData = new FormData(e.target);
-                    console.log(formData.get("gotcha-response"));
                 });
         </script>
     </body>

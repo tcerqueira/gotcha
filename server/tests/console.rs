@@ -248,7 +248,7 @@ async fn update_api_key(server: TestContext) -> anyhow::Result<()> {
             "http://localhost:{port}/api/console/{console_id}/api-key/{site_key}"
         ))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&UpdateApiKeyRequest { label: Some("updated".into()) })
+        .json(&UpdateApiKeyRequest { label: Some("updated".into()), allowed_domains: None })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -300,7 +300,7 @@ async fn update_forbidden_api_key(server: TestContext) -> anyhow::Result<()> {
             "http://localhost:{port}/api/console/{console_id}/api-key/{site_key}"
         ))
         .bearer_auth(test_helpers::auth_jwt().await)
-        .json(&UpdateApiKeyRequest { label: Some("updated".into()) })
+        .json(&UpdateApiKeyRequest { label: Some("updated".into()), allowed_domains: None })
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::FORBIDDEN);

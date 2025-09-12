@@ -9,9 +9,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use time::OffsetDateTime;
 use tracing::{Level, instrument};
-use url::Host;
 
-use crate::{AppState, db, encodings::Base64, tokens::response};
+use crate::{AppState, db, encodings::Base64, hostname::Hostname, tokens::response};
 
 use super::errors::VerificationError;
 
@@ -27,8 +26,8 @@ pub struct VerificationResponse {
     pub success: bool,
     #[serde(with = "time::serde::iso8601")]
     pub challenge_ts: OffsetDateTime,
-    #[serde(with = "crate::serde::option_host_as_str")]
-    pub hostname: Option<Host>,
+    #[serde(with = "crate::serde::none_as_empty_string")]
+    pub hostname: Option<Hostname>,
     #[serde(rename = "error-codes", skip_serializing_if = "Option::is_none")]
     pub error_codes: Option<Vec<ErrorCodes>>,
 }
